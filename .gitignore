@@ -1,0 +1,5 @@
+# Excluir archivos de Firebase (tu llave)
+*.json
+
+# Excluir archivos específicos del entorno
+.streamlit/secrets.toml
