@@ -5,17 +5,36 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from datetime import date, timedelta
 import json
+import os # Aunque no lo usamos para el secreto, lo dejamos por si acaso
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="CRM Prescripción 2n", layout="wide", page_icon="🏗️")
 
-# --- CONEXIÓN A FIREBASE ---
-# Usamos st.secrets para no subir la clave al GitHub público
+# --- CONEXIÓN A FIREBASE (CORRECCIÓN CRÍTICA) ---
 if not firebase_admin._apps:
-    # Recuperamos la información del secreto (string JSON) y la convertimos a dict
-    key_dict = json.loads(st.secrets["textkey"])
-    cred = credentials.Certificate(key_dict)
-    firebase_admin.initialize_app(cred)
+    try:
+        # 1. Leemos el texto secreto del panel de Streamlit Cloud
+        # Utilizamos st.secrets["textkey"] en lugar de os.environ.get()
+        secret_str = st.secrets["textkey"]
+        
+        # 2. Convertimos el texto JSON a diccionario (aquí fallaba antes)
+        key_dict = json.loads(secret_str)
+        
+        # 3. Inicializamos Firebase con el diccionario
+        cred = credentials.Certificate(key_dict)
+        firebase_admin.initialize_app(cred)
+        
+    except KeyError:
+        st.error("Error: La llave 'textkey' no se encontró en Streamlit Secrets. Revisa que el nombre sea 'textkey'.")
+        st.stop()
+    except json.JSONDecodeError as e:
+        # Este es el error que te salía. Ahora mostramos un mensaje específico.
+        st.error("Error de formato (JSONDecodeError): El contenido de 'textkey' no es JSON válido.")
+        st.caption("Esto ocurre si hay un caracter invisible o si no se usaron las triples comillas. Por favor, usa el bloque de clave que te di en el último mensaje y no lo copies/pegues de nuevo manualmente.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Error general de Firebase: {e}")
+        st.stop()
 
 db = firestore.client()
 
