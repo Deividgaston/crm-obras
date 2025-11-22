@@ -29,7 +29,7 @@ if not firebase_admin._apps:
         st.stop()
     except json.JSONDecodeError as e:
         st.error("ERROR DE FORMATO (JSON): El contenido de la clave no es JSON válido.")
-        st.caption("Esto es el famoso error de carácter oculto. Por favor, usa el bloque de clave final que te proporcioné en la Sección 3 y pégalo sin espacios extras.")
+        st.caption("Esto es el famoso error de carácter oculto. Por favor, usa el bloque de clave final que te proporciono en la Sección 3 y pégalo sin espacios extras.")
         st.stop()
     except Exception as e:
         st.error(f"Error general de Firebase: {e}")
