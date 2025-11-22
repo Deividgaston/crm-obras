@@ -10,26 +10,26 @@ import os
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="CRM Prescripción 2n", layout="wide", page_icon="🏗️")
 
-# --- CONEXIÓN A FIREBASE (CORRECCIÓN CRÍTICA DE LECTURA) ---
+# --- CONEXIÓN A FIREBASE (¡ATENCIÓN! USAMOS LA NUEVA CLAVE 'firebase_key') ---
 if not firebase_admin._apps:
     try:
-        # 1. Leemos el texto secreto del panel de Streamlit Cloud
-        secret_str = st.secrets["textkey"]
+        # Leemos el secreto de Streamlit Cloud. ¡El nombre AHORA es 'firebase_key'!
+        secret_str = st.secrets["firebase_key"]
         
-        # 2. Convertimos el texto JSON a diccionario
+        # Convertimos el texto JSON a diccionario
         key_dict = json.loads(secret_str)
         
-        # 3. Inicializamos Firebase con el diccionario
+        # Inicializamos Firebase con el diccionario
         cred = credentials.Certificate(key_dict)
         firebase_admin.initialize_app(cred)
         
     except KeyError:
-        st.error("Error: La llave 'textkey' no se encontró en Streamlit Secrets. Revisa que el nombre sea 'textkey'.")
+        st.error("Error: La llave 'firebase_key' no se encontró en Streamlit Secrets.")
+        st.caption("Asegúrate de que la clave en el panel de secretos de Streamlit Cloud se llama 'firebase_key'.")
         st.stop()
     except json.JSONDecodeError as e:
-        # El error que te aparecía. Ahora da un mensaje más claro.
-        st.error("ERROR DE FORMATO (JSON): El contenido de 'textkey' no es JSON válido.")
-        st.caption("Esto ocurre si hay un caracter invisible o si no se usaron las triples comillas. Debes pegar la clave TOML limpia en Streamlit Cloud.")
+        st.error("ERROR DE FORMATO (JSON): El contenido de la clave no es JSON válido.")
+        st.caption("Esto es el famoso error de carácter oculto. Por favor, usa el bloque de clave final que te proporcioné en la Sección 3 y pégalo sin espacios extras.")
         st.stop()
     except Exception as e:
         st.error(f"Error general de Firebase: {e}")
