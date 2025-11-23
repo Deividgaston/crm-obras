@@ -1,7 +1,7 @@
 import streamlit as st
-import pandas as pd
 from datetime import date, timedelta
 
+# Funciones de acceso a datos (Firestore) y utilidades
 from crm_utils import (
     get_clientes,
     get_proyectos,
@@ -9,40 +9,201 @@ from crm_utils import (
     actualizar_proyecto,
 )
 
+# Páginas específicas
 from proyectos_page import render_proyectos
-    # (usa los helpers de crm_utils y el estilo apple)
 from buscar_page import render_buscar
-from style_injector import inject_apple_style
-
 
 # ==========================
-# CONFIG GENERAL
+# CONFIGURACIÓN GENERAL
 # ==========================
-
 st.set_page_config(
     page_title="CRM Prescripción",
     layout="wide",
     page_icon="🏗️",
 )
 
-inject_apple_style()
+# ==========================
+# ESTILO APPLE-LIKE
+# ==========================
+st.markdown("""
+<style>
+/* Fuente tipo SF / Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+    background: #020617 !important; /* slate-950 */
+    color: #E5E7EB !important;
+}
+
+/* Contenedor principal */
+.block-container {
+    padding-top: 1.2rem;
+    padding-bottom: 2.5rem;
+    max-width: 1180px;
+}
+
+/* Sidebar Apple style */
+[data-testid="stSidebar"] {
+    background: radial-gradient(circle at top left, #020617 0%, #020617 45%, #020617 100%) !important;
+    border-right: 1px solid rgba(15,23,42,0.85);
+}
+
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3 {
+    font-weight: 600 !important;
+}
+
+/* Títulos globales (los hacemos pequeños/compactos) */
+h1 {
+    font-weight: 640 !important;
+    letter-spacing: -0.03em;
+    font-size: 1.30rem !important;
+}
+
+h2 {
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+    font-size: 1.10rem !important;
+}
+
+/* Tarjetas genéricas */
+.apple-card {
+    padding: 16px 20px;
+    background: radial-gradient(circle at top left, #0F172A 0%, #020617 70%);
+    border-radius: 18px;
+    border: 1px solid rgba(148,163,184,0.45);
+    box-shadow: 0 24px 70px rgba(15,23,42,0.90);
+    margin-bottom: 16px;
+}
+
+/* Tarjeta ligera (para listas, tablas, etc.) */
+.apple-card-light {
+    padding: 16px 20px;
+    background: #020617;
+    border-radius: 16px;
+    border: 1px solid rgba(30,64,175,0.65);
+    box-shadow: 0 18px 40px rgba(15,23,42,0.85);
+    margin-bottom: 16px;
+}
+
+/* Métricas de cabecera tipo Apple dashboard */
+.metric-row {
+    display: flex;
+    gap: 14px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+
+.metric-box {
+    flex: 1;
+    padding: 14px 16px;
+    background: linear-gradient(145deg, #020617 0%, #020617 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(30,64,175,0.9);
+    box-shadow: 0 18px 45px rgba(15,23,42,0.95);
+}
+
+.metric-title {
+    font-size: 0.78rem;
+    color: #9CA3AF;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 1.55rem;
+    font-weight: 650;
+    margin-top: 2px;
+    color: #E5E7EB;
+}
+
+.metric-sub {
+    font-size: 0.76rem;
+    color: #6B7280;
+    margin-top: 2px;
+}
+
+/* Botones más suaves y redondeados */
+button[kind="primary"] {
+    border-radius: 999px !important;
+}
+
+/* Campos de formulario redondeados */
+textarea, input, select {
+    border-radius: 10px !important;
+}
+
+/* Pequeño badge para secciones */
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(37,99,235,0.16);
+    color: #93C5FD;
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+/* Dataframes en oscuro */
+[data-testid="stDataFrame"] {
+    background: #020617 !important;
+}
+
+/* Tabs */
+[data-baseweb="tab-list"] {
+    gap: 0.5rem;
+}
+[data-baseweb="tab"] {
+    font-size: 0.88rem !important;
+}
+
+/* Estado pills (por si los usas) */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+.status-ganado {
+    background: rgba(34,197,94,0.12);
+    color: #4ADE80;
+}
+.status-perdido {
+    background: rgba(248,113,113,0.12);
+    color: #FCA5A5;
+}
+.status-seguimiento {
+    background: rgba(59,130,246,0.18);
+    color: #93C5FD;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 # ==========================
-# PANEL DE CONTROL
+# PÁGINA: PANEL DE CONTROL
 # ==========================
-
 def render_panel_control():
-    # Cabecera
-    st.markdown("""
+    # Cabecera tipo Apple pero compacta (h3 1.25rem)
+    st.markdown(
+        """
         <div class="apple-card">
-            <div class="section-badge">Panel de Control</div>
-            <h1 style="margin-top:6px;">CRM Prescripción</h1>
-            <p style="color:#9FB3D1;margin-bottom:0;">
-                Resumen general de clientes, proyectos y seguimientos.
+            <div class="section-badge">Panel general</div>
+            <h3 style="margin-top: 6px; font-size:1.25rem;">CRM Prescripción</h3>
+            <p style="color:#9FB3D1; margin-bottom: 0; font-size:0.85rem;">
+                Visión global de clientes y proyectos en curso. 
+                Revisa seguimientos pendientes y el pulso de la prescripción.
             </p>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
     df_clientes = get_clientes()
     df_proyectos = get_proyectos()
@@ -56,51 +217,66 @@ def render_panel_control():
             df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])]
         )
 
-    # Métricas
+    # Métricas Apple-style
     st.markdown("<div class='metric-row'>", unsafe_allow_html=True)
 
-    st.markdown(f"""
+    st.markdown(
+        f"""
         <div class="metric-box">
             <div class="metric-title">Clientes en CRM</div>
             <div class="metric-value">{total_clientes}</div>
             <div class="metric-sub">Arquitecturas, ingenierías, promotoras, integrators</div>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.markdown(f"""
+    st.markdown(
+        f"""
         <div class="metric-box">
             <div class="metric-title">Proyectos totales</div>
             <div class="metric-value">{total_proyectos}</div>
-            <div class="metric-sub">Histórico de oportunidades</div>
+            <div class="metric-sub">Histórico de oportunidades trabajadas</div>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.markdown(f"""
+    st.markdown(
+        f"""
         <div class="metric-box">
             <div class="metric-title">Proyectos activos</div>
             <div class="metric-value">{proyectos_activos}</div>
-            <div class="metric-sub">En seguimiento, prescripción u oferta</div>
+            <div class="metric-sub">En seguimiento, prescripción, oferta o negociación</div>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Bloque Seguimientos
-    st.markdown("""
+    # Bloque de seguimientos
+    st.markdown(
+        """
         <div class="apple-card-light">
             <div class="section-badge">Seguimiento</div>
-            <h3 style="margin-top:10px; margin-bottom:4px;">🚨 Seguimientos pendientes</h3>
-            <p style="color:#9FB3D1; margin-top:0; font-size:0.9rem;">
-                Proyectos con fecha de seguimiento hoy o atrasada.
+            <h4 style="margin-top:10px; margin-bottom:4px; font-size:1.0rem;">🚨 Seguimientos pendientes</h4>
+            <p style="color:#9CA3AF; margin-top:0; font-size:0.82rem;">
+                Proyectos con fecha de seguimiento hoy o atrasada. 
+                Mantén el radar siempre al día.
             </p>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
+    df_proyectos = get_proyectos()
     if df_proyectos is None or df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
-        st.info("No hay proyectos con fecha de seguimiento registrada.")
+        st.info("Todavía no hay proyectos en el sistema o no hay fecha de seguimiento registrada.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
     hoy = date.today()
+
     pendientes = df_proyectos[
         df_proyectos["fecha_seguimiento"].notna()
         & (df_proyectos["fecha_seguimiento"] <= hoy)
@@ -140,23 +316,26 @@ def render_panel_control():
 
 
 # ==========================
-# CLIENTES
+# PÁGINA: CLIENTES
 # ==========================
-
 def render_clientes():
-    st.markdown("""
+    st.markdown(
+        """
         <div class="apple-card">
             <div class="section-badge">Relaciones</div>
-            <h1 style="margin-top:6px;">Clientes</h1>
-            <p style="color:#9FB3D1;margin-bottom:0;">
-                Gestiona ingenierías, arquitecturas, promotoras e integrators clave.
+            <h3 style="margin-top: 6px; font-size:1.25rem;">Clientes</h3>
+            <p style="color:#9FB3D1; margin-bottom: 0; font-size:0.85rem;">
+                Gestiona ingenierías, arquitecturas, promotoras e integrators clave
+                para la prescripción.
             </p>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Alta de cliente
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("➕ Añadir nuevo cliente")
+    st.markdown("#### ➕ Añadir nuevo cliente", unsafe_allow_html=True)
 
     with st.form("form_cliente"):
         col1, col2 = st.columns(2)
@@ -203,7 +382,7 @@ def render_clientes():
 
     # Listado
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("📋 Listado de clientes")
+    st.markdown("#### 📋 Listado de clientes", unsafe_allow_html=True)
 
     df_clientes = get_clientes()
     if df_clientes is None or df_clientes.empty:
@@ -226,7 +405,6 @@ def render_clientes():
 # ==========================
 # MAIN
 # ==========================
-
 def main():
     with st.sidebar:
         st.markdown("### 🏗️ CRM Prescripción")
