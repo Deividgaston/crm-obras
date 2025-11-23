@@ -1,58 +1,80 @@
-import json
-from datetime import datetime, date, timedelta
-from io import BytesIO
+# crm_utils.py
+
+import io
+from datetime import date, datetime, timedelta
 
 import firebase_admin
-from firebase_admin import credentials, firestore
-import streamlit as st
 import pandas as pd
+from firebase_admin import firestore
 
 
-# =========================================================
-# 🔥 INICIALIZACIÓN PEREZOSA DE FIREBASE
-# =========================================================
+# =====================================================
+# FIRESTORE DB HELPER
+# =====================================================
+
 def _get_db():
     """
     Devuelve el cliente de Firestore.
-    - Si Firebase no está inicializado, lo inicializa usando st.secrets["firebase_key"].
-    - No hace ninguna llamada rara en import, solo cuando se usan las funciones.
+
+    IMPORTANTE:
+    - Firebase se inicializa en app.py usando st.secrets["firebase_key"].
+    - Aquí asumimos que eso ya está hecho. Si no, lanzamos un error claro.
     """
-    if not firebase_admin._apps:
-        try:
-            key_str = st.secrets["firebase_key"]
-            key_dict = json.loads(key_str)
-            cred = credentials.Certificate(key_dict)
-            firebase_admin.initialize_app(cred)
-        except Exception as e:
-            raise RuntimeError(
-                f"Firebase no se pudo inicializar desde crm_utils. "
-                f"Revisa st.secrets['firebase_key']. Detalle: {e}"
-            )
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        raise RuntimeError(
+            "Firebase no está inicializado. Inicialízalo en app.py antes de usar crm_utils."
+        )
     return firestore.client()
 
 
-# =========================================================
-# UTILIDADES DE FECHA
-# =========================================================
-def _normalize_fecha(value):
+# =====================================================
+# UTILIDADES DE FECHAS
+# =====================================================
+
+def normalize_fecha(value):
+    """
+    Convierte Timestamp / datetime / date / str en date o None.
+    La usamos para mostrar y comparar fechas en los DataFrames.
+    """
     if value is None:
         return None
-    # Timestamp de Firestore
+
+    # Firestore Timestamp
     if hasattr(value, "to_datetime"):
         value = value.to_datetime()
+
     if isinstance(value, datetime):
         return value.date()
     if isinstance(value, date):
         return value
+
     if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return None
+
+        # Intentamos ISO (2025-11-30)
         try:
             return datetime.fromisoformat(value).date()
         except ValueError:
-            return None
+            pass
+
+        # Intentamos formatos típicos dd/mm/aa o dd/mm/aaaa
+        for fmt in ("%d/%m/%y", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+
+        return None
+
     return None
 
 
 def default_pasos_seguimiento():
+    """Plantilla de pasos para seguir un proyecto."""
     nombres = [
         "Identificar agentes clave (promotora / ingeniería / arquitectura / integrador)",
         "Primer contacto (llamada / email)",
@@ -64,9 +86,10 @@ def default_pasos_seguimiento():
     return [{"nombre": n, "completado": False} for n in nombres]
 
 
-# =========================================================
+# =====================================================
 # CLIENTES
-# =========================================================
+# =====================================================
+
 def get_clientes():
     db = _get_db()
     docs = db.collection("clientes").stream()
@@ -74,33 +97,48 @@ def get_clientes():
     for d in docs:
         data = d.to_dict()
         data["id"] = d.id
+        # Si quisieras fecha_alta, aquí se podría normalizar
         if "fecha_alta" in data:
-            data["fecha_alta"] = _normalize_fecha(data["fecha_alta"])
+            data["fecha_alta"] = normalize_fecha(data.get("fecha_alta"))
         items.append(data)
-    return pd.DataFrame(items) if items else pd.DataFrame()
+
+    if not items:
+        return pd.DataFrame()
+
+    return pd.DataFrame(items)
 
 
 def add_cliente(data: dict):
+    """
+    Inserta un cliente en la colección 'clientes'.
+    Añade fecha_alta = datetime.utcnow() si no viene.
+    """
     db = _get_db()
-    data = dict(data)
-    if "fecha_alta" not in data:
+    if "fecha_alta" not in data or data["fecha_alta"] is None:
         data["fecha_alta"] = datetime.utcnow()
     db.collection("clientes").add(data)
 
 
 def ensure_cliente_basico(nombre: str | None, tipo_cliente: str):
     """
-    Si el nombre viene relleno, asegura que exista un cliente básico con ese nombre/empresa.
-    No rompe nada si ya existe.
+    Crea un cliente mínimo (empresa) si no existe ya.
+
+    - nombre: normalmente 'empresa' (Promotora, Arquitectura, Ingeniería)
+    - tipo_cliente: 'Promotora', 'Arquitectura', 'Ingeniería', etc.
     """
     if not nombre:
         return
-    df = get_clientes()
-    if not df.empty and "empresa" in df.columns:
-        mask = df["empresa"].fillna("") == nombre
-        if mask.any():
-            return
-    add_cliente(
+
+    db = _get_db()
+    col = db.collection("clientes")
+
+    # Buscamos por campo empresa
+    query = col.where("empresa", "==", nombre).limit(1).stream()
+    found = any(True for _ in query)
+    if found:
+        return
+
+    col.add(
         {
             "nombre": "",
             "empresa": nombre,
@@ -109,14 +147,16 @@ def ensure_cliente_basico(nombre: str | None, tipo_cliente: str):
             "telefono": "",
             "ciudad": "",
             "provincia": "",
-            "notas": f"Creado automáticamente desde proyectos como {tipo_cliente}.",
+            "notas": "Creado automáticamente desde importación/proyecto.",
+            "fecha_alta": datetime.utcnow(),
         }
     )
 
 
-# =========================================================
-# PROYECTOS (colección 'obras')
-# =========================================================
+# =====================================================
+# PROYECTOS / OBRAS
+# =====================================================
+
 def get_proyectos():
     db = _get_db()
     docs = db.collection("obras").stream()
@@ -125,35 +165,61 @@ def get_proyectos():
         data = d.to_dict()
         data["id"] = d.id
 
-        if "fecha_creacion" in data:
-            fc = data["fecha_creacion"]
-            if hasattr(fc, "to_datetime"):
-                data["fecha_creacion"] = fc.to_datetime()
-            elif isinstance(fc, str):
-                try:
-                    data["fecha_creacion"] = datetime.fromisoformat(fc)
-                except Exception:
-                    data["fecha_creacion"] = None
+        # Normalizamos fechas
+        data["fecha_creacion"] = normalize_fecha(data.get("fecha_creacion"))
+        data["fecha_seguimiento"] = normalize_fecha(data.get("fecha_seguimiento"))
 
-        if "fecha_seguimiento" in data:
-            data["fecha_seguimiento"] = _normalize_fecha(data["fecha_seguimiento"])
+        # Otros campos de fecha opcionales
+        if "fecha_inicio" in data:
+            data["fecha_inicio"] = normalize_fecha(data.get("fecha_inicio"))
+        if "fecha_entrega" in data:
+            data["fecha_entrega"] = normalize_fecha(data.get("fecha_entrega"))
 
         items.append(data)
 
-    return pd.DataFrame(items) if items else pd.DataFrame()
+    if not items:
+        return pd.DataFrame()
+
+    return pd.DataFrame(items)
 
 
 def add_proyecto(data: dict):
+    """
+    Inserta un proyecto en la colección 'obras'.
+
+    - Fuerza fecha_creacion como datetime.utcnow()
+    - Si no hay fecha_seguimiento, pone hoy+7 (ISO string)
+    """
     db = _get_db()
-    data = dict(data)
-    data.setdefault("fecha_creacion", datetime.utcnow())
+    data = dict(data)  # copia defensiva
+    data["fecha_creacion"] = datetime.utcnow()
+
     if "fecha_seguimiento" not in data or data["fecha_seguimiento"] is None:
         data["fecha_seguimiento"] = (date.today() + timedelta(days=7)).isoformat()
+    elif isinstance(data["fecha_seguimiento"], (date, datetime)):
+        data["fecha_seguimiento"] = data["fecha_seguimiento"].isoformat()
+
     db.collection("obras").add(data)
 
 
 def actualizar_proyecto(proyecto_id: str, data: dict):
     db = _get_db()
+    # Normalizamos algunas fechas si vienen como date
+    if "fecha_seguimiento" in data and isinstance(
+        data["fecha_seguimiento"], (date, datetime)
+    ):
+        data["fecha_seguimiento"] = data["fecha_seguimiento"].isoformat()
+
+    if "fecha_inicio" in data and isinstance(
+        data["fecha_inicio"], (date, datetime)
+    ):
+        data["fecha_inicio"] = data["fecha_inicio"].isoformat()
+
+    if "fecha_entrega" in data and isinstance(
+        data["fecha_entrega"], (date, datetime)
+    ):
+        data["fecha_entrega"] = data["fecha_entrega"].isoformat()
+
     db.collection("obras").document(proyecto_id).update(data)
 
 
@@ -162,20 +228,28 @@ def delete_proyecto(proyecto_id: str):
     db.collection("obras").document(proyecto_id).delete()
 
 
-# =========================================================
-# OBRAS IMPORTANTES + EXPORTAR EXCEL
-# =========================================================
+# =====================================================
+# FILTRADO OBRAS IMPORTANTES
+# =====================================================
+
 def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
-    if df_proy.empty:
+    """
+    Define qué es una 'obra importante':
+    - Estado en seguimiento (no perdido, no ganado), Y
+    - Prioridad Alta, O
+    - Potencial estimado >= 50.000 €
+    """
+    if df_proy is None or df_proy.empty:
         return df_proy
 
     df = df_proy.copy()
+
     if "prioridad" not in df.columns:
         df["prioridad"] = "Media"
     if "potencial_eur" not in df.columns:
         df["potencial_eur"] = 0.0
-
-    df["potencial_eur"] = df["potencial_eur"].fillna(0).astype(float)
+    if "estado" not in df.columns:
+        df["estado"] = "Detectado"
 
     estados_seguimiento = [
         "Detectado",
@@ -183,69 +257,95 @@ def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
         "En Prescripción",
         "Oferta Enviada",
         "Negociación",
+        "En comercialización",
     ]
 
-    mask_estado = df["estado"].isin(estados_seguimiento) if "estado" in df.columns else True
+    mask_estado = df["estado"].isin(estados_seguimiento)
     mask_prioridad = df["prioridad"] == "Alta"
-    mask_potencial = df["potencial_eur"] >= 50000
+    mask_potencial = df["potencial_eur"].fillna(0) >= 50000
 
     importantes = df[mask_estado & (mask_prioridad | mask_potencial)].copy()
     return importantes
 
 
-def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> bytes:
-    df_imp = filtrar_obras_importantes(df_proy)
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-        df_imp.to_excel(writer, index=False, sheet_name="Obras_importantes")
-    return buffer.getvalue()
+# =====================================================
+# IMPORTAR PROYECTOS DESDE EXCEL (ChatGPT)
+# =====================================================
+
+def _convertir_fecha_excel(valor):
+    """
+    Convierte un valor procedente de Excel a un string ISO 'YYYY-MM-DD'
+    o None. Acepta:
+    - celdas vacías / NaN
+    - date/datetime
+    - str en formatos dd/mm/aa, dd/mm/aaaa, ISO
+    """
+    if pd.isna(valor):
+        return None
+
+    if isinstance(valor, (datetime, date)):
+        return valor.isoformat()
+
+    if isinstance(valor, str):
+        valor = valor.strip()
+        if not valor:
+            return None
+
+        # dd/mm/aa o dd/mm/aaaa
+        for fmt in ("%d/%m/%y", "%d/%m/%Y"):
+            try:
+                d = datetime.strptime(valor, fmt).date()
+                return d.isoformat()
+            except ValueError:
+                continue
+
+        # ISO directo
+        try:
+            d = datetime.fromisoformat(valor)
+            if isinstance(d, datetime):
+                d = d.date()
+            return d.isoformat()
+        except Exception:
+            pass
+
+        # Último recurso: texto tal cual
+        return valor
+
+    # Otros tipos -> str
+    try:
+        return str(valor)
+    except Exception:
+        return None
 
 
-# =========================================================
-# IMPORTAR PROYECTOS DESDE EXCEL (para pestaña Importar)
-# =========================================================
 def importar_proyectos_desde_excel(file) -> int:
     """
-    Excel con columnas típicas:
-    - Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado,
-      Promotora_Fondo, Arquitectura, Ingenieria,
-      Fecha_Inicio_Estimada, Fecha_Entrega_Estimada,
-      Notas, Fuente_URL
+    Importa proyectos desde un Excel generado por ChatGPT y los guarda en Firestore.
+    Devuelve el número de proyectos creados.
+
+    Columnas esperadas (nombres orientativos):
+    - Proyecto
+    - Ciudad
+    - Provincia
+    - Tipo_Proyecto
+    - Segmento
+    - Estado
+    - Promotora_Fondo
+    - Arquitectura
+    - Ingenieria
+    - Fecha_Inicio_Estimada
+    - Fecha_Entrega_Estimada
+    - Notas
+    - Fuente_URL
     """
     try:
         df = pd.read_excel(file)
     except Exception as e:
-        st.error(f"Error leyendo el Excel: {e}")
-        return 0
+        # Este error se maneja desde la página de proyectos
+        raise RuntimeError(f"Error leyendo el Excel: {e}")
 
     creados = 0
     hoy = date.today()
-
-    def _conv_fecha(valor):
-        if pd.isna(valor):
-            return None
-        if isinstance(valor, (datetime, date)):
-            return valor.isoformat()
-        if isinstance(valor, str):
-            valor = valor.strip()
-            if not valor:
-                return None
-            # dd/mm/aa o dd/mm/aaaa
-            for fmt in ("%d/%m/%y", "%d/%m/%Y"):
-                try:
-                    d = datetime.strptime(valor, fmt).date()
-                    return d.isoformat()
-                except ValueError:
-                    continue
-            # ISO
-            try:
-                d = datetime.fromisoformat(valor)
-                if isinstance(d, datetime):
-                    return d.date().isoformat()
-            except Exception:
-                pass
-            return valor
-        return str(valor)
 
     for _, row in df.iterrows():
         try:
@@ -259,23 +359,34 @@ def importar_proyectos_desde_excel(file) -> int:
             estado = str(row.get("Estado", "Detectado")).strip() or "Detectado"
             segmento = str(row.get("Segmento", "") or "").lower()
 
+            # Promotor como cliente principal
             promotor = str(row.get("Promotora_Fondo", "") or "").strip() or None
+
             arquitectura = str(row.get("Arquitectura", "") or "").strip() or None
             ingenieria = str(row.get("Ingenieria", "") or "").strip() or None
 
-            # prioridad sencilla
+            # Creamos clientes mínimos si no existen
+            if promotor:
+                ensure_cliente_basico(promotor, "Promotora")
+            if arquitectura:
+                ensure_cliente_basico(arquitectura, "Arquitectura")
+            if ingenieria:
+                ensure_cliente_basico(ingenieria, "Ingeniería")
+
+            # Prioridad simple basada en segmento
             if "ultra" in segmento or "lujo" in segmento:
                 prioridad = "Alta"
             else:
                 prioridad = "Media"
 
-            potencial = 0.0
+            potencial = 0.0  # se puede mejorar más adelante
 
-            fecha_inicio = _conv_fecha(row.get("Fecha_Inicio_Estimada"))
-            fecha_entrega = _conv_fecha(row.get("Fecha_Entrega_Estimada"))
+            fecha_inicio = _convertir_fecha_excel(row.get("Fecha_Inicio_Estimada"))
+            fecha_entrega = _convertir_fecha_excel(row.get("Fecha_Entrega_Estimada"))
 
             notas = str(row.get("Notas", "") or "").strip()
             url = str(row.get("Fuente_URL", "") or "").strip()
+
             notas_full = notas
             if url:
                 if notas_full:
@@ -301,21 +412,57 @@ def importar_proyectos_desde_excel(file) -> int:
                 "notas_seguimiento": notas_full,
                 "notas_historial": [],
                 "tareas": [],
+                "pasos_seguimiento": [],
             }
-
-            # crear clientes básicos si procede
-            if promotor:
-                ensure_cliente_basico(promotor, "Promotora")
-            if arquitectura:
-                ensure_cliente_basico(arquitectura, "Arquitectura")
-            if ingenieria:
-                ensure_cliente_basico(ingenieria, "Ingeniería")
 
             add_proyecto(data)
             creados += 1
 
         except Exception as e:
-            st.warning(f"No se pudo importar una fila: {e}")
-            continue
+            # No paramos la importación por una fila mala
+            print(f"No se pudo importar una fila: {e}")
 
     return creados
+
+
+# =====================================================
+# GENERAR EXCEL DE OBRAS IMPORTANTES (openpyxl)
+# =====================================================
+
+def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> io.BytesIO:
+    """
+    Genera un Excel en memoria con las obras importantes usando openpyxl
+    (compatible con Streamlit Cloud).
+    """
+    df_imp = filtrar_obras_importantes(df_proy)
+    if df_imp is None or df_imp.empty:
+        # Devolvemos un Excel vacío pero válido
+        df_imp = pd.DataFrame(
+            columns=[
+                "nombre_obra",
+                "cliente_principal",
+                "ciudad",
+                "provincia",
+                "estado",
+                "prioridad",
+                "potencial_eur",
+                "fecha_seguimiento",
+            ]
+        )
+
+    # Quitamos columnas técnicas que no quieras exportar
+    cols_export = [
+        c
+        for c in df_imp.columns
+        if c not in ("id", "notas_historial", "tareas", "pasos_seguimiento")
+    ]
+    df_imp = df_imp[cols_export]
+
+    buffer = io.BytesIO()
+    # 🔴 Antes: engine="xlsxwriter" (no disponible en Streamlit Cloud)
+    # ✅ Ahora: engine="openpyxl"
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df_imp.to_excel(writer, index=False, sheet_name="Obras_importantes")
+
+    buffer.seek(0)
+    return buffer
