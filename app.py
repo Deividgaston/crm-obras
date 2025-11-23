@@ -133,6 +133,11 @@ def actualizar_proyecto(proyecto_id, data):
     db.collection("obras").document(proyecto_id).update(data)
 
 
+def delete_proyecto(proyecto_id):
+    """Borra un proyecto en Firestore."""
+    db.collection("obras").document(proyecto_id).delete()
+
+
 def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
     """
     Define qué es una 'obra importante':
@@ -447,6 +452,51 @@ elif menu == "Proyectos":
     if df_proy.empty:
         st.info("Todavía no hay proyectos guardados en Firestore.")
     else:
+        # ===== AVISO DE POSIBLES DUPLICADOS =====
+        st.markdown("### ⚠️ Revisión de posibles proyectos duplicados")
+
+        df_tmp = df_proy.copy()
+        # Clave para detectar duplicados (puedes ajustar columnas)
+        key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
+        key_cols = [c for c in key_cols_all if c in df_tmp.columns]
+
+        if key_cols:
+            df_tmp["dup_key"] = df_tmp[key_cols].astype(str).agg(" | ".join, axis=1)
+            duplicated_mask = df_tmp["dup_key"].duplicated(keep=False)
+            df_dups = df_tmp[duplicated_mask].copy()
+
+            if df_dups.empty:
+                st.success("No se han detectado proyectos duplicados por nombre + cliente + ciudad + provincia. ✅")
+            else:
+                grupos = df_dups["dup_key"].unique()
+                st.warning(f"Se han detectado {len(grupos)} grupos de proyectos que podrían estar duplicados.")
+                st.caption("Revisa y borra los que sobren para mantener limpio el CRM.")
+
+                for g in grupos:
+                    grupo_df = df_dups[df_dups["dup_key"] == g]
+                    titulo = grupo_df.iloc[0].get("nombre_obra", "Proyecto sin nombre")
+                    with st.expander(f"Posibles duplicados: {titulo}"):
+                        show_cols = ["id", "nombre_obra", "cliente_principal", "ciudad",
+                                     "provincia", "estado", "fecha_creacion", "fecha_seguimiento"]
+                        show_cols = [c for c in show_cols if c in grupo_df.columns]
+                        st.dataframe(grupo_df[show_cols], hide_index=True, use_container_width=True)
+
+                        for _, row in grupo_df.iterrows():
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.write(
+                                    f"• {row.get('nombre_obra','')} "
+                                    f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
+                                )
+                            with col2:
+                                if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
+                                    delete_proyecto(row["id"])
+                                    st.success("Proyecto borrado.")
+                                    st.rerun()
+        else:
+            st.info("No hay suficientes campos para detectar duplicados automáticamente.")
+
+        # ===== LISTADO GENERAL =====
         st.subheader("📂 Todos los proyectos")
         cols = [
             "nombre_obra", "cliente_principal", "promotora",
