@@ -11,31 +11,32 @@ st.set_page_config(page_title="CRM Prescripción 2N", layout="wide", page_icon="
 # --- CONEXIÓN A FIREBASE (USANDO SECRET 'firebase_key') ---
 if not firebase_admin._apps:
     try:
-        # Leemos el secreto de Streamlit Cloud. El nombre es 'firebase_key'
+        # 1) Leer texto del secret: es un JSON completo
         secret_str = st.secrets["firebase_key"]
 
-        # Convertimos el texto JSON a diccionario
+        # 2) Convertir ese texto JSON a diccionario
         key_dict = json.loads(secret_str)
 
-        # Inicializamos Firebase con el diccionario
+        # 3) Inicializar Firebase con el diccionario
         cred = credentials.Certificate(key_dict)
         firebase_admin.initialize_app(cred)
 
     except KeyError:
         st.error("Error: La llave 'firebase_key' no se encontró en Streamlit Secrets.")
-        st.caption("Asegúrate de que la clave en el panel de secretos de Streamlit Cloud se llama 'firebase_key'.")
+        st.caption("Ve a Settings → Secrets y asegúrate de haber subido el archivo secrets.toml con la clave firebase_key.")
         st.stop()
     except json.JSONDecodeError:
         st.error("ERROR DE FORMATO (JSON): El contenido de la clave no es JSON válido.")
         st.caption(
-            "Esto es el famoso error de carácter oculto. "
-            "Copia y pega el JSON exactamente como te lo da Firebase, sin espacios extra."
+            "Revisa el secrets.toml en Streamlit. Debe tener la forma:\n\n"
+            'firebase_key = """{ ...JSON del service account... }"""'
         )
         st.stop()
     except Exception as e:
         st.error(f"Error general de Firebase: {e}")
         st.stop()
 
+# Cliente de Firestore
 db = firestore.client()
 
 # --- FUNCIONES AUXILIARES ---
@@ -48,7 +49,6 @@ def normalize_fecha(value):
     if value is None:
         return None
 
-    # Firestore Timestamp tiene atributo .to_datetime() o es un datetime
     if hasattr(value, "to_datetime"):
         value = value.to_datetime()
 
@@ -58,12 +58,10 @@ def normalize_fecha(value):
     if isinstance(value, date):
         return value
 
-    # Si viene como string tipo '2025-11-23'
     if isinstance(value, str):
         try:
             return datetime.fromisoformat(value).date()
         except ValueError:
-            # Si no se puede parsear, lo dejamos en None
             return None
 
     return None
@@ -103,7 +101,6 @@ def get_obras():
 
     df = pd.DataFrame(items)
 
-    # Asegurarnos de que la columna fecha_seguimiento es tipo date
     if 'fecha_seguimiento' in df.columns:
         df['fecha_seguimiento'] = df['fecha_seguimiento'].apply(normalize_fecha)
 
@@ -121,15 +118,9 @@ if menu == "Panel de Control":
 
     df_obras = get_obras()
 
-    if not df_obras.empty:
-        # Obras activas: todas excepto Ganada / Perdida
+    if not df_obras.empty and 'estado' in df_obras.columns:
         total = len(df_obras[~df_obras['estado'].isin(['Ganada', 'Perdida'])])
-
-        # Obras en revisión
-        if 'estado' in df_obras.columns:
-            revision = len(df_obras[df_obras['estado'] == 'Revisión Planificada'])
-        else:
-            revision = 0
+        revision = len(df_obras[df_obras['estado'] == 'Revisión Planificada'])
     else:
         total, revision = 0, 0
 
@@ -143,7 +134,6 @@ if menu == "Panel de Control":
     if not df_obras.empty and 'fecha_seguimiento' in df_obras.columns:
         today = date.today()
 
-        # Filtramos las que toca llamar hoy o antes (y que no estén cerradas)
         alerta_df = df_obras[
             df_obras['fecha_seguimiento'].notna()
             & (df_obras['fecha_seguimiento'] <= today)
@@ -161,7 +151,7 @@ if menu == "Panel de Control":
                     st.write(f"**Estado:** {row.get('estado', '')}")
                     st.write(f"**Nota:** {row.get('notas_seguimiento', '')}")
 
-                    if st.button(f"✅ Posponer 1 semana", key=f"posponer_{row['id']}"):
+                    if st.button("✅ Posponer 1 semana", key=f"posponer_{row['id']}"):
                         next_week = date.today() + timedelta(days=7)
                         db.collection('obras').document(row['id']).update({
                             'fecha_seguimiento': next_week
@@ -205,7 +195,7 @@ elif menu == "Mis Obras":
                             'arquitectura': arq,
                             'ingenieria': ing,
                             'estado': 'Detección',
-                            'fecha_seguimiento': fecha,  # Guardamos como date, no string
+                            'fecha_seguimiento': fecha,
                             'notas_seguimiento': notas
                         })
                         st.success("Obra guardada en la nube.")
@@ -218,13 +208,10 @@ elif menu == "Mis Obras":
     if df.empty:
         st.info("Todavía no hay obras registradas.")
     else:
-        # Vista rápida en tabla
         st.markdown("### 📋 Vista rápida")
         cols_mostrar = ['nombre_obra', 'promotora', 'estado', 'fecha_seguimiento']
         cols_mostrar = [c for c in cols_mostrar if c in df.columns]
-
-        df_vista = df[cols_mostrar].copy()
-        st.dataframe(df_vista, hide_index=True)
+        st.dataframe(df[cols_mostrar], hide_index=True)
 
         st.markdown("### ✏️ Editar obras")
         df_sorted = df.sort_values(by='fecha_seguimiento', ascending=True, na_position='last')
@@ -241,19 +228,18 @@ elif menu == "Mis Obras":
 
             with st.expander(f"🧱 {nombre_obra} | {promotora}"):
                 col1, col2 = st.columns(2)
+                estados_posibles = [
+                    "Detección", "Revisión Planificada", "Llamada Realizada", "Reunión",
+                    "Memoria Enviada", "En Prescripción", "Oferta Enviada",
+                    "Negociación", "Ganada", "Perdida"
+                ]
+
                 with col1:
-                    nuevo_estado = st.selectbox(
-                        "Estado",
-                        ["Detección", "Revisión Planificada", "Llamada Realizada", "Reunión", "Memoria Enviada",
-                         "En Prescripción", "Oferta Enviada", "Negociación", "Ganada", "Perdida"],
-                        index=0 if estado_actual not in [
-                            "Detección", "Revisión Planificada", "Llamada Realizada", "Reunión", "Memoria Enviada",
-                            "En Prescripción", "Oferta Enviada", "Negociación", "Ganada", "Perdida"
-                        ] else [
-                            "Detección", "Revisión Planificada", "Llamada Realizada", "Reunión", "Memoria Enviada",
-                            "En Prescripción", "Oferta Enviada", "Negociación", "Ganada", "Perdida"
-                        ].index(estado_actual)
-                    )
+                    if estado_actual in estados_posibles:
+                        idx = estados_posibles.index(estado_actual)
+                    else:
+                        idx = 0
+                    nuevo_estado = st.selectbox("Estado", estados_posibles, index=idx)
 
                 with col2:
                     nueva_fecha_seg = st.date_input(
@@ -281,7 +267,6 @@ elif menu == "Mis Obras":
 elif menu == "Promotoras":
     st.title("Promotoras")
 
-    # --- ALTA DE PROMOTORA ---
     with st.form("nueva_prom"):
         nom = st.text_input("Nombre")
         tipo = st.selectbox("Tipo", ["Lujo", "Estándar", "Fondo"])
@@ -303,7 +288,6 @@ elif menu == "Promotoras":
                 st.success("Promotora creada correctamente.")
                 st.rerun()
 
-    # --- LISTADO DE PROMOTORAS ---
     df = get_promotoras()
     if not df.empty:
         st.subheader("Listado de promotoras")
