@@ -19,112 +19,48 @@ from crm_utils import (
 )
 
 
+# =====================================================
+# FUNCIÓN PRINCIPAL DE LA PÁGINA DE PROYECTOS
+# =====================================================
+
 def render_proyectos():
-    # Activamos estilo Apple
+    """Página principal del módulo de proyectos con estilo Apple Premium."""
     inject_apple_style()
 
-    # Cabecera estilo Apple
+    # ---------------- CABECERA APPLE -----------------
     st.markdown(
         """
         <div class="apple-card">
             <div class="section-badge">Proyectos</div>
             <h1 style="margin-top: 6px;">CRM de Proyectos</h1>
             <p style="color:#6B7280; margin-bottom: 0;">
-                Gestiona todo el pipeline de obras: detección, prescripción, oferta, negociación,
-                ganadas y perdidas. Alta rápida, dashboard y control de duplicados.
+                Gestiona todo el pipeline de proyectos: detección, prescripción, oferta,
+                negociación, paralización y cierre. Incluye dashboard Apple, análisis,
+                duplicados, timeline y más.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # =============== CLIENTES PARA ALTA RÁPIDA ===============
+    # ---------------- OBTENER DATOS -------------------
     df_clientes = get_clientes()
-    nombres_clientes = ["(sin asignar)"]
-    if not df_clientes.empty and "empresa" in df_clientes.columns:
-        nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
-
-    # =============== ALTA MANUAL DE PROYECTOS ===============
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    with st.expander("➕ Añadir nuevo proyecto manualmente"):
-        with st.form("form_proyecto"):
-            col1, col2 = st.columns(2)
-            with col1:
-                nombre_obra = st.text_input("Nombre del proyecto / obra")
-                cliente_principal = st.selectbox(
-                    "Cliente principal (normalmente promotor)", nombres_clientes
-                )
-                tipo_proyecto = st.selectbox(
-                    "Tipo de proyecto",
-                    ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"],
-                )
-                ciudad = st.text_input("Ciudad")
-                provincia = st.text_input("Provincia")
-            with col2:
-                arquitectura = st.text_input("Arquitectura")
-                ingenieria = st.text_input("Ingeniería")
-                prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
-                potencial_eur = st.number_input(
-                    "Potencial estimado 2N (€)",
-                    min_value=0.0,
-                    step=10000.0,
-                    value=50000.0,
-                )
-                estado_inicial = "Detectado"
-                fecha_seg = st.date_input(
-                    "Primera fecha de seguimiento", value=date.today()
-                )
-
-            notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
-
-            guardar_proy = st.form_submit_button("Guardar proyecto")
-
-        if guardar_proy:
-            if not nombre_obra:
-                st.warning("El nombre del proyecto es obligatorio.")
-            else:
-                promotor_nombre = (
-                    None if cliente_principal == "(sin asignar)" else cliente_principal
-                )
-                if promotor_nombre:
-                    ensure_cliente_basico(promotor_nombre, "Promotora")
-                ensure_cliente_basico(arquitectura or None, "Arquitectura")
-                ensure_cliente_basico(ingenieria or None, "Ingeniería")
-
-                add_proyecto(
-                    {
-                        "nombre_obra": nombre_obra,
-                        "cliente_principal": promotor_nombre,
-                        "promotora": promotor_nombre,
-                        "tipo_proyecto": tipo_proyecto,
-                        "ciudad": ciudad,
-                        "provincia": provincia,
-                        "arquitectura": arquitectura or None,
-                        "ingenieria": ingenieria or None,
-                        "prioridad": prioridad,
-                        "potencial_eur": float(potencial_eur),
-                        "estado": estado_inicial,
-                        "fecha_seguimiento": fecha_seg.isoformat(),
-                        "notas_seguimiento": notas,
-                        "notas_historial": [],
-                        "tareas": [],
-                    }
-                )
-                st.success("Proyecto creado correctamente.")
-                st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # =============== DATOS DE PROYECTOS ===============
     df_proy = get_proyectos()
+
+    if df_proy is None:
+        df_proy = pd.DataFrame()
+
+    # ========== ALTA RÁPIDA DE PROYECTOS ==========
+    _bloque_alta_proyecto(df_clientes)
 
     if df_proy.empty:
         st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-        st.info("Todavía no hay proyectos guardados en Firestore.")
+        st.info("Todavía no hay proyectos creados en Firestore.")
         _render_import_export(df_proy_empty=True)
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # =============== PESTAÑAS ===============
+    # ========== PESTAÑAS PRINCIPALES ==========
     tab_dash, tab_resumen, tab_detalle, tab_duplicados, tab_import = st.tabs(
         [
             "📈 Dashboard",
@@ -152,18 +88,105 @@ def render_proyectos():
 
 
 # =====================================================
-# FILTROS COMUNES
+# ALTA DE PROYECTO (APPLE PREMIUM)
 # =====================================================
+
+def _bloque_alta_proyecto(df_clientes):
+    """Bloque de alta rápida con diseño Apple."""
+    nombres_clientes = ["(sin asignar)"]
+    if df_clientes is not None and not df_clientes.empty:
+        if "empresa" in df_clientes.columns:
+            nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
+
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    with st.expander("➕ Añadir nuevo proyecto"):
+        with st.form("form_proyecto"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                nombre_obra = st.text_input("Nombre del proyecto / obra")
+                cliente_principal = st.selectbox(
+                    "Cliente principal (promotor)",
+                    nombres_clientes,
+                )
+                tipo_proyecto = st.selectbox(
+                    "Tipo de proyecto",
+                    ["Residencial lujo", "Residencial", "BTR", "Oficinas", "Hotel", "Industrial", "Otro"],
+                )
+                ciudad = st.text_input("Ciudad")
+                provincia = st.text_input("Provincia")
+
+            with col2:
+                arquitectura = st.text_input("Arquitectura")
+                ingenieria = st.text_input("Ingeniería")
+                prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
+                potencial_eur = st.number_input(
+                    "Potencial estimado 2N (€)",
+                    min_value=0.0,
+                    step=10000.0,
+                    value=50000.0,
+                )
+                fecha_seg = st.date_input(
+                    "Primera fecha de seguimiento",
+                    value=date.today(),
+                )
+
+            notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
+
+            guardar = st.form_submit_button("Guardar proyecto")
+
+        if guardar:
+            if not nombre_obra.strip():
+                st.warning("Debes introducir el nombre del proyecto.")
+                return
+
+            cli = None if cliente_principal == "(sin asignar)" else cliente_principal
+
+            if cli:
+                ensure_cliente_basico(cli, "Promotora")
+            ensure_cliente_basico(arquitectura or None, "Arquitectura")
+            ensure_cliente_basico(ingenieria or None, "Ingeniería")
+
+            add_proyecto(
+                {
+                    "nombre_obra": nombre_obra,
+                    "cliente_principal": cli,
+                    "promotora": cli,
+                    "tipo_proyecto": tipo_proyecto,
+                    "ciudad": ciudad,
+                    "provincia": provincia,
+                    "arquitectura": arquitectura or None,
+                    "ingenieria": ingenieria or None,
+                    "prioridad": prioridad,
+                    "potencial_eur": float(potencial_eur),
+                    "estado": "Detectado",
+                    "fecha_seguimiento": fecha_seg.isoformat(),
+                    "notas_seguimiento": notas,
+                    "notas_historial": [],
+                    "tareas": [],
+                    "pasos_seguimiento": [],
+                }
+            )
+
+            st.success("Proyecto creado correctamente.")
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+# =====================================================
+# FILTROS COMUNES APPLE PREMIUM
+# =====================================================
+
 def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
     """
-    Devuelve df_filtrado usando los mismos filtros básicos,
-    pero con keys únicos por pestaña gracias al key_prefix.
+    Filtros reutilizables para todas las pestañas (Dashboard, Resumen, Duplicados).
+    Usa prefijos de keys para evitar colisiones entre pestañas.
     """
     df = df.copy()
 
     st.markdown("##### 🎯 Filtros rápidos", unsafe_allow_html=True)
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
+    # ---- Filtro ciudad ----
     ciudades = (
         sorted(df["ciudad"].dropna().unique().tolist())
         if "ciudad" in df.columns
@@ -176,11 +199,17 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_ciudad",
         )
 
+    # ---- Filtro estado ----
     estados_list = (
         sorted(df["estado"].dropna().unique().tolist())
         if "estado" in df.columns
         else []
     )
+
+    # Nos aseguramos de que Paralizado esté disponible en filtros aunque no exista aún
+    if "Paralizado" not in estados_list:
+        estados_list.append("Paralizado")
+
     with col_f2:
         estado_sel = st.selectbox(
             "Estado / Seguimiento",
@@ -188,6 +217,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_estado",
         )
 
+    # ---- Filtro tipo ----
     tipos_list = (
         sorted(df["tipo_proyecto"].dropna().unique().tolist())
         if "tipo_proyecto" in df.columns
@@ -200,6 +230,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_tipo",
         )
 
+    # ---- Filtro prioridad ----
     prioridades = (
         sorted(df["prioridad"].dropna().unique().tolist())
         if "prioridad" in df.columns
@@ -212,7 +243,8 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_prioridad",
         )
 
-    mask = pd.Series([True] * len(df))
+    # ---- Aplicar filtros ----
+    mask = pd.Series(True, index=df.index)
 
     if ciudad_sel != "Todas":
         mask &= df["ciudad"].fillna("") == ciudad_sel
@@ -226,31 +258,30 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
     if prioridad_sel != "Todas":
         mask &= df["prioridad"].fillna("") == prioridad_sel
 
-    df_filtrado = df[mask].copy()
-    return df_filtrado
+    return df[mask].copy()
 
 
 # =====================================================
-# DASHBOARD
+# DASHBOARD APPLE PREMIUM
 # =====================================================
+
 def _render_dashboard(df_proy: pd.DataFrame):
-    st.markdown(
-        '<div class="apple-card-light">',
-        unsafe_allow_html=True,
-    )
-    st.subheader("📈 Dashboard de obras")
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.subheader("📈 Dashboard de obras (visión global)")
 
-    # Prefijo "dash" para las keys de los filtros
+    # Filtros Dashboard
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="dash")
 
     if df_filtrado.empty:
-        st.info("No hay datos para mostrar en el dashboard con estos filtros.")
+        st.info("No hay datos para mostrar con los filtros actuales.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    # Aseguramos columna de potencial
     if "potencial_eur" not in df_filtrado.columns:
-        df_filtrado["potencial_eur"] = 0.0
+        df_filtrado["potencial_eur"] = 0
 
+    # ---- Opciones de agrupación ----
     agrupacion_opciones = [
         "Estado / Seguimiento",
         "Ciudad",
@@ -259,6 +290,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
         "Prioridad",
         "Rango de potencial (€)",
     ]
+
     dim_map = {
         "Estado / Seguimiento": "estado",
         "Ciudad": "ciudad",
@@ -268,37 +300,48 @@ def _render_dashboard(df_proy: pd.DataFrame):
     }
 
     col_d1, col_d2 = st.columns([2, 1])
+
     with col_d1:
         agrupacion = st.selectbox(
-            "Agrupar por", agrupacion_opciones, index=0, key="dash_agrupacion"
+            "Agrupar por",
+            agrupacion_opciones,
+            index=0,
+            key="dash_agrupacion",
         )
+
     with col_d2:
         metrica = st.radio(
             "Métrica",
             ["Número de obras", "Potencial total (€)"],
-            horizontal=False,
             key="dash_metrica",
         )
 
     df_plot = df_filtrado.copy()
 
+    # ---- Rango potencial ----
     if agrupacion == "Rango de potencial (€)":
         potencial = df_plot["potencial_eur"].fillna(0)
         bins = [0, 50000, 100000, 200000, 500000, 1_000_000_000]
-        labels = ["< 50k", "50k-100k", "100k-200k", "200k-500k", "> 500k"]
+        labels = ["<50k", "50k-100k", "100k-200k", "200k-500k", ">500k"]
         df_plot["rango_potencial"] = pd.cut(
-            potencial, bins=bins, labels=labels, include_lowest=True
+            potencial,
+            bins=bins,
+            labels=labels,
+            include_lowest=True,
         )
         group_col = "rango_potencial"
-        titulo_eje = "Rango de potencial (€)"
+        titulo_eje = "Rango de potencial"
     else:
         group_col = dim_map.get(agrupacion)
+
         if group_col not in df_plot.columns:
-            st.info("No hay datos suficientes para esta agrupación.")
+            st.info("No hay datos válidos para esta agrupación.")
             st.markdown("</div>", unsafe_allow_html=True)
             return
+
         titulo_eje = agrupacion
 
+    # ---- Agregación ----
     agg_df = (
         df_plot.groupby(group_col)
         .agg(
@@ -308,11 +351,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
         .reset_index()
     )
 
-    if agg_df.empty:
-        st.info("No hay datos para esta agrupación.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
+    # ---- Métrica seleccionada ----
     if metrica == "Número de obras":
         y_field = "num_obras"
         y_title = "Número de obras"
@@ -320,56 +359,67 @@ def _render_dashboard(df_proy: pd.DataFrame):
         y_field = "potencial_total"
         y_title = "Potencial total (€)"
 
+    # ---- Gráfico Apple Premium ----
     chart = (
         alt.Chart(agg_df)
-        .mark_bar()
+        .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
         .encode(
             x=alt.X(f"{group_col}:N", sort="-y", title=titulo_eje),
             y=alt.Y(f"{y_field}:Q", title=y_title),
             tooltip=[group_col, "num_obras", "potencial_total"],
+            color=alt.Color(
+                f"{group_col}:N",
+                scale=alt.Scale(scheme="blues"),
+                legend=None,
+            ),
         )
-        .properties(height=350)
+        .properties(height=340)
     )
 
     st.altair_chart(chart, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 # =====================================================
 # LISTA / RESUMEN: pipeline + tabla + seleccionar/borrar
 # =====================================================
+
 def _render_resumen(df_proy: pd.DataFrame):
-    # ---------- TARJETA RESUMEN + FILTROS ----------
+    # -------- CABECERA DE LA SECCIÓN --------
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("📋 Resumen y lista de proyectos")
 
-    # Prefijo "res" para filtros de esta pestaña
+    # Aplicar filtros
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="res")
 
-    # Inicializamos filtro por estado desde pipeline visual
+    # Obtener estado filtrado por pipeline (si lo hubiera)
     filtro_estado = st.session_state.get("pipeline_estado_filter", "Todos")
 
-    # ---------- PIPELINE 1: MÉTRICAS (st.metric) ----------
+    # -------- PIPELINE 1: MÉTRICAS (ST.METRIC) --------
     st.markdown("### 🧪 Pipeline (métricas por estado)", unsafe_allow_html=True)
+
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
-        estados = [
+        estados_base = [
             "Detectado",
             "Seguimiento",
             "En Prescripción",
             "Oferta Enviada",
             "Negociación",
+            "Paralizado",      # 🔥 NUEVO ESTADO APPLE
             "Ganado",
             "Perdido",
         ]
-        counts = df_filtrado["estado"].value_counts()
-        cols_pipe = st.columns(len(estados))
-        for col, est in zip(cols_pipe, estados):
-            col.metric(est, int(counts.get(est, 0)))
-    else:
-        st.info("No hay información de estados con los filtros aplicados.")
 
-    # ---------- PIPELINE 2: VISUAL APPLE + CLICK PARA FILTRAR ----------
+        counts = df_filtrado["estado"].value_counts()
+        cols = st.columns(len(estados_base))
+
+        for col, est in zip(cols, estados_base):
+            col.metric(est, int(counts.get(est, 0)))
+
+    else:
+        st.info("No hay datos suficientes para generar métricas de pipeline.")
+
+    # -------- PIPELINE 2: VISUAL APPLE (con clic para filtrar) --------
     st.markdown("### 🔁 Pipeline visual Apple (clic para filtrar)", unsafe_allow_html=True)
+
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         counts = df_filtrado["estado"].value_counts()
 
@@ -379,80 +429,70 @@ def _render_resumen(df_proy: pd.DataFrame):
             "En Prescripción": ("🟣", "rgba(129,140,248,0.16)", "#4C1D95"),
             "Oferta Enviada":  ("🟡", "rgba(250,204,21,0.22)", "#92400E"),
             "Negociación":     ("🟠", "rgba(249,115,22,0.20)", "#9A3412"),
+            "Paralizado":      ("⚫", "rgba(107,114,128,0.16)", "#374151"),  # NUEVO → TU ELECCIÓN
             "Ganado":          ("🟢", "rgba(34,197,94,0.18)", "#15803D"),
             "Perdido":         ("🔴", "rgba(248,113,113,0.20)", "#B91C1C"),
         }
 
-        orden_estados = [
-            "Detectado",
-            "Seguimiento",
-            "En Prescripción",
-            "Oferta Enviada",
-            "Negociación",
-            "Ganado",
-            "Perdido",
-        ]
+        orden_estados = list(estado_cfg.keys())
 
-        cols_pills = st.columns(len(orden_estados) + 1)
+        cols = st.columns(len(orden_estados) + 1)
 
-        # Botón "Todos"
-        with cols_pills[0]:
+        # ---- CÁPSULA: TODOS ----
+        with cols[0]:
             if st.button("🔁 Todos", key="pill_todos"):
                 st.session_state["pipeline_estado_filter"] = "Todos"
                 st.rerun()
 
-        # Botones por estado
+        # ---- CÁPSULAS: ESTADOS ----
         for idx, est in enumerate(orden_estados, start=1):
             emoji, bg, color = estado_cfg[est]
             count = int(counts.get(est, 0))
-            style = (
-                f"background:{bg};color:{color};border-radius:999px;padding:4px 10px;"
-                f"border:none;cursor:pointer;font-size:0.78rem;font-weight:600;"
-            )
-            if filtro_estado == est:
-                style += "box-shadow:0 0 0 2px rgba(37,99,235,0.35);"
 
-            label_html = f"""
+            # Si está seleccionado → borde azul Apple
+            style = (
+                f"background:{bg};color:{color};border-radius:999px;"
+                f"padding:6px 12px;font-size:0.80rem;font-weight:600;"
+                f"cursor:pointer;border:1px solid transparent;"
+            )
+
+            if filtro_estado == est:
+                style += "box-shadow:0 0 0 2px rgba(37,99,235,0.40);"
+
+            label = f"""
             <div style="{style}">
-                <span>{emoji}</span>
-                <span style="margin-left:4px;">{est}</span>
-                <span style="margin-left:6px;">{count}</span>
+                {emoji}  {est}  <b>{count}</b>
             </div>
             """
 
-            with cols_pills[idx]:
-                if st.button(
-                    label=" ", key=f"pill_{est}"
-                ):
+            with cols[idx]:
+                if st.button(f" ", key=f"pill_{est}"):
                     st.session_state["pipeline_estado_filter"] = est
                     st.rerun()
-                st.markdown(label_html, unsafe_allow_html=True)
+                st.markdown(label, unsafe_allow_html=True)
 
         if filtro_estado != "Todos":
-            st.caption(f"Filtro activo desde pipeline: **{filtro_estado}**")
+            st.caption(f"Filtro activo: **{filtro_estado}**")
 
     else:
-        st.caption("No hay datos para representar el pipeline visual.")
+        st.caption("No hay estados para mostrar en el pipeline visual.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------- TABLA PRINCIPAL ----------
+    # -----------------------------------------
+    # TABLA PRINCIPAL (con filtro de pipeline)
+    # -----------------------------------------
+
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("### 📂 Lista de proyectos filtrados", unsafe_allow_html=True)
+    st.subheader("📂 Lista de proyectos filtrados")
 
-    if df_filtrado.empty:
-        st.warning("No hay proyectos que cumplan los filtros seleccionados.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    # Aplicamos filtro de estado adicional si viene del pipeline
-    if filtro_estado != "Todos" and "estado" in df_filtrado.columns:
+    if filtro_estado != "Todos":
         df_tabla = df_filtrado[df_filtrado["estado"] == filtro_estado].copy()
     else:
         df_tabla = df_filtrado.copy()
 
     if df_tabla.empty:
-        st.warning("No hay proyectos con el filtro de estado actual.")
+        st.warning("No hay proyectos que cumplan el filtro de estado.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
@@ -460,72 +500,62 @@ def _render_resumen(df_proy: pd.DataFrame):
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
 
-    df_ui.insert(0, "seleccionar", False)
-    df_ui.insert(1, "borrar", False)
+    # Columnas Apple de acción
+    df_ui.insert(0, "Seleccionar", False)
+    df_ui.insert(1, "Borrar", False)
 
     edited_df = st.data_editor(
         df_ui,
         column_config={
-            "seleccionar": st.column_config.CheckboxColumn(
-                "Seleccionar",
-                help="Selecciona una obra y pulsa 'Ver en Detalle'",
-                default=False,
+            "Seleccionar": st.column_config.CheckboxColumn(
+                "✔",
+                help="Selecciona un proyecto y pulsa el botón para ver detalles",
             ),
-            "borrar": st.column_config.CheckboxColumn(
-                "Borrar",
-                help="Marca proyectos y pulsa 'Eliminar seleccionados'",
-                default=False,
+            "Borrar": st.column_config.CheckboxColumn(
+                "🗑️",
+                help="Marca para borrar",
             ),
         },
         hide_index=True,
         use_container_width=True,
-        key="tabla_proyectos_editor",
+        key="tabla_resumen_proyectos",
     )
 
-    col_acc1, col_acc2 = st.columns(2)
+    # -------- BOTONES DE ACCIÓN --------
+    col1, col2 = st.columns(2)
 
-    with col_acc1:
-        if st.button("➡️ Ver proyecto seleccionado en Detalle"):
-            if "seleccionar" not in edited_df.columns:
-                st.error("No se ha encontrado la columna 'seleccionar'.")
+    with col1:
+        if st.button("➡️ Ver proyecto seleccionado"):
+            seleccionados = edited_df["Seleccionar"]
+            idxs = [i for i, v in seleccionados.items() if v]
+
+            if not idxs:
+                st.warning("Selecciona un proyecto primero.")
             else:
-                seleccionados = edited_df["seleccionar"]
-                idxs = [i for i, v in seleccionados.items() if v]
-                if not idxs:
-                    st.warning("No hay ninguna obra seleccionada.")
-                else:
-                    idx = idxs[0]
-                    st.session_state["detalle_proyecto_id"] = ids[idx]
-                    st.success(
-                        "Proyecto seleccionado. Ve a la pestaña 'Detalle' para verlo."
-                    )
+                st.session_state["detalle_proyecto_id"] = ids[idxs[0]]
+                st.success("Proyecto cargado. Ve a la pestaña 'Detalle'. 🔍")
 
-    with col_acc2:
+    with col2:
         if st.button("🗑️ Eliminar seleccionados"):
-            if "borrar" not in edited_df.columns:
-                st.error("No se ha encontrado la columna 'borrar'.")
+            seleccionados = edited_df["Borrar"]
+
+            if not seleccionados.any():
+                st.warning("No hay proyectos marcados para borrar.")
             else:
-                seleccionados = edited_df["borrar"]
-                if not seleccionados.any():
-                    st.warning("No hay proyectos marcados para borrar.")
-                else:
-                    total = 0
-                    for row_idx, marcado in seleccionados.items():
-                        if marcado:
-                            try:
-                                delete_proyecto(ids[row_idx])
-                                total += 1
-                            except Exception as e:
-                                st.error(f"No se pudo borrar un proyecto: {e}")
-                    st.success(f"Proyectos eliminados: {total}")
-                    st.rerun()
+                total = 0
+                for i, marcado in seleccionados.items():
+                    if marcado:
+                        delete_proyecto(ids[i])
+                        total += 1
+
+                st.success(f"Proyectos eliminados: {total}")
+                st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 # =====================================================
 # DETALLE + TIMELINE + TAREAS + CHECKLIST
 # =====================================================
+
 def _render_detalle_proyecto(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("🔍 Detalle y edición de un proyecto")
@@ -540,6 +570,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    # Sincronizar con selección desde la pestaña Resumen
     if "detalle_proyecto_id" in st.session_state:
         detalle_id = st.session_state["detalle_proyecto_id"]
         try:
@@ -567,7 +598,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
 
     proy = df_proy_sorted.iloc[idx_sel]
     st.markdown(
-        f"#### Proyecto seleccionado: **{proy['nombre_obra']}**",
+        f"#### Proyecto seleccionado: **{proy.get('nombre_obra','(sin nombre)')}**",
         unsafe_allow_html=True,
     )
 
@@ -577,26 +608,38 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
 
     with st.form(f"form_detalle_{proy['id']}"):
         col_a, col_b = st.columns(2)
+
+        # -------- DATOS PRINCIPALES --------
         with col_a:
             nombre_det = st.text_input(
-                "Nombre del proyecto", value=proy.get("nombre_obra", "")
+                "Nombre del proyecto",
+                value=proy.get("nombre_obra", ""),
             )
             tipo_det = st.text_input(
-                "Tipo de proyecto", value=proy.get("tipo_proyecto", "")
+                "Tipo de proyecto",
+                value=proy.get("tipo_proyecto", ""),
             )
             promotor_det = st.text_input(
-                "Promotor (cliente principal)", value=proy.get("cliente_principal", "")
+                "Promotor (cliente principal)",
+                value=proy.get("cliente_principal", ""),
             )
-            ciudad_det = st.text_input("Ciudad", value=proy.get("ciudad", ""))
+            ciudad_det = st.text_input(
+                "Ciudad",
+                value=proy.get("ciudad", ""),
+            )
             provincia_det = st.text_input(
-                "Provincia", value=proy.get("provincia", "")
+                "Provincia",
+                value=proy.get("provincia", ""),
             )
+
         with col_b:
             arquitectura_det = st.text_input(
-                "Arquitectura", value=proy.get("arquitectura", "")
+                "Arquitectura",
+                value=proy.get("arquitectura", ""),
             )
             ingenieria_det = st.text_input(
-                "Ingeniería", value=proy.get("ingenieria", "")
+                "Ingeniería",
+                value=proy.get("ingenieria", ""),
             )
             prioridad_det = st.selectbox(
                 "Prioridad",
@@ -615,12 +658,14 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
                 if proy.get("potencial_eur") is not None
                 else 0.0,
             )
+
             estados_posibles = [
                 "Detectado",
                 "Seguimiento",
                 "En Prescripción",
                 "Oferta Enviada",
                 "Negociación",
+                "Paralizado",   # 🔥 nuevo estado aquí también
                 "Ganado",
                 "Perdido",
             ]
@@ -637,10 +682,13 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
             "Próxima fecha de seguimiento",
             value=proy.get("fecha_seguimiento") or date.today(),
         )
+
         notas_det = st.text_area(
-            "Notas generales de seguimiento", value=proy.get("notas_seguimiento", "")
+            "Notas generales de seguimiento",
+            value=proy.get("notas_seguimiento", ""),
         )
 
+        # -------- HISTORIAL DE NOTAS --------
         st.markdown("##### 📝 Historial de notas del proyecto", unsafe_allow_html=True)
         if notas_historial:
             try:
@@ -656,7 +704,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
                 fecha_txt = nota.get("fecha", "")
                 tipo_txt = nota.get("tipo", "Nota")
                 texto_txt = nota.get("texto", "")
-                st.markdown(f"**[{tipo_txt}] {fecha_txt}**  ")
+                st.markdown(f"**[{tipo_txt}] {fecha_txt}**")
                 st.write(texto_txt)
         else:
             st.caption("Todavía no hay notas históricas para este proyecto.")
@@ -670,9 +718,10 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         nueva_nota_texto = st.text_area(
             "Texto de la nota",
             key=f"texto_nota_{proy['id']}",
-            placeholder="Ejemplo: Llamada con la promotora, pendiente de enviar oferta...",
+            placeholder="Ejemplo: Reunión con promotora, acordado revisar memoria técnica...",
         )
 
+        # -------- TAREAS --------
         st.markdown("##### ✅ Tareas asociadas al proyecto", unsafe_allow_html=True)
         tareas_actualizadas = []
         if tareas:
@@ -718,6 +767,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
             key=f"fecha_tarea_{proy['id']}",
         )
 
+        # -------- CHECKLIST PASOS --------
         st.markdown("##### 🧭 Checklist de pasos de seguimiento", unsafe_allow_html=True)
         estados_check_pasos = []
         if not pasos:
@@ -726,6 +776,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
                 key=f"chk_crear_pasos_{proy['id']}",
             ):
                 pasos = default_pasos_seguimiento()
+
         if pasos:
             for i, paso in enumerate(pasos):
                 chk = st.checkbox(
@@ -743,6 +794,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         with col_btn2:
             borrar_det = st.form_submit_button("🗑️ Borrar este proyecto")
 
+    # -------- POST SUBMIT: GUARDAR --------
     if guardar_det:
         if nueva_nota_texto.strip():
             notas_historial.append(
@@ -787,80 +839,68 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         }
 
         actualizar_proyecto(proy["id"], update_data)
-        st.success(
-            "Cambios guardados en el proyecto (datos, notas, tareas y pasos)."
-        )
+        st.success("Cambios guardados correctamente.")
         st.rerun()
 
+    # -------- POST SUBMIT: BORRAR --------
     if borrar_det:
         delete_proyecto(proy["id"])
         st.success("Proyecto borrado.")
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
 # =====================================================
-# DUPLICADOS
+# DUPLICADOS APPLE PREMIUM
 # =====================================================
+
 def _render_duplicados(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("🧬 Revisión de posibles proyectos duplicados")
+    st.subheader("🧬 Detección de proyectos duplicados")
 
     df_tmp = df_proy.copy()
-    key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
-    key_cols = [c for c in key_cols_all if c in df_tmp.columns]
+    key_cols = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
+    key_cols = [c for c in key_cols if c in df_tmp.columns]
 
     if not key_cols:
-        st.info("No hay suficientes campos para detectar duplicados automáticamente.")
+        st.info("No hay columnas suficientes para detectar duplicados.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
     df_tmp["dup_key"] = df_tmp[key_cols].astype(str).agg(" | ".join, axis=1)
-    duplicated_mask = df_tmp["dup_key"].duplicated(keep=False)
-    df_dups = df_tmp[duplicated_mask].copy()
+    mask = df_tmp["dup_key"].duplicated(keep=False)
+    df_dups = df_tmp[mask].copy()
 
     if df_dups.empty:
-        st.success(
-            "No se han detectado proyectos duplicados por nombre + cliente + ciudad + provincia. ✅"
-        )
+        st.success("No hay proyectos duplicados. Todo limpio. ✅")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
     grupos = df_dups["dup_key"].unique()
-    st.warning(
-        f"Se han detectado {len(grupos)} grupos de proyectos que podrían estar duplicados."
-    )
-    st.caption("Revisa y borra los que sobren para mantener limpio el CRM.")
+    st.warning(f"Hay {len(grupos)} grupos de proyectos duplicados.")
+    st.caption("Revisa y elimina los que sobren.")
 
     for g in grupos:
-        grupo_df = df_dups[df_dups["dup_key"] == g]
-        titulo = grupo_df.iloc[0].get("nombre_obra", "Proyecto sin nombre")
-        with st.expander(f"Posibles duplicados: {titulo}"):
-            show_cols = [
-                "id",
-                "nombre_obra",
-                "cliente_principal",
-                "ciudad",
-                "provincia",
-                "estado",
-                "fecha_creacion",
-                "fecha_seguimiento",
-            ]
-            show_cols = [c for c in show_cols if c in grupo_df.columns]
-            st.dataframe(
-                grupo_df[show_cols], hide_index=True, use_container_width=True
-            )
+        grupo = df_dups[df_dups["dup_key"] == g]
+        nombre = grupo.iloc[0].get("nombre_obra", "Proyecto")
 
-            for _, row in grupo_df.iterrows():
-                col1, col2 = st.columns([3, 1])
+        with st.expander(f"Posibles duplicados – {nombre}"):
+            cols_show = [
+                "id", "nombre_obra", "cliente_principal", "ciudad",
+                "provincia", "estado", "fecha_creacion", "fecha_seguimiento"
+            ]
+            cols_show = [c for c in cols_show if c in grupo.columns]
+
+            st.dataframe(grupo[cols_show], hide_index=True, use_container_width=True)
+
+            for _, row in grupo.iterrows():
+                col1, col2 = st.columns([3,1])
                 with col1:
                     st.write(
                         f"• {row.get('nombre_obra','')} "
                         f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
                     )
                 with col2:
-                    if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
+                    if st.button("🗑️ Borrar", key=f"del_dup_{row['id']}"):
                         delete_proyecto(row["id"])
                         st.success("Proyecto borrado.")
                         st.rerun()
@@ -869,55 +909,60 @@ def _render_duplicados(df_proy: pd.DataFrame):
 
 
 # =====================================================
-# IMPORTAR / EXPORTAR
+# IMPORTAR / EXPORTAR APPLE PREMIUM
 # =====================================================
+
 def _render_import_export(df_proy_empty: bool, df_proy=None):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("📤 Exportar / 📥 Importar proyectos")
 
+    # ---------- EXPORTAR ----------
     if not df_proy_empty and df_proy is not None:
         st.markdown("#### Exportar Excel de obras importantes")
-        df_importantes = filtrar_obras_importantes(df_proy)
-        if df_importantes.empty:
-            st.info(
-                "No hay obras importantes según criterios (prioridad Alta o potencial ≥ 50k€)."
-            )
+        importantes = filtrar_obras_importantes(df_proy)
+
+        if importantes.empty:
+            st.info("No hay obras importantes (prioridad Alta o potencial ≥ 50k).")
         else:
             output = generar_excel_obras_importantes(df_proy)
             fecha_str = date.today().isoformat()
+
             st.download_button(
-                label=f"⬇️ Descargar Excel obras importantes ({fecha_str})",
+                label=f"⬇️ Descargar Excel ({fecha_str})",
                 data=output,
                 file_name=f"obras_importantes_{fecha_str}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
+    # ---------- IMPORTAR ----------
     st.markdown("#### Importar proyectos desde Excel (ChatGPT)")
     st.caption(
-        "Sube el Excel que te genera ChatGPT. "
-        "Formato de fechas: 30/11/25 o 30/11/2025 (dd/mm/aa). "
-        "El campo Promotora_Fondo se usará como cliente principal (promotor)."
+        "Sube el Excel que genera ChatGPT.\n"
+        "• Fechas: 30/11/25 o 30/11/2025\n"
+        "• El campo Promotora_Fondo se usará como cliente principal."
     )
 
-    uploaded_file = st.file_uploader(
-        "Sube aquí el archivo .xlsx con los proyectos",
+    uploaded = st.file_uploader(
+        "Subir archivo .xlsx",
         type=["xlsx"],
         key="uploader_import",
     )
 
-    if uploaded_file is not None:
+    if uploaded is not None:
         try:
-            df_preview = pd.read_excel(uploaded_file)
-            st.write("Vista previa de los datos a importar:")
+            df_preview = pd.read_excel(uploaded)
+            st.write("Vista previa:")
             st.dataframe(df_preview.head(), use_container_width=True)
 
-            if st.button("🚀 Importar estos proyectos al CRM"):
-                creados = importar_proyectos_desde_excel(uploaded_file)
+            if st.button("🚀 Importar proyectos"):
+                creados = importar_proyectos_desde_excel(uploaded)
                 st.success(f"Importación completada. Proyectos creados: {creados}")
                 st.rerun()
+
         except Exception as e:
             st.error(f"Error leyendo el Excel: {e}")
+
     else:
-        st.info("Sube un Excel para poder importarlo.")
+        st.info("Sube un Excel para importarlo.")
 
     st.markdown("</div>", unsafe_allow_html=True)
