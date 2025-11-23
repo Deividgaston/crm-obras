@@ -18,6 +18,7 @@ from crm_utils import (
 def render_proyectos():
     st.title("🏗️ CRM de Proyectos")
 
+
     df_clientes = get_clientes()
     nombres_clientes = ["(sin asignar)"]
     if not df_clientes.empty and "empresa" in df_clientes.columns:
@@ -44,7 +45,9 @@ def render_proyectos():
             fecha_seg = st.date_input("Primera fecha de seguimiento", value=date.today())
             notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
 
+
             guardar_proy = st.form_submit_button("Guardar proyecto")
+
 
         if guardar_proy:
             if not nombre_obra:
@@ -55,6 +58,7 @@ def render_proyectos():
                     ensure_cliente_basico(promotor_nombre, "Promotora")
                 ensure_cliente_basico(arquitectura or None, "Arquitectura")
                 ensure_cliente_basico(ingenieria or None, "Ingeniería")
+
 
                 add_proyecto({
                     "nombre_obra": nombre_obra,
@@ -115,6 +119,7 @@ def render_proyectos():
 def _render_resumen(df_proy):
     st.subheader("📊 Pipeline de proyectos por estado")
 
+
     if "estado" in df_proy.columns:
         estados = ["Detectado", "Seguimiento", "En Prescripción",
                    "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
@@ -125,52 +130,58 @@ def _render_resumen(df_proy):
     else:
         st.info("No hay información de estados todavía.")
 
-    st.markdown("### 📂 Todos los proyectos (vista tipo Excel con borrar)")
 
-    # Tabla principal
-    cols_tabla = [
-        "id", "nombre_obra", "cliente_principal", "tipo_proyecto",
-        "ciudad", "provincia", "prioridad", "potencial_eur",
-        "estado", "fecha_creacion", "fecha_seguimiento"
-    ]
-    cols_tabla = [c for c in cols_tabla if c in df_proy.columns]
+    st.markdown("### 📂 Lista de proyectos (selección a la izquierda, sin ID)")
 
-    if "id" not in cols_tabla:
-        cols_tabla = ["id"] + cols_tabla
 
-    df_tabla = df_proy[cols_tabla].copy()
-    # Columna para marcar proyectos a borrar
-    df_tabla["borrar"] = False
+    # --- Tabla sin ID visible, pero lo guardamos aparte ---
+    df_ui = df_proy.copy()
+    ids = df_ui["id"].tolist()   # Guardamos IDs para borrado
+    df_ui = df_ui.drop(columns=["id"])  # OCULTAMOS el id visualmente
+
+
+    # Insertamos columna borrar en la primera posición
+    df_ui.insert(0, "🗑️ borrar", False)
+
 
     edited_df = st.data_editor(
-        df_tabla,
+        df_ui,
         column_config={
-            "borrar": st.column_config.CheckboxColumn(
-                "🗑️ Borrar",
-                help="Marca los proyectos que quieres eliminar y pulsa 'Eliminar seleccionados'.",
+            "🗑️ borrar": st.column_config.CheckboxColumn(
+                "🗑️ borrar",
+                help="Marca proyectos y pulsa 'Eliminar seleccionados'",
                 default=False,
             )
         },
-        disabled=["id"],  # no se edita el id
         hide_index=True,
         use_container_width=True,
         key="tabla_proyectos_editor",
     )
 
+
+    # ---- Borrar seleccionados ----
     if st.button("Eliminar seleccionados"):
-        marcados = edited_df[edited_df["borrar"] == True]
-        if marcados.empty:
+        if "🗑️ borrar" not in edited_df.columns:
+            st.error("No se ha encontrado la columna de selección.")
+            return
+
+        seleccionados = edited_df["🗑️ borrar"]
+
+        if not seleccionados.any():
             st.warning("No hay proyectos marcados para borrar.")
-        else:
-            num = 0
-            for _, row in marcados.iterrows():
+            return
+
+        total = 0
+        for row_idx, marcado in seleccionados.items():
+            if marcado:
                 try:
-                    delete_proyecto(row["id"])
-                    num += 1
+                    delete_proyecto(ids[row_idx])   # Usamos el ID real
+                    total += 1
                 except Exception as e:
                     st.error(f"No se pudo borrar un proyecto: {e}")
-            st.success(f"Proyectos borrados: {num}")
-            st.rerun()
+
+        st.success(f"Proyectos eliminados: {total}")
+        st.rerun()
 
 
 # ==========================
@@ -179,6 +190,7 @@ def _render_resumen(df_proy):
 
 def _render_duplicados(df_proy):
     st.subheader("🧬 Revisión de posibles proyectos duplicados")
+
 
     df_tmp = df_proy.copy()
     key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
@@ -199,6 +211,7 @@ def _render_duplicados(df_proy):
     grupos = df_dups["dup_key"].unique()
     st.warning(f"Se han detectado {len(grupos)} grupos de proyectos que podrían estar duplicados.")
     st.caption("Revisa y borra los que sobren para mantener limpio el CRM.")
+
 
     for g in grupos:
         grupo_df = df_dups[df_dups["dup_key"] == g]
@@ -230,6 +243,7 @@ def _render_duplicados(df_proy):
 def _render_detalle_proyecto(df_proy):
     st.subheader("🔍 Detalle y edición de un proyecto (con timeline y tareas)")
 
+
     df_proy_sorted = df_proy.sort_values("fecha_creacion", ascending=False).reset_index(drop=True)
     opciones = [
         f"{r['nombre_obra']} – {r.get('cliente_principal','—')} ({r.get('ciudad','—')})"
@@ -243,6 +257,7 @@ def _render_detalle_proyecto(df_proy):
 
     proy = df_proy_sorted.iloc[idx_sel]
     st.markdown(f"#### Proyecto seleccionado: **{proy['nombre_obra']}**")
+
 
     # Sacamos listas existentes (notas_historial, tareas, pasos)
     notas_historial = proy.get("notas_historial") or []
@@ -285,6 +300,7 @@ def _render_detalle_proyecto(df_proy):
         )
         notas_det = st.text_area("Notas generales de seguimiento", value=proy.get("notas_seguimiento", ""))
 
+
         st.markdown("##### 📝 Historial de notas del proyecto")
         if notas_historial:
             try:
@@ -305,6 +321,7 @@ def _render_detalle_proyecto(df_proy):
         else:
             st.caption("Todavía no hay notas históricas para este proyecto.")
 
+
         st.markdown("**Añadir nueva nota al historial**")
         nueva_nota_tipo = st.selectbox(
             "Tipo de nota",
@@ -316,6 +333,7 @@ def _render_detalle_proyecto(df_proy):
             key=f"texto_nota_{proy['id']}",
             placeholder="Ejemplo: Llamada con la promotora, pendiente de enviar oferta..."
         )
+
 
         st.markdown("##### ✅ Tareas asociadas al proyecto")
         tareas_actualizadas = []
@@ -343,6 +361,7 @@ def _render_detalle_proyecto(df_proy):
         else:
             st.caption("No hay tareas creadas todavía.")
 
+
         st.markdown("**Añadir nueva tarea**")
         nueva_tarea_titulo = st.text_input(
             "Título de la tarea",
@@ -360,6 +379,7 @@ def _render_detalle_proyecto(df_proy):
             key=f"fecha_tarea_{proy['id']}",
         )
 
+
         st.markdown("##### 🧭 Checklist de pasos de seguimiento")
         estados_check_pasos = []
         if not pasos:
@@ -374,11 +394,13 @@ def _render_detalle_proyecto(df_proy):
                 )
                 estados_check_pasos.append(chk)
 
+
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             guardar_det = st.form_submit_button("💾 Guardar cambios (datos, notas, tareas)")
         with col_btn2:
             borrar_det = st.form_submit_button("🗑️ Borrar este proyecto")
+
 
     if guardar_det:
         if nueva_nota_texto.strip():
@@ -388,6 +410,7 @@ def _render_detalle_proyecto(df_proy):
                 "texto": nueva_nota_texto.strip(),
             })
 
+
         if nueva_tarea_titulo.strip():
             tareas_actualizadas.append({
                 "titulo": nueva_tarea_titulo.strip(),
@@ -395,6 +418,7 @@ def _render_detalle_proyecto(df_proy):
                 "completado": False,
                 "tipo": nueva_tarea_tipo,
             })
+
 
         if pasos and estados_check_pasos:
             for i, chk in enumerate(estados_check_pasos):
@@ -420,7 +444,10 @@ def _render_detalle_proyecto(df_proy):
         }
 
         actualizar_proyecto(proy["id"], update_data)
-        st.success("Cambios guardados en el proyecto (datos, notas, tareas y pasos).")
+        st.success("Cambios guardados en el proyecto (datos, notas, tareas y pasos)."
+
+
+        )
         st.rerun()
 
     if borrar_det:
@@ -435,6 +462,7 @@ def _render_detalle_proyecto(df_proy):
 
 def _render_import_export(df_proy_empty: bool, df_proy=None):
     st.subheader("📤 Exportar / 📥 Importar")
+
 
     if not df_proy_empty and df_proy is not None:
         st.markdown("#### Exportar Excel de obras importantes")
