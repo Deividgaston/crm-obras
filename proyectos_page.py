@@ -24,17 +24,17 @@ from crm_utils import (
 # =====================================================
 
 def render_proyectos():
-    """Página principal de Proyectos con interfaz más intuitiva y SIN pipeline Apple."""
+    """Página principal de Proyectos."""
     inject_apple_style()
 
-    # CABECERA
+    # CABECERA (título más compacto)
     st.markdown(
         """
         <div class="apple-card">
             <div class="section-badge">Proyectos</div>
-            <h1 style="margin-top: 6px;">CRM de Proyectos</h1>
-            <p style="color:#9FB3D1; margin-bottom: 0;">
-                Vista unificada: filtros, pipeline, lista y detalle del proyecto en una misma pantalla.
+            <h2 style="margin-top: 6px; font-size:1.55rem;">CRM de Proyectos</h2>
+            <p style="color:#9FB3D1; margin-bottom: 0; font-size:0.9rem;">
+                Vista unificada para filtrar, revisar el pipeline, listar y editar proyectos.
             </p>
         </div>
         """,
@@ -51,7 +51,7 @@ def render_proyectos():
 
     if df_proy.empty:
         st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-        st.info("Todavía no hay proyectos creados en Firestore.")
+        st.info("Todavía no hay proyectos creadados en Firestore.")
         _render_import_export(df_proy_empty=True)
         st.markdown("</div>", unsafe_allow_html=True)
         return
@@ -89,71 +89,72 @@ def _bloque_alta_proyecto(df_clientes):
         nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
 
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    with st.expander("➕ Añadir nuevo proyecto"):
-        with st.form("form_proyecto"):
-            col1, col2 = st.columns(2)
-            with col1:
-                nombre_obra = st.text_input("Nombre del proyecto / obra")
-                cliente_principal = st.selectbox(
-                    "Cliente principal (promotor)",
-                    nombres_clientes,
-                )
-                tipo_proyecto = st.selectbox(
-                    "Tipo de proyecto",
-                    ["Residencial lujo", "Residencial", "BTR", "Oficinas", "Hotel", "Industrial", "Otro"],
-                )
-                ciudad = st.text_input("Ciudad")
-                provincia = st.text_input("Provincia")
-            with col2:
-                arquitectura = st.text_input("Arquitectura")
-                ingenieria = st.text_input("Ingeniería")
-                prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
-                potencial_eur = st.number_input(
-                    "Potencial estimado 2N (€)",
-                    min_value=0.0,
-                    step=10000.0,
-                    value=50000.0,
-                )
-                fecha_seg = st.date_input(
-                    "Primera fecha de seguimiento",
-                    value=date.today(),
-                )
+    st.markdown("#### ➕ Añadir nuevo proyecto", unsafe_allow_html=True)
 
-            notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
-            guardar = st.form_submit_button("Guardar proyecto")
+    with st.form("form_proyecto"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre_obra = st.text_input("Nombre del proyecto / obra")
+            cliente_principal = st.selectbox(
+                "Cliente principal (promotor)",
+                nombres_clientes,
+            )
+            tipo_proyecto = st.selectbox(
+                "Tipo de proyecto",
+                ["Residencial lujo", "Residencial", "BTR", "Oficinas", "Hotel", "Industrial", "Otro"],
+            )
+            ciudad = st.text_input("Ciudad")
+            provincia = st.text_input("Provincia")
+        with col2:
+            arquitectura = st.text_input("Arquitectura")
+            ingenieria = st.text_input("Ingeniería")
+            prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
+            potencial_eur = st.number_input(
+                "Potencial estimado 2N (€)",
+                min_value=0.0,
+                step=10000.0,
+                value=50000.0,
+            )
+            fecha_seg = st.date_input(
+                "Primera fecha de seguimiento",
+                value=date.today(),
+            )
 
-        if guardar:
-            if not nombre_obra.strip():
-                st.warning("Debes introducir el nombre del proyecto.")
-            else:
-                cli = None if cliente_principal == "(sin asignar)" else cliente_principal
-                if cli:
-                    ensure_cliente_basico(cli, "Promotora")
-                ensure_cliente_basico(arquitectura or None, "Arquitectura")
-                ensure_cliente_basico(ingenieria or None, "Ingeniería")
+        notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
+        guardar = st.form_submit_button("Guardar proyecto")
 
-                add_proyecto(
-                    {
-                        "nombre_obra": nombre_obra,
-                        "cliente_principal": cli,
-                        "promotora": cli,
-                        "tipo_proyecto": tipo_proyecto,
-                        "ciudad": ciudad,
-                        "provincia": provincia,
-                        "arquitectura": arquitectura or None,
-                        "ingenieria": ingenieria or None,
-                        "prioridad": prioridad,
-                        "potencial_eur": float(potencial_eur),
-                        "estado": "Detectado",
-                        "fecha_seguimiento": fecha_seg.isoformat(),
-                        "notas_seguimiento": notas,
-                        "notas_historial": [],
-                        "tareas": [],
-                        "pasos_seguimiento": [],
-                    }
-                )
-                st.success("Proyecto creado correctamente.")
-                st.rerun()
+    if guardar:
+        if not nombre_obra.strip():
+            st.warning("Debes introducir el nombre del proyecto.")
+        else:
+            cli = None if cliente_principal == "(sin asignar)" else cliente_principal
+            if cli:
+                ensure_cliente_basico(cli, "Promotora")
+            ensure_cliente_basico(arquitectura or None, "Arquitectura")
+            ensure_cliente_basico(ingenieria or None, "Ingeniería")
+
+            add_proyecto(
+                {
+                    "nombre_obra": nombre_obra,
+                    "cliente_principal": cli,
+                    "promotora": cli,
+                    "tipo_proyecto": tipo_proyecto,
+                    "ciudad": ciudad,
+                    "provincia": provincia,
+                    "arquitectura": arquitectura or None,
+                    "ingenieria": ingenieria or None,
+                    "prioridad": prioridad,
+                    "potencial_eur": float(potencial_eur),
+                    "estado": "Detectado",
+                    "fecha_seguimiento": fecha_seg.isoformat(),
+                    "notas_seguimiento": notas,
+                    "notas_historial": [],
+                    "tareas": [],
+                    "pasos_seguimiento": [],
+                }
+            )
+            st.success("Proyecto creado correctamente.")
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -217,12 +218,12 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
 
 
 # =====================================================
-# VISTA GENERAL (LISTA + DETALLE)
+# VISTA GENERAL (TABLA + MODAL DE EDICIÓN)
 # =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("📂 Lista de proyectos + detalle")
+    st.subheader("📂 Lista de proyectos")
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista")
 
@@ -231,7 +232,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Pipeline básico (SOLO métricas)
+    # Pipeline métrico sencillo
     st.markdown("### 🧪 Pipeline (métricas por estado)", unsafe_allow_html=True)
     estados_base = [
         "Detectado",
@@ -252,70 +253,91 @@ def _render_vista_general(df_proy: pd.DataFrame):
     else:
         st.caption("No hay columna de estado en los proyectos.")
 
+    # -------- TABLA A TODO EL ANCHO --------
     df_lista = df_filtrado.copy()
 
-    col_left, col_right = st.columns([1.25, 1.75])
+    df_ui = df_lista.reset_index(drop=True).copy()
+    ids = df_ui["id"].tolist()
+    df_ui = df_ui.drop(columns=["id"])
 
-    # IZQUIERDA — Tabla
-    with col_left:
-        st.markdown("#### 📋 Lista de proyectos", unsafe_allow_html=True)
-        df_ui = df_lista.reset_index(drop=True).copy()
-        ids = df_ui["id"].tolist()
+    # Solo una columna de selección
+    df_ui.insert(0, "Seleccionar", False)
 
-        df_ui = df_ui.drop(columns=["id"])
-        df_ui.insert(0, "Seleccionar", False)
-        df_ui.insert(1, "Borrar", False)
+    edited_df = st.data_editor(
+        df_ui,
+        column_config={
+            "Seleccionar": st.column_config.CheckboxColumn(
+                "✔",
+                help="Marca la fila sobre la que quieres editar o eliminar",
+                default=False,
+            ),
+        },
+        hide_index=True,
+        use_container_width=True,
+        key="vista_tabla_proyectos",
+    )
 
-        edited_df = st.data_editor(
-            df_ui,
-            column_config={
-                "Seleccionar": st.column_config.CheckboxColumn("✔"),
-                "Borrar": st.column_config.CheckboxColumn("🗑️"),
-            },
-            hide_index=True,
+    # Determinar fila seleccionada
+    selected_indices = [i for i, v in edited_df["Seleccionar"].items() if v]
+    selected_id = None
+    selected_row = None
+
+    if len(selected_indices) > 1:
+        st.warning("Hay varias filas seleccionadas. Solo se usará la primera.")
+    if selected_indices:
+        idx = selected_indices[0]
+        selected_id = ids[idx]
+        selected_row = df_lista.reset_index(drop=True).iloc[idx]
+
+    # -------- BOTONES DE ACCIÓN BAJO LA TABLA --------
+    col_acc1, col_acc2 = st.columns(2)
+    with col_acc1:
+        if st.button(
+            "✏️ Editar seleccionado",
             use_container_width=True,
-            key="vista_tabla_proyectos",
-        )
-
-        seleccionados = edited_df["Seleccionar"]
-        idx_sel = None
-        for i, v in seleccionados.items():
-            if v:
-                idx_sel = i
-                break
-
-        if idx_sel is None:
-            idx_sel = 0
-        else:
-            st.session_state["detalle_proyecto_id"] = ids[idx_sel]
-
-        if st.button("🗑️ Eliminar proyectos marcados"):
-            marcados = edited_df["Borrar"]
-            total = 0
-            for i, m in marcados.items():
-                if m:
-                    delete_proyecto(ids[i])
-                    total += 1
-            if total > 0:
-                st.success(f"Proyectos eliminados: {total}")
+            disabled=selected_id is None,
+        ):
+            if selected_id is None:
+                st.warning("Selecciona primero un proyecto en la tabla.")
+            else:
+                st.session_state["edit_proyecto_id"] = selected_id
+                st.session_state["show_edit_modal"] = True
                 st.rerun()
 
-    # DERECHA — Detalle
-    with col_right:
-        st.markdown("#### 🔍 Detalle", unsafe_allow_html=True)
+    with col_acc2:
+        if st.button(
+            "🗑️ Eliminar seleccionado",
+            use_container_width=True,
+            disabled=selected_id is None,
+        ):
+            if selected_id is None:
+                st.warning("Selecciona primero un proyecto en la tabla.")
+            else:
+                delete_proyecto(selected_id)
+                st.success("Proyecto eliminado.")
+                st.rerun()
+
+    # -------- MODAL FLOANTE DE EDICIÓN --------
+    if st.session_state.get("show_edit_modal") and st.session_state.get("edit_proyecto_id"):
+        edit_id = st.session_state["edit_proyecto_id"]
+
+        # Buscamos el proyecto en el DF filtrado (por si han cambiado filtros)
         df_reset = df_lista.reset_index(drop=True)
-
-        if idx_sel < 0 or idx_sel >= len(df_reset):
-            idx_sel = 0
-
-        proy = df_reset.iloc[idx_sel]
-        _panel_detalle_proyecto(proy)
+        match = df_reset[df_reset["id"] == edit_id]
+        if match.empty:
+            # Si no está, cerramos modal
+            st.session_state["show_edit_modal"] = False
+            st.session_state["edit_proyecto_id"] = None
+        else:
+            proy = match.iloc[0]
+            with st.modal("Editar proyecto"):
+                _panel_detalle_proyecto(proy)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =====================================================
-# PANEL DETALLE
+# PANEL DETALLE (USADO DENTRO DEL MODAL)
 # =====================================================
 
 def _panel_detalle_proyecto(proy):
@@ -324,11 +346,12 @@ def _panel_detalle_proyecto(proy):
     pasos = proy.get("pasos_seguimiento") or []
 
     st.markdown(
-        f"### {proy.get('nombre_obra','(sin nombre)')} – {proy.get('cliente_principal','—')}",
+        f"**{proy.get('nombre_obra','(sin nombre)')} – {proy.get('cliente_principal','—')}**",
         unsafe_allow_html=True,
     )
+    st.caption(f"Ciudad: {proy.get('ciudad','—')} · Provincia: {proy.get('provincia','—')}")
 
-    with st.form(f"form_detalle_inline_{proy['id']}"):
+    with st.form(f"form_detalle_modal_{proy['id']}"):
         col_a, col_b = st.columns(2)
 
         with col_a:
@@ -347,8 +370,10 @@ def _panel_detalle_proyecto(proy):
                 index=["Alta", "Media", "Baja"].index(proy.get("prioridad", "Media")),
             )
             potencial_det = st.number_input(
-                "Potencial 2N (€)", min_value=0.0, step=10000.0,
-                value=float(proy.get("potencial_eur", 0.0) or 0.0)
+                "Potencial 2N (€)",
+                min_value=0.0,
+                step=10000.0,
+                value=float(proy.get("potencial_eur", 0.0) or 0.0),
             )
             estado_det = st.selectbox(
                 "Estado",
@@ -359,15 +384,23 @@ def _panel_detalle_proyecto(proy):
                     proy.get("estado", "Detectado"))
             )
 
+        fecha_seg_val = proy.get("fecha_seguimiento") or date.today()
+        if isinstance(fecha_seg_val, str):
+            try:
+                fecha_seg_val = datetime.fromisoformat(fecha_seg_val).date()
+            except Exception:
+                fecha_seg_val = date.today()
+
         fecha_seg_det = st.date_input(
             "Próxima fecha de seguimiento",
-            value=proy.get("fecha_seguimiento") or date.today(),
+            value=fecha_seg_val,
         )
         notas_det = st.text_area(
             "Notas generales de seguimiento",
             value=proy.get("notas_seguimiento", ""),
         )
 
+        # ---- Historial de notas ----
         st.markdown("##### 📝 Historial de notas")
         if notas_historial:
             for nota in sorted(notas_historial, key=lambda x: x.get("fecha", ""), reverse=True):
@@ -376,44 +409,69 @@ def _panel_detalle_proyecto(proy):
         else:
             st.caption("Sin notas aún.")
 
-        # Añadir nota
         nueva_nota_tipo = st.selectbox(
-            "Tipo de nota", ["Nota", "Llamada", "Reunión", "Visita", "Otro"]
+            "Tipo de nota",
+            ["Nota", "Llamada", "Reunión", "Visita", "Otro"],
+            key=f"tipo_nota_{proy['id']}",
         )
-        nueva_nota_texto = st.text_area("Nueva nota")
+        nueva_nota_texto = st.text_area(
+            "Nueva nota",
+            key=f"texto_nota_{proy['id']}",
+            placeholder="Ejemplo: llamada con la promotora, pendiente de oferta...",
+        )
 
-        # Tareas
+        # ---- Tareas ----
         st.markdown("##### ☑️ Tareas")
         tareas_actualizadas = []
-        for i, t in enumerate(tareas):
-            cols_t = st.columns([0.08, 0.52, 0.20, 0.20])
-            with cols_t[0]:
-                completado = st.checkbox("", value=t.get("completado", False),
-                                         key=f"chk_tarea_inline_{proy['id']}_{i}")
-            with cols_t[1]:
-                st.write(t.get("titulo", "(sin título)"))
-            with cols_t[2]:
-                st.write(t.get("fecha_limite", ""))
-            with cols_t[3]:
-                st.write(t.get("tipo", "Tarea"))
+        if tareas:
+            for i, t in enumerate(tareas):
+                cols_t = st.columns([0.08, 0.52, 0.20, 0.20])
+                with cols_t[0]:
+                    completado = st.checkbox(
+                        "",
+                        value=t.get("completado", False),
+                        key=f"chk_tarea_modal_{proy['id']}_{i}",
+                    )
+                with cols_t[1]:
+                    st.write(t.get("titulo", "(sin título)"))
+                with cols_t[2]:
+                    st.write(t.get("fecha_limite", ""))
+                with cols_t[3]:
+                    st.write(t.get("tipo", "Tarea"))
 
-            tareas_actualizadas.append({
-                "titulo": t.get("titulo", ""),
-                "fecha_limite": t.get("fecha_limite", None),
-                "completado": completado,
-                "tipo": t.get("tipo", "Tarea"),
-            })
+                tareas_actualizadas.append(
+                    {
+                        "titulo": t.get("titulo", ""),
+                        "fecha_limite": t.get("fecha_limite", None),
+                        "completado": completado,
+                        "tipo": t.get("tipo", "Tarea"),
+                    }
+                )
+        else:
+            st.caption("No hay tareas todavía.")
 
-        nueva_tarea_titulo = st.text_input("Añadir tarea nueva", key=f"tarea_nueva_{proy['id']}")
-        nueva_tarea_tipo = st.selectbox(
-            "Tipo de tarea nueva", ["Llamada", "Email", "Reunión", "Visita", "Otro"],
+        nueva_tarea_titulo = st.text_input(
+            "Añadir tarea nueva",
+            key=f"titulo_tarea_{proy['id']}",
         )
-        nueva_tarea_fecha = st.date_input("Fecha límite nueva", value=date.today())
+        nueva_tarea_tipo = st.selectbox(
+            "Tipo de tarea nueva",
+            ["Llamada", "Email", "Reunión", "Visita", "Otro"],
+            key=f"tipo_tarea_{proy['id']}",
+        )
+        nueva_tarea_fecha = st.date_input(
+            "Fecha límite nueva",
+            value=date.today(),
+            key=f"fecha_tarea_{proy['id']}",
+        )
 
-        # Checklist
+        # ---- Checklist ----
         st.markdown("##### 🧭 Checklist de pasos")
         if not pasos:
-            if st.checkbox("Crear checklist base"):
+            if st.checkbox(
+                "Crear checklist base",
+                key=f"chk_crear_pasos_{proy['id']}",
+            ):
                 pasos = default_pasos_seguimiento()
 
         estados_check_pasos = []
@@ -421,57 +479,73 @@ def _panel_detalle_proyecto(proy):
             chk = st.checkbox(
                 paso.get("nombre", f"Paso {i+1}"),
                 value=paso.get("completado", False),
-                key=f"chk_paso_{proy['id']}_{i}"
+                key=f"chk_paso_{proy['id']}_{i}",
             )
             estados_check_pasos.append(chk)
 
         col1, col2 = st.columns(2)
         guardar_det = col1.form_submit_button("💾 Guardar cambios")
-        borrar_det = col2.form_submit_button("🗑️ Borrar proyecto")
+        cancelar_det = col2.form_submit_button("Cancelar")
 
-    if guardar_det:
-        if nueva_nota_texto.strip():
-            notas_historial.append({
-                "fecha": datetime.utcnow().isoformat(timespec="seconds"),
-                "tipo": nueva_nota_tipo,
-                "texto": nueva_nota_texto.strip(),
-            })
-
-        if nueva_tarea_titulo.strip():
-            tareas_actualizadas.append({
-                "titulo": nueva_tarea_titulo.strip(),
-                "fecha_limite": nueva_tarea_fecha.isoformat(),
-                "completado": False,
-                "tipo": nueva_tarea_tipo,
-            })
-
-        for i, chk in enumerate(estados_check_pasos):
-            pasos[i]["completado"] = chk
-
-        actualizar_proyecto(proy["id"], {
-            "nombre_obra": nombre_det,
-            "tipo_proyecto": tipo_det,
-            "cliente_principal": promotor_det or None,
-            "promotora": promotor_det or None,
-            "ciudad": ciudad_det or None,
-            "provincia": provincia_det or None,
-            "arquitectura": arquitectura_det or None,
-            "ingenieria": ingenieria_det or None,
-            "prioridad": prioridad_det,
-            "potencial_eur": float(potencial_det),
-            "estado": estado_det,
-            "fecha_seguimiento": fecha_seg_det.isoformat(),
-            "notas_seguimiento": notas_det,
-            "notas_historial": notas_historial,
-            "tareas": tareas_actualizadas,
-            "pasos_seguimiento": pasos,
-        })
-        st.success("Proyecto actualizado.")
+    if cancelar_det:
+        # Cerrar modal sin guardar
+        st.session_state["show_edit_modal"] = False
+        st.session_state["edit_proyecto_id"] = None
         st.rerun()
 
-    if borrar_det:
-        delete_proyecto(proy["id"])
-        st.success("Proyecto eliminado.")
+    if guardar_det:
+        # Nueva nota
+        if nueva_nota_texto.strip():
+            notas_historial.append(
+                {
+                    "fecha": datetime.utcnow().isoformat(timespec="seconds"),
+                    "tipo": nueva_nota_tipo,
+                    "texto": nueva_nota_texto.strip(),
+                }
+            )
+
+        # Nueva tarea
+        if nueva_tarea_titulo.strip():
+            tareas_actualizadas.append(
+                {
+                    "titulo": nueva_tarea_titulo.strip(),
+                    "fecha_limite": nueva_tarea_fecha.isoformat(),
+                    "completado": False,
+                    "tipo": nueva_tarea_tipo,
+                }
+            )
+
+        # Checklist
+        if pasos and estados_check_pasos:
+            for i, chk in enumerate(estados_check_pasos):
+                pasos[i]["completado"] = chk
+
+        actualizar_proyecto(
+            proy["id"],
+            {
+                "nombre_obra": nombre_det,
+                "tipo_proyecto": tipo_det,
+                "cliente_principal": promotor_det or None,
+                "promotora": promotor_det or None,
+                "ciudad": ciudad_det or None,
+                "provincia": provincia_det or None,
+                "arquitectura": arquitectura_det or None,
+                "ingenieria": ingenieria_det or None,
+                "prioridad": prioridad_det,
+                "potencial_eur": float(potencial_det),
+                "estado": estado_det,
+                "fecha_seguimiento": fecha_seg_det.isoformat(),
+                "notas_seguimiento": notas_det,
+                "notas_historial": notas_historial,
+                "tareas": tareas_actualizadas,
+                "pasos_seguimiento": pasos,
+            },
+        )
+
+        # Cerramos modal y refrescamos
+        st.session_state["show_edit_modal"] = False
+        st.session_state["edit_proyecto_id"] = None
+        st.success("Proyecto actualizado.")
         st.rerun()
 
 
@@ -562,7 +636,6 @@ def _render_dashboard(df_proy: pd.DataFrame):
     )
 
     st.altair_chart(chart, use_container_width=True)
-
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -579,7 +652,7 @@ def _render_duplicados(df_proy: pd.DataFrame):
     key_cols = [c for c in key_cols if c in df_tmp.columns]
 
     if not key_cols:
-        st.info("No hay columnas suficientes.")
+        st.info("No hay columnas suficientes para detectar duplicados.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
@@ -588,12 +661,12 @@ def _render_duplicados(df_proy: pd.DataFrame):
     df_dups = df_tmp[mask].copy()
 
     if df_dups.empty:
-        st.success("Sin duplicados.")
+        st.success("No se han detectado proyectos duplicados.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
     grupos = df_dups["dup_key"].unique()
-    st.warning(f"Hay {len(grupos)} grupos duplicados:")
+    st.warning(f"Hay {len(grupos)} grupos de posibles duplicados:")
 
     for g in grupos:
         grupo = df_dups[df_dups["dup_key"] == g]
@@ -626,21 +699,24 @@ def _render_import_export(df_proy_empty, df_proy=None):
         st.markdown("#### Exportar Excel de obras importantes")
         importantes = filtrar_obras_importantes(df_proy)
         if importantes.empty:
-            st.info("No hay obras importantes.")
+            st.info("No hay obras importantes según los criterios definidos.")
         else:
             output = generar_excel_obras_importantes(df_proy)
             fecha_str = date.today().isoformat()
             st.download_button(
-                "⬇️ Descargar Excel",
+                "⬇️ Descargar Excel de obras importantes",
                 data=output,
                 file_name=f"obras_importantes_{fecha_str}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
-    st.markdown("#### Importar Excel generado por ChatGPT")
-    st.caption("Formato de fechas: dd/mm/aa o dd/mm/aaaa. 'Promotora_Fondo' = cliente principal.")
+    st.markdown("#### Importar proyectos desde Excel generado con ChatGPT")
+    st.caption(
+        "Formato de fechas: dd/mm/aa o dd/mm/aaaa. "
+        "El campo 'Promotora_Fondo' se usará como cliente principal (promotor)."
+    )
 
-    uploaded = st.file_uploader("Subir archivo Excel", type=["xlsx"])
+    uploaded = st.file_uploader("Sube un archivo .xlsx", type=["xlsx"])
 
     if uploaded:
         try:
@@ -648,12 +724,12 @@ def _render_import_export(df_proy_empty, df_proy=None):
             st.write("Vista previa:")
             st.dataframe(prev.head(), use_container_width=True)
 
-            if st.button("🚀 Importar"):
+            if st.button("🚀 Importar estos proyectos"):
                 creados = importar_proyectos_desde_excel(uploaded)
                 st.success(f"Importación completada. Proyectos creados: {creados}")
                 st.rerun()
 
         except Exception as e:
-            st.error(f"Error leyendo Excel: {e}")
+            st.error(f"Error leyendo el Excel: {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
