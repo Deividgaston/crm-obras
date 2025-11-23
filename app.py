@@ -100,6 +100,42 @@ def add_cliente(data):
     db.collection("clientes").add(data)
 
 
+def ensure_cliente_basico(nombre: str, tipo: str):
+    """
+    Si no existe un cliente con esa empresa y tipo, lo crea con datos básicos.
+    Aquí en el futuro podrías enchufar una API para buscar teléfono, email, web, etc.
+    """
+    if not nombre:
+        return
+    try:
+        q = (
+            db.collection("clientes")
+            .where("empresa", "==", nombre)
+            .where("tipo_cliente", "==", tipo)
+            .limit(1)
+            .stream()
+        )
+        exists = any(True for _ in q)
+        if exists:
+            return
+
+        cliente_data = {
+            "nombre": "",
+            "empresa": nombre,
+            "tipo_cliente": tipo,
+            "email": "",
+            "telefono": "",
+            "ciudad": "",
+            "provincia": "",
+            "notas": "Creado automáticamente desde un proyecto.",
+            "fecha_alta": datetime.utcnow(),
+        }
+        db.collection("clientes").add(cliente_data)
+    except Exception:
+        # En producción podrías registrar el error en logs
+        pass
+
+
 # ---- PROYECTOS (colección 'obras') ----
 
 def get_proyectos():
@@ -277,6 +313,11 @@ def importar_proyectos_desde_excel(file) -> int:
                 "notas_seguimiento": notas_full,
             }
 
+            # Crear fichas básicas de promotor, arquitectura e ingeniería
+            ensure_cliente_basico(promotor, "Promotora")
+            ensure_cliente_basico(arquitectura, "Arquitectura")
+            ensure_cliente_basico(ingenieria, "Ingeniería")
+
             add_proyecto(data)
             creados += 1
 
@@ -429,9 +470,14 @@ elif menu == "Proyectos":
             if not nombre_obra:
                 st.warning("El nombre del proyecto es obligatorio.")
             else:
+                promotor_nombre = None if cliente_principal == "(sin asignar)" else cliente_principal
+                if promotor_nombre:
+                    ensure_cliente_basico(promotor_nombre, "Promotora")
+
                 add_proyecto({
                     "nombre_obra": nombre_obra,
-                    "cliente_principal": None if cliente_principal == "(sin asignar)" else cliente_principal,
+                    "cliente_principal": promotor_nombre,
+                    "promotora": promotor_nombre,
                     "tipo_proyecto": tipo_proyecto,
                     "ciudad": ciudad,
                     "provincia": provincia,
@@ -456,7 +502,6 @@ elif menu == "Proyectos":
         st.markdown("### ⚠️ Revisión de posibles proyectos duplicados")
 
         df_tmp = df_proy.copy()
-        # Clave para detectar duplicados (puedes ajustar columnas)
         key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
         key_cols = [c for c in key_cols_all if c in df_tmp.columns]
 
@@ -496,22 +541,142 @@ elif menu == "Proyectos":
         else:
             st.info("No hay suficientes campos para detectar duplicados automáticamente.")
 
-        # ===== LISTADO GENERAL =====
+        # ===== LISTADO GENERAL (CON BORRADO RÁPIDO) =====
         st.subheader("📂 Todos los proyectos")
-        cols = [
-            "nombre_obra", "cliente_principal", "promotora",
-            "tipo_proyecto", "ciudad", "provincia",
-            "arquitectura", "ingenieria",
-            "prioridad", "potencial_eur",
+
+        cols_tabla = [
+            "nombre_obra", "cliente_principal", "tipo_proyecto",
+            "ciudad", "provincia", "prioridad", "potencial_eur",
             "estado", "fecha_creacion", "fecha_seguimiento"
         ]
-        cols = [c for c in cols if c in df_proy.columns]
+        cols_tabla = [c for c in cols_tabla if c in df_proy.columns]
         st.dataframe(
-            df_proy[cols].sort_values("fecha_creacion", ascending=False),
+            df_proy[cols_tabla].sort_values("fecha_creacion", ascending=False),
             hide_index=True,
             use_container_width=True
         )
 
+        st.markdown("#### 🗑️ Borrar proyectos rápidamente")
+        for _, row in df_proy.sort_values("fecha_creacion", ascending=False).iterrows():
+            c1, c2 = st.columns([6, 1])
+            with c1:
+                st.write(
+                    f"- {row.get('nombre_obra','(sin nombre)')} "
+                    f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
+                )
+            with c2:
+                if st.button("🗑️ Borrar", key=f"del_row_{row['id']}"):
+                    delete_proyecto(row["id"])
+                    st.success("Proyecto borrado.")
+                    st.rerun()
+
+        # ===== DETALLE / EDICIÓN DE PROYECTO =====
+        st.markdown("### 🔍 Detalle y edición de un proyecto")
+
+        df_proy_sorted = df_proy.sort_values("fecha_creacion", ascending=False).reset_index(drop=True)
+        opciones = [
+            f"{r['nombre_obra']} – {r.get('cliente_principal','—')} ({r.get('ciudad','—')})"
+            for _, r in df_proy_sorted.iterrows()
+        ]
+        idx_sel = st.selectbox(
+            "Selecciona un proyecto para ver/editar el detalle",
+            options=list(range(len(df_proy_sorted))),
+            format_func=lambda i: opciones[i] if 0 <= i < len(opciones) else ""
+        )
+
+        proy = df_proy_sorted.iloc[idx_sel]
+
+        st.markdown(f"#### Proyecto seleccionado: **{proy['nombre_obra']}**")
+
+        with st.form(f"form_detalle_{proy['id']}"):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                nombre_det = st.text_input("Nombre del proyecto", value=proy.get("nombre_obra", ""))
+                tipo_det = st.text_input("Tipo de proyecto", value=proy.get("tipo_proyecto", ""))
+                promotor_det = st.text_input("Promotor (cliente principal)", value=proy.get("cliente_principal", ""))
+                ciudad_det = st.text_input("Ciudad", value=proy.get("ciudad", ""))
+                provincia_det = st.text_input("Provincia", value=proy.get("provincia", ""))
+            with col_b:
+                arquitectura_det = st.text_input("Arquitectura", value=proy.get("arquitectura", ""))
+                ingenieria_det = st.text_input("Ingeniería", value=proy.get("ingenieria", ""))
+                prioridad_det = st.selectbox(
+                    "Prioridad",
+                    ["Alta", "Media", "Baja"],
+                    index=["Alta", "Media", "Baja"].index(proy.get("prioridad", "Media")) if proy.get("prioridad") in ["Alta", "Media", "Baja"] else 1,
+                )
+                potencial_det = st.number_input(
+                    "Potencial 2N (€)",
+                    min_value=0.0,
+                    step=10000.0,
+                    value=float(proy.get("potencial_eur", 0.0)) if proy.get("potencial_eur") is not None else 0.0,
+                )
+                estados_posibles = ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
+                estado_actual = proy.get("estado", "Detectado")
+                if estado_actual not in estados_posibles:
+                    estado_actual = "Detectado"
+                estado_det = st.selectbox("Estado", estados_posibles, index=estados_posibles.index(estado_actual))
+
+            fecha_seg_det = st.date_input(
+                "Próxima fecha de seguimiento",
+                value=proy.get("fecha_seguimiento") or date.today()
+            )
+            notas_det = st.text_area("Notas de seguimiento", value=proy.get("notas_seguimiento", ""))
+
+            st.markdown("##### Checklist de pasos")
+            pasos = proy.get("pasos_seguimiento")
+            if not pasos:
+                if st.checkbox("Crear checklist base para este proyecto", key=f"chk_crear_pasos_{proy['id']}"):
+                    pasos = default_pasos_seguimiento()
+            estados_check = []
+            if pasos:
+                for i, paso in enumerate(pasos):
+                    chk = st.checkbox(
+                        paso.get("nombre", f"Paso {i+1}"),
+                        value=paso.get("completado", False),
+                        key=f"detalle_chk_{proy['id']}_{i}"
+                    )
+                    estados_check.append(chk)
+
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                guardar_det = st.form_submit_button("💾 Guardar cambios")
+            with col_btn2:
+                borrar_det = st.form_submit_button("🗑️ Borrar este proyecto")
+
+        if guardar_det:
+            update_data = {
+                "nombre_obra": nombre_det,
+                "tipo_proyecto": tipo_det,
+                "cliente_principal": promotor_det or None,
+                "promotora": promotor_det or None,
+                "ciudad": ciudad_det or None,
+                "provincia": provincia_det or None,
+                "arquitectura": arquitectura_det or None,
+                "ingenieria": ingenieria_det or None,
+                "prioridad": prioridad_det,
+                "potencial_eur": float(potencial_det),
+                "estado": estado_det,
+                "fecha_seguimiento": fecha_seg_det.isoformat(),
+                "notas_seguimiento": notas_det,
+            }
+
+            if pasos and estados_check:
+                for i, chk in enumerate(estados_check):
+                    pasos[i]["completado"] = chk
+                update_data["pasos_seguimiento"] = pasos
+
+            actualizar_proyecto(proy["id"], update_data)
+            st.success("Cambios guardados en el proyecto.")
+            st.rerun()
+
+        if borrar_det:
+            delete_proyecto(proy["id"])
+            st.success("Proyecto borrado.")
+            st.rerun()
+
+        # ==========================
+        # PROYECTOS EN SEGUIMIENTO (vista rápida)
+        # ==========================
         st.markdown("### 📌 Proyectos en seguimiento")
         en_seg = df_proy[df_proy["estado"].isin(["Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación"])]
 
@@ -530,37 +695,37 @@ elif menu == "Proyectos":
                     st.write(f"**Potencial 2N (€):** {row.get('potencial_eur','—')}")
                     st.write(f"**Notas de seguimiento:** {row.get('notas_seguimiento','')}")
 
-                    pasos = row.get("pasos_seguimiento")
-                    if not pasos:
+                    pasos_seg = row.get("pasos_seguimiento")
+                    if not pasos_seg:
                         if st.button("Crear checklist de pasos", key=f"crear_pasos_{row['id']}"):
-                            pasos = default_pasos_seguimiento()
-                            actualizar_proyecto(row["id"], {"pasos_seguimiento": pasos})
+                            pasos_seg = default_pasos_seguimiento()
+                            actualizar_proyecto(row["id"], {"pasos_seguimiento": pasos_seg})
                             st.success("Checklist creado.")
                             st.rerun()
                     else:
                         st.markdown("#### ✅ Pasos de seguimiento")
                         estados = []
-                        for i, paso in enumerate(pasos):
+                        for i, paso in enumerate(pasos_seg):
                             checked = st.checkbox(
                                 paso.get("nombre", f"Paso {i+1}"),
                                 value=paso.get("completado", False),
-                                key=f"chk_{row['id']}_{i}"
+                                key=f"chk_seg_{row['id']}_{i}"
                             )
                             estados.append(checked)
 
                         if st.button("💾 Guardar pasos", key=f"save_pasos_{row['id']}"):
                             for i, chk in enumerate(estados):
-                                pasos[i]["completado"] = chk
-                            actualizar_proyecto(row["id"], {"pasos_seguimiento": pasos})
+                                pasos_seg[i]["completado"] = chk
+                            actualizar_proyecto(row["id"], {"pasos_seguimiento": pasos_seg})
                             st.success("Pasos actualizados.")
                             st.rerun()
 
                     nueva_fecha = st.date_input(
                         "Nueva fecha de seguimiento",
                         value=row.get("fecha_seguimiento") or hoy,
-                        key=f"fecha_seg_{row['id']}"
+                        key=f"fecha_seg_seg_{row['id']}"
                     )
-                    if st.button("Actualizar fecha de seguimiento", key=f"upd_fecha_{row['id']}"):
+                    if st.button("Actualizar fecha de seguimiento", key=f"upd_fecha_seg_{row['id']}"):
                         actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha.isoformat()})
                         st.success("Fecha de seguimiento actualizada.")
                         st.rerun()
