@@ -8,12 +8,12 @@ def inject_apple_style():
        APPLE BLUE THEME — DUAL MODE
        ========================================= */
 
-    /* Detect Dark Mode */
+    /* Dark Mode */
     @media (prefers-color-scheme: dark) {
         :root {
             --bg-main: #0E1A2B;                /* Navy profundo */
             --bg-card: rgba(21, 36, 58, 0.65); /* Semi transparente */
-            --bg-card-light: rgba(28, 49, 78, 0.85);
+            --bg-card-light: rgba(28, 49, 78, 0.90);
             --border-color: rgba(255,255,255,0.08);
             --text-color: #E9EEF6;
             --text-muted: #9FB3D1;
@@ -27,8 +27,8 @@ def inject_apple_style():
     @media (prefers-color-scheme: light) {
         :root {
             --bg-main: #EAF4FF;                /* Azul Apple súper claro */
-            --bg-card: rgba(255,255,255,0.75);
-            --bg-card-light: rgba(255,255,255,0.92);
+            --bg-card: rgba(255,255,255,0.82);
+            --bg-card-light: rgba(255,255,255,0.96);
             --border-color: rgba(0,0,0,0.08);
             --text-color: #0A1A2F;
             --text-muted: #4B5E74;
@@ -45,6 +45,13 @@ def inject_apple_style():
         color: var(--text-color) !important;
     }
 
+    /* Streamlit block container width */
+    .block-container {
+        max-width: 1200px;
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+    }
+
     /* Sidebar */
     [data-testid="stSidebar"] {
         background: var(--bg-card-light) !important;
@@ -53,10 +60,26 @@ def inject_apple_style():
         color: var(--text-color);
     }
 
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: var(--text-color) !important;
+    }
+
     /* HEADERS */
     h1, h2, h3, h4 {
         color: var(--text-color) !important;
         letter-spacing: -0.02em !important;
+    }
+
+    h1 {
+        font-size: 2.1rem !important;
+        font-weight: 650 !important;
+    }
+
+    h2 {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
     }
 
     /* Apple Card */
@@ -80,21 +103,41 @@ def inject_apple_style():
     }
 
     /* Metrics Apple */
-    .metric-row { display: flex; gap: 14px; margin: 12px 0; }
+    .metric-row { 
+        display: flex; 
+        gap: 14px; 
+        margin: 12px 0; 
+    }
     .metric-box {
         flex: 1;
         padding: 18px;
         background: var(--bg-card-light);
         border-radius: 16px;
         border: 1px solid var(--border-color);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.12);
     }
-    .metric-title { font-size: 0.8rem; color: var(--text-muted); }
-    .metric-value { font-size: 1.8rem; margin-top: 4px; color: var(--accent); }
+    .metric-title { 
+        font-size: 0.8rem; 
+        color: var(--text-muted); 
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .metric-value { 
+        font-size: 1.8rem; 
+        margin-top: 4px; 
+        color: var(--accent); 
+        font-weight: 650;
+    }
+    .metric-sub { 
+        font-size: 0.78rem; 
+        color: var(--text-muted); 
+        margin-top: 3px;
+    }
 
     /* Section badge */
     .section-badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
         padding: 4px 12px;
         border-radius: 999px;
         background: var(--accent-soft);
@@ -103,14 +146,20 @@ def inject_apple_style():
         font-size: 0.75rem;
     }
 
-    /* Dataframes */
-    .stDataFrame td {
-        color: var(--text-color) !important;
-        background-color: var(--bg-card) !important;
+    /* DataFrames */
+    .stDataFrame table {
+        border-radius: 12px;
+        overflow: hidden;
     }
-    .stDataFrame th {
+    .stDataFrame tbody tr td {
+        background-color: var(--bg-card) !important;
+        color: var(--text-color) !important;
+        border-color: var(--border-color) !important;
+    }
+    .stDataFrame thead tr th {
         background-color: var(--bg-card-light) !important;
         color: var(--text-color) !important;
+        border-color: var(--border-color) !important;
     }
 
     /* Buttons */
@@ -130,22 +179,19 @@ def inject_apple_style():
         box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     }
 
-    /* Pills (pipeline) */
-    .status-pill {
-        padding: 6px 14px;
-        border-radius: 999px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        font-weight: 600;
-        box-shadow: 0 0 0 2px var(--pill-shadow);
-    }
-
     /* Inputs */
     input, textarea, select {
         background: var(--bg-card-light) !important;
         border-radius: 12px !important;
         border: 1px solid var(--border-color) !important;
         color: var(--text-color) !important;
+    }
+
+    /* Code block (para el prompt de Buscar) */
+    pre, code {
+        background: #020617 !important;
+        color: #E5E7EB !important;
+        border-radius: 12px !important;
     }
 
     </style>
