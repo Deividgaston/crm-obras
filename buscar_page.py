@@ -327,13 +327,8 @@ def render_buscar():
     # =======================
     st.markdown(
         "### ✂️ Copia este prompt y pégalo en ChatGPT\n"
-        "Te devolverá una tabla en Markdown que podrás pegar en Excel, guardar como `.xlsx` "
-        "e importar en la pestaña **Importar / Exportar** de tu CRM."
+        "Se actualiza automáticamente cada vez que cambias un filtro."
     )
 
-    st.text_area(
-        "Prompt listo para copiar (Cmd+C / Ctrl+C):",
-        value=prompt,
-        height=430,
-        key="buscar_prompt_final",
-    )
+    # IMPORTANTE: usar st.code para que siempre se refresque
+    st.code(prompt, language="text")
