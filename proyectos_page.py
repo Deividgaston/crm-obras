@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 from datetime import date, datetime
 
 from crm_utils import (
@@ -121,7 +122,7 @@ def render_proyectos():
 
 
 # ==========================
-# RESUMEN: pipeline + tabla tipo Excel con filtros y borrar
+# RESUMEN: DASHBOARD + pipeline + tabla
 # ==========================
 
 
@@ -133,7 +134,6 @@ def _render_resumen(df_proy):
     # --- Filtros superiores ---
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
-    # Filtro ciudad
     ciudades = (
         sorted(df["ciudad"].dropna().unique().tolist())
         if "ciudad" in df.columns
@@ -142,7 +142,6 @@ def _render_resumen(df_proy):
     with col_f1:
         ciudad_sel = st.selectbox("Ciudad", ["Todas"] + ciudades)
 
-    # Filtro estado
     estados_list = (
         sorted(df["estado"].dropna().unique().tolist())
         if "estado" in df.columns
@@ -151,7 +150,6 @@ def _render_resumen(df_proy):
     with col_f2:
         estado_sel = st.selectbox("Estado / Seguimiento", ["Todos"] + estados_list)
 
-    # Filtro tipo de proyecto
     tipos_list = (
         sorted(df["tipo_proyecto"].dropna().unique().tolist())
         if "tipo_proyecto" in df.columns
@@ -160,7 +158,6 @@ def _render_resumen(df_proy):
     with col_f3:
         tipo_sel = st.selectbox("Tipo de proyecto", ["Todos"] + tipos_list)
 
-    # Filtro prioridad
     prioridades = (
         sorted(df["prioridad"].dropna().unique().tolist())
         if "prioridad" in df.columns
@@ -186,7 +183,104 @@ def _render_resumen(df_proy):
 
     df_filtrado = df[mask].copy()
 
-    # --- Pipeline sobre el filtrado ---
+    # ==========================
+    # DASHBOARD (gráfico)
+    # ==========================
+    st.markdown("### 📈 Dashboard de obras (según filtros aplicados)")
+
+    if df_filtrado.empty:
+        st.info("No hay datos para mostrar en el dashboard con estos filtros.")
+    else:
+        # Aseguramos columna de potencial
+        if "potencial_eur" not in df_filtrado.columns:
+            df_filtrado["potencial_eur"] = 0.0
+
+        agrupacion_opciones = [
+            "Estado / Seguimiento",
+            "Ciudad",
+            "Provincia",
+            "Tipo de proyecto",
+            "Prioridad",
+            "Rango de potencial (€)",
+        ]
+        dim_map = {
+            "Estado / Seguimiento": "estado",
+            "Ciudad": "ciudad",
+            "Provincia": "provincia",
+            "Tipo de proyecto": "tipo_proyecto",
+            "Prioridad": "prioridad",
+        }
+
+        col_d1, col_d2 = st.columns([2, 1])
+        with col_d1:
+            agrupacion = st.selectbox(
+                "Agrupar por", opciones := agrupacion_opciones, index=0
+            )
+        with col_d2:
+            metrica = st.radio(
+                "Métrica",
+                ["Número de obras", "Potencial total (€)"],
+                horizontal=False,
+            )
+
+        df_plot = df_filtrado.copy()
+
+        if agrupacion == "Rango de potencial (€)":
+            # Creamos rangos de potencial
+            potencial = df_plot["potencial_eur"].fillna(0)
+            bins = [0, 50000, 100000, 200000, 500000, 1_000_000_000]
+            labels = ["< 50k", "50k-100k", "100k-200k", "200k-500k", "> 500k"]
+            df_plot["rango_potencial"] = pd.cut(
+                potencial, bins=bins, labels=labels, include_lowest=True
+            )
+            group_col = "rango_potencial"
+            titulo_eje = "Rango de potencial (€)"
+        else:
+            group_col = dim_map.get(agrupacion)
+            if group_col not in df_plot.columns:
+                st.info("No hay datos suficientes para esta agrupación.")
+                group_col = None
+
+            titulo_eje = agrupacion
+
+        if group_col is not None:
+            agg_df = (
+                df_plot.groupby(group_col)
+                .agg(
+                    num_obras=("id", "count"),
+                    potencial_total=("potencial_eur", "sum"),
+                )
+                .reset_index()
+            )
+
+            if agg_df.empty:
+                st.info("No hay datos para esta agrupación.")
+            else:
+                if metrica == "Número de obras":
+                    y_field = "num_obras"
+                    y_title = "Número de obras"
+                else:
+                    y_field = "potencial_total"
+                    y_title = "Potencial total (€)"
+
+                chart = (
+                    alt.Chart(agg_df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X(f"{group_col}:N", sort="-y", title=titulo_eje),
+                        y=alt.Y(f"{y_field}:Q", title=y_title),
+                        tooltip=[group_col, "num_obras", "potencial_total"],
+                    )
+                    .properties(height=350)
+                )
+
+                st.altair_chart(chart, use_container_width=True)
+
+    # ==========================
+    # PIPELINE POR ESTADO
+    # ==========================
+    st.markdown("### 🧪 Pipeline (conteo por estado)")
+
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
             "Detectado",
@@ -204,7 +298,10 @@ def _render_resumen(df_proy):
     else:
         st.info("No hay información de estados con los filtros aplicados.")
 
-    st.markdown("### 📂 Lista de proyectos filtrados (selección a la izquierda, sin ID)")
+    # ==========================
+    # TABLA FILTRADA + BORRADO + IR A DETALLE
+    # ==========================
+    st.markdown("### 📂 Lista de proyectos filtrados")
 
     if df_filtrado.empty:
         st.warning("No hay proyectos que cumplan los filtros seleccionados.")
@@ -215,7 +312,7 @@ def _render_resumen(df_proy):
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
 
-    # Insertamos columna borrar en la primera posición (sin emojis conflictivos)
+    # Insertamos columna borrar en la primera posición
     df_ui.insert(0, "borrar", False)
 
     edited_df = st.data_editor(
@@ -255,6 +352,27 @@ def _render_resumen(df_proy):
 
         st.success(f"Proyectos eliminados: {total}")
         st.rerun()
+
+    # ---- “Simular doble click”: elegir un proyecto para abrir en Detalle ----
+    st.markdown("### 🔗 Ir al detalle de un proyecto")
+
+    opciones_detalle = [
+        f"{row['nombre_obra']} – {row.get('cliente_principal','—')} ({row.get('ciudad','—')})"
+        for _, row in df_filtrado.reset_index(drop=True).iterrows()
+    ]
+
+    idx_detalle = st.selectbox(
+        "Selecciona un proyecto (se abrirá en la pestaña Detalle)",
+        options=list(range(len(opciones_detalle))),
+        format_func=lambda i: opciones_detalle[i]
+        if 0 <= i < len(opciones_detalle)
+        else "",
+    )
+
+    if st.button("➡️ Abrir en pestaña Detalle"):
+        # Guardamos el ID en sesión para que la pestaña Detalle lo use como seleccionado
+        st.session_state["detalle_proyecto_id"] = ids[idx_detalle]
+        st.success("Ahora ve a la pestaña 'Detalle' para ver ese proyecto.")
 
 
 # ==========================
@@ -334,6 +452,18 @@ def _render_detalle_proyecto(df_proy):
         df_proy.sort_values("fecha_creacion", ascending=False)
         .reset_index(drop=True)
     )
+
+    # Si venimos desde Resumen con un proyecto elegido, lo usamos como índice por defecto
+    default_index = 0
+    if "detalle_proyecto_id" in st.session_state:
+        detalle_id = st.session_state["detalle_proyecto_id"]
+        try:
+            default_index = df_proy_sorted.index[
+                df_proy_sorted["id"] == detalle_id
+            ][0]
+        except Exception:
+            default_index = 0
+
     opciones = [
         f"{r['nombre_obra']} – {r.get('cliente_principal','—')} ({r.get('ciudad','—')})"
         for _, r in df_proy_sorted.iterrows()
@@ -341,13 +471,13 @@ def _render_detalle_proyecto(df_proy):
     idx_sel = st.selectbox(
         "Selecciona un proyecto para ver/editar el detalle",
         options=list(range(len(df_proy_sorted))),
+        index=default_index,
         format_func=lambda i: opciones[i] if 0 <= i < len(opciones) else "",
     )
 
     proy = df_proy_sorted.iloc[idx_sel]
     st.markdown(f"#### Proyecto seleccionado: **{proy['nombre_obra']}**")
 
-    # Sacamos listas existentes (notas_historial, tareas, pasos)
     notas_historial = proy.get("notas_historial") or []
     tareas = proy.get("tareas") or []
     pasos = proy.get("pasos_seguimiento") or []
