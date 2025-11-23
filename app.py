@@ -38,9 +38,13 @@ db = firestore.client()
 # ==========================
 
 def normalize_fecha(value):
-    """Convierte Timestamp / datetime / date / str en date o None."""
+    """
+    Convierte Timestamp / datetime / date / str en date o None.
+    La usaremos para mostrar y comparar fechas.
+    """
     if value is None:
         return None
+    # Firestore Timestamp
     if hasattr(value, "to_datetime"):
         value = value.to_datetime()
     if isinstance(value, datetime):
@@ -48,9 +52,16 @@ def normalize_fecha(value):
     if isinstance(value, date):
         return value
     if isinstance(value, str):
+        # Intentamos ISO (2025-11-30)
         try:
             return datetime.fromisoformat(value).date()
         except ValueError:
+            # Intentamos formatos típicos dd/mm/aa o dd/mm/aaaa
+            for fmt in ("%d/%m/%y", "%d/%m/%Y"):
+                try:
+                    return datetime.strptime(value, fmt).date()
+                except ValueError:
+                    continue
             return None
     return None
 
@@ -107,9 +118,14 @@ def get_proyectos():
 
 
 def add_proyecto(data):
+    """
+    Inserta un proyecto.
+    Siempre fuerza fecha_creacion como datetime.utcnow() (tipo correcto para Firestore).
+    Si no hay fecha_seguimiento, la pone a hoy+7, en formato string ISO 'YYYY-MM-DD'.
+    """
     data["fecha_creacion"] = datetime.utcnow()
     if "fecha_seguimiento" not in data or data["fecha_seguimiento"] is None:
-        data["fecha_seguimiento"] = datetime.utcnow()
+        data["fecha_seguimiento"] = (date.today() + timedelta(days=7)).isoformat()
     db.collection("obras").add(data)
 
 
@@ -164,14 +180,35 @@ def importar_proyectos_desde_excel(file) -> int:
     creados = 0
     hoy = date.today()
 
-    # Función interna para convertir fechas a string o None
+    # Función interna para convertir fechas a texto ISO o None
     def convertir_fecha(valor):
         if pd.isna(valor):
             return None
+        # Si ya viene como date/datetime
+        if isinstance(valor, (datetime, date)):
+            return valor.isoformat()
+        if isinstance(valor, str):
+            valor = valor.strip()
+            if not valor:
+                return None
+            # Intentamos dd/mm/aa o dd/mm/aaaa
+            for fmt in ("%d/%m/%y", "%d/%m/%Y"):
+                try:
+                    d = datetime.strptime(valor, fmt).date()
+                    return d.isoformat()
+                except ValueError:
+                    continue
+            # Intentamos ISO directa
+            try:
+                d = datetime.fromisoformat(valor)
+                if isinstance(d, datetime):
+                    return d.date().isoformat()
+            except Exception:
+                pass
+            # Como último recurso, lo guardamos tal cual en texto
+            return valor
+        # Cualquier otro tipo, lo convertimos a str
         try:
-            if isinstance(valor, (datetime, date)):
-                return valor.isoformat()
-            # Si viene como Timestamp o similar
             return str(valor)
         except Exception:
             return None
@@ -196,7 +233,7 @@ def importar_proyectos_desde_excel(file) -> int:
 
             potencial = 0.0  # si quieres luego lo afinamos
 
-            # Fechas opcionales del Excel
+            # Fechas opcionales del Excel (dd/mm/aa, dd/mm/aaaa, ISO...)
             fecha_inicio = convertir_fecha(row.get("Fecha_Inicio_Estimada"))
             fecha_entrega = convertir_fecha(row.get("Fecha_Entrega_Estimada"))
 
@@ -218,10 +255,10 @@ def importar_proyectos_desde_excel(file) -> int:
                 "prioridad": prioridad,
                 "potencial_eur": float(potencial),
                 "estado": estado,
-                "fecha_creacion": datetime.utcnow(),
-                "fecha_seguimiento": hoy + timedelta(days=7),
-                "fecha_inicio": fecha_inicio,        # guardadas como string o None
-                "fecha_entrega": fecha_entrega,      # guardadas como string o None
+                # fecha_creacion la pone add_proyecto()
+                "fecha_seguimiento": (hoy + timedelta(days=7)).isoformat(),  # SIEMPRE string
+                "fecha_inicio": fecha_inicio,        # string o None
+                "fecha_entrega": fecha_entrega,      # string o None
                 "notas_seguimiento": notas_full,
             }
 
@@ -282,7 +319,7 @@ if menu == "Panel de Control":
                     st.write(f"**Estado:** {row.get('estado', '—')}")
                     st.write(f"**Notas:** {row.get('notas_seguimiento', '')}")
                     if st.button("Posponer 1 semana", key=f"posponer_{row['id']}"):
-                        nueva_fecha = hoy + timedelta(days=7)
+                        nueva_fecha = (hoy + timedelta(days=7)).isoformat()
                         actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha})
                         st.success("Pospuesto 1 semana.")
                         st.rerun()
@@ -384,7 +421,7 @@ elif menu == "Proyectos":
                     "prioridad": prioridad,
                     "potencial_eur": float(potencial_eur),
                     "estado": estado_inicial,
-                    "fecha_seguimiento": fecha_seg,
+                    "fecha_seguimiento": fecha_seg.isoformat(),  # string, no date
                     "notas_seguimiento": notas,
                 })
                 st.success("Proyecto creado correctamente.")
@@ -456,7 +493,7 @@ elif menu == "Proyectos":
                         key=f"fecha_seg_{row['id']}"
                     )
                     if st.button("Actualizar fecha de seguimiento", key=f"upd_fecha_{row['id']}"):
-                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha})
+                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha.isoformat()})
                         st.success("Fecha de seguimiento actualizada.")
                         st.rerun()
 
@@ -498,8 +535,8 @@ elif menu == "Proyectos":
     # ==========================
     st.markdown("### 📥 Importar proyectos desde Excel (ChatGPT)")
     st.caption(
-        "Sube el Excel que te genero desde ChatGPT con columnas como "
-        "`Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado, Fuente_URL, Notas, Fecha_Inicio_Estimada, Fecha_Entrega_Estimada`."
+        "Sube el Excel que te genero desde ChatGPT. "
+        "En las columnas de fecha puedes escribir, por ejemplo: 30/11/25 o 30/11/2025 (formato dd/mm/aa)."
     )
 
     uploaded_file = st.file_uploader(
