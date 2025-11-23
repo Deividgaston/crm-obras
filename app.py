@@ -1,203 +1,119 @@
 import streamlit as st
 from datetime import date, timedelta
 
-# Estilos globales Apple-Blue
-from style_injector import inject_global_styles
+# 🔥 Firebase se inicializa AQUÍ, antes de cargar crm_utils
+# ----------------------------------------------------------
+import json
+import firebase_admin
+from firebase_admin import credentials
 
-# Utilidades de datos (Firestore)
-from crm_utils import (
-    get_clientes,
-    get_proyectos,
-    actualizar_proyecto,
-)
+if not firebase_admin._apps:
+    try:
+        key_str = st.secrets["firebase_key"]
+        key_dict = json.loads(key_str)
+        cred = credentials.Certificate(key_dict)
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        st.error(f"No se pudo inicializar Firebase: {e}")
+        st.stop()
 
-# Páginas específicas
-from clientes_page import render_clientes
+
+# ----------------------------------------------------------
+# Ahora que Firebase YA está inicializado:
+# → YA se puede cargar crm_utils sin errores
+# ----------------------------------------------------------
+from crm_utils import get_clientes, get_proyectos, add_cliente, actualizar_proyecto
+
+# Páginas
 from proyectos_page import render_proyectos
 from buscar_page import render_buscar
+from clientes_page import render_clientes_page  # si lo usas
 
 
-# =========================================================
-# PANEL DE CONTROL
-# =========================================================
+# ==========================
+# CONFIGURACIÓN
+# ==========================
+st.set_page_config(
+    page_title="CRM Prescripción",
+    layout="wide",
+    page_icon="🏗️",
+)
+
+
+# ==========================
+# ESTILO APPLE
+# ==========================
+st.markdown("""
+<style>
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+}
+.block-container {
+    padding-top: 1rem;
+    max-width: 1400px;
+}
+h1 { font-size: 1.55rem !important; font-weight: 650; }
+h2 { font-size: 1.2rem !important; font-weight: 600; }
+h3 { font-size: 1rem !important; font-weight: 600; }
+.section-badge {
+    padding: 3px 9px;
+    background: rgba(37,99,235,0.1);
+    border-radius: 999px;
+    font-size: 0.70rem;
+    color: #2563EB;
+}
+.apple-card {
+    padding: 15px 20px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ==========================
+# PANEL
+# ==========================
 def render_panel_control():
-    # --- Cabecera compacta estilo Apple ---
-    st.markdown(
-        """
-        <div class="apple-card">
-            <div class="section-badge">Panel general</div>
-            <h3 style="margin-top: 6px; font-size:1.25rem;">CRM Prescripción · Vista global</h3>
-            <p style="color:#9FB3D1; margin-bottom: 0; font-size:0.85rem;">
-                Resumen de clientes, proyectos activos y seguimientos pendientes
-                para mantener el pipeline siempre controlado.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.markdown("""
+    <div class="apple-card">
+        <div class="section-badge">Panel</div>
+        <h1>CRM Prescripción</h1>
+        <p style="font-size:0.9rem;color:#999">Resumen del estado general</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    df_clientes = get_clientes()
+    df_proy = get_proyectos()
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Clientes", len(df_clientes) if not df_clientes.empty else 0)
+    col2.metric("Proyectos", len(df_proy) if not df_proy.empty else 0)
+    col3.metric(
+        "Activos",
+        len(df_proy[~df_proy["estado"].isin(["Ganado", "Perdido"])])
+        if not df_proy.empty else 0
     )
 
-    # --- Carga de datos ---
-    try:
-        df_clientes = get_clientes()
-    except Exception as e:
-        st.error(f"No se pudieron cargar los clientes: {e}")
-        df_clientes = None
 
-    try:
-        df_proyectos = get_proyectos()
-    except Exception as e:
-        st.error(f"No se pudieron cargar los proyectos: {e}")
-        df_proyectos = None
-
-    total_clientes = 0 if df_clientes is None or df_clientes.empty else len(df_clientes)
-    total_proyectos = 0 if df_proyectos is None or df_proyectos.empty else len(df_proyectos)
-
-    proyectos_activos = 0
-    if df_proyectos is not None and not df_proyectos.empty and "estado" in df_proyectos.columns:
-        proyectos_activos = len(
-            df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])]
-        )
-
-    # --- Métricas principales ---
-    with st.container():
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric("Clientes en CRM", total_clientes, help="Arquitecturas, ingenierías, promotoras, integrators…")
-
-        with col2:
-            st.metric("Proyectos totales", total_proyectos, help="Histórico completo de oportunidades.")
-
-        with col3:
-            st.metric("Proyectos activos", proyectos_activos,
-                      help="En detección, seguimiento, prescripción, oferta o negociación.")
-
-    # --- Bloque de seguimientos pendientes ---
-    st.markdown(
-        """
-        <div class="apple-card-light">
-            <div class="section-badge">Seguimiento</div>
-            <h4 style="margin-top:10px; margin-bottom:4px; font-size:1.0rem;">🚨 Seguimientos pendientes</h4>
-            <p style="color:#9CA3AF; margin-top:0; font-size:0.8rem;">
-                Proyectos con fecha de seguimiento hoy o atrasada. 
-                Aquí ves el radar de llamadas, emails y visitas que no se pueden escapar.
-            </p>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if df_proyectos is None or df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
-        st.info("Todavía no hay proyectos en el sistema o no hay fecha de seguimiento registrada.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    hoy = date.today()
-
-    # Filtros rápidos del panel
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        estados_disp = sorted(df_proyectos["estado"].dropna().unique().tolist()) if "estado" in df_proyectos.columns else []
-        estado_filtro = st.selectbox(
-            "Filtrar por estado",
-            ["Todos"] + estados_disp,
-            index=0,
-        )
-    with col_f2:
-        ciudades_disp = sorted(df_proyectos["ciudad"].dropna().unique().tolist()) if "ciudad" in df_proyectos.columns else []
-        ciudad_filtro = st.selectbox(
-            "Filtrar por ciudad",
-            ["Todas"] + ciudades_disp,
-            index=0,
-        )
-
-    pendientes = df_proyectos[
-        df_proyectos["fecha_seguimiento"].notna()
-        & (df_proyectos["fecha_seguimiento"] <= hoy)
-        & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))
-    ].copy()
-
-    if estado_filtro != "Todos":
-        pendientes = pendientes[pendientes["estado"] == estado_filtro]
-
-    if ciudad_filtro != "Todas":
-        pendientes = pendientes[pendientes["ciudad"] == ciudad_filtro]
-
-    if pendientes.empty:
-        st.success("No tienes seguimientos atrasados con los filtros actuales. ✅")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente.")
-
-    pendientes = pendientes.sort_values("fecha_seguimiento")
-
-    for _, row in pendientes.iterrows():
-        nombre = row.get("nombre_obra", "Sin nombre")
-        fecha_seg = row.get("fecha_seguimiento", "")
-        cliente = row.get("cliente_principal", "—")
-        estado = row.get("estado", "—")
-        ciudad = row.get("ciudad", "—")
-        notas = row.get("notas_seguimiento", "")
-
-        titulo_expander = f"⏰ {nombre} – {fecha_seg} · {cliente} ({ciudad})"
-
-        with st.expander(titulo_expander):
-            st.write(f"**Estado actual:** {estado}")
-            st.write(f"**Notas:** {notas or '—'}")
-
-            cols_btn = st.columns(3)
-            with cols_btn[0]:
-                if st.button("📅 Posponer 1 semana", key=f"pos1_{row['id']}"):
-                    nueva_fecha = hoy + timedelta(days=7)
-                    try:
-                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha.isoformat()})
-                        st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
-                        st.experimental_rerun()
-                    except Exception as e:
-                        st.error(f"No se pudo actualizar la fecha de seguimiento: {e}")
-            with cols_btn[1]:
-                if st.button("📅 Posponer 1 mes", key=f"pos30_{row['id']}"):
-                    nueva_fecha = hoy + timedelta(days=30)
-                    try:
-                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha.isoformat()})
-                        st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
-                        st.experimental_rerun()
-                    except Exception as e:
-                        st.error(f"No se pudo actualizar la fecha de seguimiento: {e}")
-            with cols_btn[2]:
-                st.caption("Consejo: usa la pestaña **Proyectos → Detalle** para registrar la llamada o reunión.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# =========================================================
-# MAIN
-# =========================================================
+# ==========================
+# MAIN APP
+# ==========================
 def main():
-    st.set_page_config(
-        page_title="CRM Prescripción",
-        layout="wide",
-        page_icon="🏗️",
-    )
-
-    # Inyectar estilos Apple-Blue
-    inject_global_styles()
-
-    # Sidebar
     with st.sidebar:
         st.markdown("### 🏗️ CRM Prescripción")
-        st.caption("Tu cockpit de proyectos, clientes y scouting.")
+        st.caption("Cockpit de prescripción profesional")
         st.markdown("---")
 
     menu = st.sidebar.radio(
         "Ir a:",
-        ["Panel de Control", "Clientes", "Proyectos", "Buscar"],
+        ["Panel de Control", "Clientes", "Proyectos", "Buscar"]
     )
 
     if menu == "Panel de Control":
         render_panel_control()
     elif menu == "Clientes":
-        render_clientes()
+        render_clientes_page()
     elif menu == "Proyectos":
         render_proyectos()
     elif menu == "Buscar":
