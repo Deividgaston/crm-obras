@@ -1,237 +1,226 @@
 import streamlit as st
 from style_injector import inject_apple_style
 
-# ==========================================
-# HELPERS PARA GENERAR PROMPTS
-# ==========================================
 
-def _build_proyectos_prompt(zonas, verticales, meses, min_viv, incluir_hoteles_btr):
-    if zonas:
-        zonas_txt = ", ".join(zonas)
-    else:
-        zonas_txt = "toda España"
+def _construir_prompt_proyectos(zonas, tipos, segmentos, horizonte, notas_extra):
+    zonas_txt = ", ".join(zonas) if zonas else "España (foco en grandes capitales)"
+    tipos_txt = ", ".join(tipos) if tipos else "residencial, oficinas y hoteles"
+    seg_txt = ", ".join(segmentos) if segmentos else "alta gama, buena calidad"
+    horiz_txt = horizonte or "corto y medio plazo (0-5 años)"
 
-    if verticales:
-        verticales_txt = ", ".join(verticales)
-    else:
-        verticales_txt = "residencial, oficinas y hoteles"
-
-    rango_tiempo_txt = {
-        "6": "los últimos 6 meses",
-        "12": "los últimos 12 meses",
-        "18": "los últimos 18 meses",
-        "24": "los últimos 24 meses",
-    }.get(meses, "los últimos 12 meses")
-
-    filtro_viv = ""
-    if min_viv and min_viv > 0:
-        filtro_viv = f"\n- Mínimo {int(min_viv)} viviendas"
-
-    extra_verticales = ""
-    if incluir_hoteles_btr:
-        extra_verticales = (
-            "\n- Priorizar hoteles 4/5* y proyectos BTR por su alto potencial de control de accesos."
-        )
+    extra = notas_extra.strip()
+    extra_txt = f"\n\nContexto adicional del usuario:\n{extra}" if extra else ""
 
     prompt = f"""
-Quiero que actúes como mi agente profesional de scouting inmobiliario.
+Actúa como un analista de mercado inmobiliario especializado en proyectos nuevos
+para integradores de soluciones de control de accesos y videoportero IP (marca 2N).
 
-🎯 **Objetivo:** Encontrar proyectos relevantes donde aplicar videoportero IP + control de accesos.
+Quiero que busques **proyectos inmobiliarios nuevos o en desarrollo** en las siguientes zonas:
+- Zonas objetivo: {zonas_txt}
 
-📍 **Zonas objetivo:** {zonas_txt}
-🏗️ **Verticales:** {verticales_txt}
-🕒 **Periodo:** {rango_tiempo_txt}
-{filtro_viv}
-{extra_verticales}
+Tipos de activo que me interesan:
+- Tipos: {tipos_txt}
+- Segmento / nivel: {seg_txt}
+- Horizonte temporal: {horiz_txt}
 
----
+Tu tarea:
+1. Localiza **proyectos concretos** (no genéricos) que estén:
+   - En promoción, construcción o recién lanzados.
+   - Con cierto tamaño (mínimo ~20-30 unidades en residencial / más de 3-4 plantas en oficinas / hoteles relevantes).
+2. Identifica para cada proyecto:
+   - Nombre del proyecto (o nombre comercial si lo tiene).
+   - Ciudad y provincia.
+   - Tipo de proyecto (Residencial lujo, Residencial, BTR, Oficinas, Hotel, etc.).
+   - Nombre de la promotora o fondo.
+   - Estudio de arquitectura (si se conoce).
+   - Ingeniería / project manager (si se conoce).
+   - Segmento (alta gama, lujo, ultra lujo, estándar, etc.).
+   - Fechas estimadas (inicio de obra y entrega, si se encuentran).
+   - Enlace web principal o fuente de información.
+   - Notas relevantes (por qué parece interesante para soluciones de acceso y videoportero IP).
 
-## 📌 Qué debes buscar
-- Proyectos en fase de proyecto, construcción o comercialización.
-- Obras de tamaño relevante o de promotoras/arquitecturas importantes.
-- Que tengan sentido técnico para control de accesos avanzado.
+3. Devuélveme el resultado **en formato tabla pensado para Excel**, con estas columnas EXACTAS:
 
----
+- Proyecto
+- Ciudad
+- Provincia
+- Tipo_Proyecto
+- Promotora_Fondo
+- Arquitectura
+- Ingenieria
+- Segmento
+- Fecha_Inicio_Estimada
+- Fecha_Entrega_Estimada
+- Fuente_URL
+- Notas
 
-## 📊 Entrega la información en una **tabla Markdown** con EXACTAMENTE estas columnas:
+Formato de salida:
+- Usa una tabla separada por columnas clara, que luego se pueda exportar fácilmente a Excel.
+- No añadas texto adicional fuera de la tabla.
 
-- Proyecto  
-- Ciudad  
-- Provincia  
-- Comunidad_Autonoma  
-- País  
-- Tipo_Proyecto  
-- Segmento  
-- Nº_Viviendas  
-- Promotora_Fondo  
-- Arquitectura  
-- Ingenieria  
-- Estado  
-- Fecha_Inicio_Estimada  
-- Fecha_Entrega_Estimada  
-- Fuente_URL  
-- Notas  
-
-⚠️ **No inventes datos**: deja vacío si no hay información verificable.
+{extra_txt}
 """
     return prompt.strip()
 
 
+def _construir_prompt_clientes(zonas, tipos_cliente, notas_extra):
+    zonas_txt = ", ".join(zonas) if zonas else "España (foco en grandes capitales)"
+    tipos_txt = ", ".join(tipos_cliente) if tipos_cliente else "ingenierías, arquitecturas y promotoras relevantes"
 
-def _build_clientes_prompt(zonas, tipos_cliente, verticales, incluir_top10):
-    if zonas:
-        zonas_txt = ", ".join(zonas)
-    else:
-        zonas_txt = "toda España"
-
-    if tipos_cliente:
-        tipos_txt = ", ".join(tipos_cliente)
-    else:
-        tipos_txt = "Arquitectura, Ingeniería e Integrators"
-
-    if verticales:
-        verticales_txt = ", ".join(verticales)
-    else:
-        verticales_txt = "residencial, oficinas y hoteles"
-
-    extra_top = ""
-    if incluir_top10:
-        extra_top = "\nIncluye al final un TOP 10 de empresas con más potencial."
+    extra = notas_extra.strip()
+    extra_txt = f"\n\nContexto adicional del usuario:\n{extra}" if extra else ""
 
     prompt = f"""
-Quiero que actúes como mi analista profesional de desarrollo de canal.
+Actúa como un analista de negocio B2B especializado en el sector inmobiliario y de integración
+de soluciones de control de accesos y videoportero IP (marca 2N).
 
-🎯 **Objetivo:** Encontrar arquitecturas, ingenierías, integrators y promotoras potentes.
+Quiero que busques **contactos de empresas relevantes** con el siguiente perfil:
 
-📍 **Zonas objetivo:** {zonas_txt}  
-🏢 **Tipos de cliente prioritarios:** {tipos_txt}  
-🏗️ **Verticales relevantes:** {verticales_txt}  
-{extra_top}
+Zonas objetivo:
+- {zonas_txt}
 
----
+Tipos de empresa:
+- {tipos_txt}
 
-## 📊 Devuelve una **tabla Markdown** con EXACTAMENTE estas columnas:
+Tu tarea:
+1. Localiza empresas concretas (no listados genéricos) que:
+   - Trabajen en proyectos residenciales, BTR, oficinas u hoteles.
+   - Tengan actividad en obra nueva o rehabilitación donde el control de accesos y videoportero IP sea relevante.
 
-- Empresa  
-- Tipo_Cliente  
-- Ciudad  
-- Provincia  
-- País  
-- Web  
-- Email_Contacto  
-- Teléfono  
-- Persona_Contacto  
-- Cargo  
-- Segmento_Objetivo  
-- Fuente_URL  
-- Notas  
+2. Para cada empresa, devuelve:
+   - Nombre de la empresa.
+   - Tipo de cliente (Ingeniería, Arquitectura, Promotora, Integrator Partner, etc.).
+   - Ciudad y provincia principal.
+   - Página web.
+   - Persona de contacto relevante (si se encuentra).
+   - Email de contacto profesional.
+   - Teléfono.
+   - Notas (proyectos relevantes, segmentos, etc.).
+   - URL de la fuente de información (LinkedIn, web, directorio, etc.).
 
-⚠️ No inventes datos. Si algo no está disponible, déjalo en blanco.
+3. Devuélveme el resultado **en formato tabla pensado para Excel**, con estas columnas EXACTAS:
+
+- Empresa
+- Tipo_Cliente
+- Ciudad
+- Provincia
+- Web
+- Persona_Contacto
+- Email
+- Telefono
+- Notas
+- Fuente_URL
+
+Formato de salida:
+- Usa una tabla clara que luego se pueda exportar fácilmente a Excel.
+- No añadas texto adicional fuera de la tabla.
+
+{extra_txt}
 """
     return prompt.strip()
-# ==========================================
-# PÁGINA PRINCIPAL DE BÚSQUEDA APPLE PREMIUM
-# ==========================================
+
 
 def render_buscar():
     inject_apple_style()
 
     st.markdown("""
         <div class="apple-card">
-            <div class="section-badge">Scouting & Canal</div>
-            <h1 style="margin-top: 6px;">Buscar proyectos y clientes</h1>
-            <p style="color:#6B7280; margin-bottom: 0;">
-                Genera un prompt profesional para detectar nuevas obras o clientes estratégicos.
+            <div class="section-badge">Scouting</div>
+            <h1 style="margin-top:6px;">Buscar proyectos y clientes</h1>
+            <p style="color:#9FB3D1;margin-bottom:0;">
+                Generador de prompts profesionales para que ChatGPT te prepare Excels listos para importar al CRM.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
-    # Tipo de búsqueda
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    tipo = st.radio(
+    st.subheader("🎛 Configura tu búsqueda")
+
+    tipo_busqueda = st.radio(
         "¿Qué quieres buscar?",
-        ["Proyectos (obras)", "Clientes (promotoras, ingenierías, integrators)"],
-        key="buscar_tipo",
+        ["Proyectos nuevos", "Clientes potenciales"],
+        horizontal=True,
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # Zonas
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("🎯 Zonas objetivo")
-    zonas = st.multiselect(
-        "Selecciona las zonas",
-        [
-            "Madrid", "Comunidad de Madrid",
-            "Málaga", "Costa del Sol",
-            "Barcelona", "Provincia de Barcelona",
-            "Valencia", "Alicante",
-            "Islas Baleares",
-            "España"
-        ],
-        default=["Madrid", "Málaga", "Barcelona"]
+    st.markdown("##### 🌍 Zonas objetivo")
+    zonas_opciones = ["Madrid", "Málaga", "Valencia", "Barcelona", "Mallorca", "Alicante", "Otras zonas España"]
+    zonas_sel = st.multiselect(
+        "Selecciona zonas:",
+        zonas_opciones,
+        default=["Madrid", "Málaga", "Barcelona", "Valencia"],
     )
-    st.markdown("</div>", unsafe_allow_html=True)
-    # Parámetros según tipo
-    if tipo.startswith("Proyectos"):
-        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-        st.subheader("🏗️ Filtros de obra")
 
-        verticales = st.multiselect(
-            "Verticales",
-            ["Residencial lujo", "Residencial", "BTR", "Oficinas", "Hoteles 4/5*", "Otros"],
-            default=["Residencial lujo", "BTR", "Hoteles 4/5*"]
+    notas_extra = ""
+    prompt_generado = ""
+
+    if tipo_busqueda == "Proyectos nuevos":
+        st.markdown("##### 🏗 Tipo de proyectos")
+        tipos_proy = st.multiselect(
+            "Tipos de proyecto a priorizar",
+            ["Residencial lujo", "Residencial", "BTR", "Oficinas", "Hotel", "Otros"],
+            default=["Residencial lujo", "BTR", "Oficinas", "Hotel"],
         )
 
-        meses = st.selectbox(
-            "Periodo a analizar",
-            [("6", "Últimos 6 meses"),
-             ("12", "Últimos 12 meses"),
-             ("18", "Últimos 18 meses"),
-             ("24", "Últimos 24 meses")],
-            index=1,
-            format_func=lambda x: x[1]
-        )[0]
-
-        min_viv = st.number_input("Mínimo de viviendas", min_value=0, step=10, value=0)
-        incluir_hoteles_btr = st.checkbox("Priorizar hoteles y BTR", value=True)
-
-        prompt = _build_proyectos_prompt(
-            zonas, verticales, meses, min_viv, incluir_hoteles_btr
+        segmentos = st.multiselect(
+            "Segmento / nivel",
+            ["Ultra lujo", "Lujo", "Alta gama", "Estándar"],
+            default=["Ultra lujo", "Lujo", "Alta gama"],
         )
-        st.markdown("</div>", unsafe_allow_html=True)
+
+        horizonte = st.selectbox(
+            "Horizonte temporal",
+            ["Corto plazo (0-2 años)", "Medio plazo (2-5 años)", "Largo plazo (5+ años)", "Corto y medio plazo"],
+            index=3,
+        )
+
+        notas_extra = st.text_area(
+            "Notas adicionales para afinar la búsqueda (opcional)",
+            placeholder="Ejemplo: Foco en BTR de fondos internacionales, proyectos con amenities, conserjería, etc.",
+        )
+
+        if st.button("🔁 Actualizar prompt"):
+            prompt_generado = _construir_prompt_proyectos(
+                zonas=zonas_sel,
+                tipos=tipos_proy,
+                segmentos=segmentos,
+                horizonte=horizonte,
+                notas_extra=notas_extra,
+            )
+            st.session_state["buscar_prompt"] = prompt_generado
 
     else:
-        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-        st.subheader("👤 Filtros de cliente")
-
+        st.markdown("##### 👥 Tipo de clientes")
         tipos_cliente = st.multiselect(
-            "Tipo de cliente",
-            ["Arquitectura", "Ingeniería", "Integrator Partner", "Promotora/Fondo"],
-            default=["Arquitectura", "Ingeniería", "Integrator Partner"]
+            "Tipos de empresa objetivo",
+            ["Ingeniería", "Arquitectura", "Promotora", "Integrator Partner", "Fondo de inversión", "Otro"],
+            default=["Promotora", "Arquitectura", "Ingeniería"],
         )
 
-        verticales = st.multiselect(
-            "Verticales del cliente",
-            ["Residencial lujo", "Residencial", "BTR", "Oficinas", "Hoteles"],
-            default=["Residencial lujo", "Oficinas"]
+        notas_extra = st.text_area(
+            "Notas adicionales para afinar la búsqueda (opcional)",
+            placeholder="Ejemplo: Enfoque en promotoras de residencial de lujo y BTR en costa y grandes capitales.",
         )
 
-        incluir_top10 = st.checkbox("Incluir ranking TOP 10", value=True)
+        if st.button("🔁 Actualizar prompt"):
+            prompt_generado = _construir_prompt_clientes(
+                zonas=zonas_sel,
+                tipos_cliente=tipos_cliente,
+                notas_extra=notas_extra,
+            )
+            st.session_state["buscar_prompt"] = prompt_generado
 
-        prompt = _build_clientes_prompt(
-            zonas, tipos_cliente, verticales, incluir_top10
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Prompt final
+    # Bloque prompt
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("🧾 Prompt final (listo para copiar)")
+    st.subheader("📋 Prompt generado para ChatGPT")
 
-    if st.button("🔄 Actualizar prompt"):
-        st.session_state["prompt_busqueda"] = prompt
+    prompt_mostrar = st.session_state.get("buscar_prompt", "").strip()
+    if not prompt_mostrar:
+        st.caption("Configura arriba tu búsqueda y pulsa **Actualizar prompt** para generarlo.")
+    else:
+        st.code(prompt_mostrar, language="markdown")
+        st.caption("Copia este prompt, pégalo en ChatGPT y pídele que te devuelva el resultado en una tabla lista para Excel.")
 
-    if "prompt_busqueda" not in st.session_state:
-        st.session_state["prompt_busqueda"] = prompt
-
-    st.code(st.session_state["prompt_busqueda"], language="text")
     st.markdown("</div>", unsafe_allow_html=True)
