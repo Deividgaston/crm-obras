@@ -20,12 +20,13 @@ from crm_utils import (
 def render_proyectos():
     st.title("🏗️ CRM de Proyectos")
 
+    # =============== CLIENTES PARA ALTA RÁPIDA ===============
     df_clientes = get_clientes()
     nombres_clientes = ["(sin asignar)"]
     if not df_clientes.empty and "empresa" in df_clientes.columns:
         nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
 
-    # ---- Alta de proyecto manual ----
+    # =============== ALTA MANUAL DE PROYECTOS ===============
     with st.expander("➕ Añadir nuevo proyecto manualmente"):
         with st.form("form_proyecto"):
             nombre_obra = st.text_input("Nombre del proyecto / obra")
@@ -89,7 +90,7 @@ def render_proyectos():
                 st.success("Proyecto creado correctamente.")
                 st.rerun()
 
-    # ---- Datos de proyectos ----
+    # =============== DATOS DE PROYECTOS ===============
     df_proy = get_proyectos()
 
     if df_proy.empty:
@@ -97,41 +98,35 @@ def render_proyectos():
         _render_import_export(df_proy_empty=True)
         return
 
-    # ==========================
-    # TABS (ventanas) en Proyectos
-    # ==========================
-    tab_resumen, tab_detalle, tab_duplicados, tab_import = st.tabs(
-        ["📊 Resumen", "🔍 Detalle", "🧬 Duplicados", "📥 Importar / Exportar"]
+    # =============== PESTAÑAS ===============
+    tab_dash, tab_resumen, tab_detalle, tab_duplicados, tab_import = st.tabs(
+        ["📈 Dashboard", "📋 Lista / Resumen", "🔍 Detalle", "🧬 Duplicados", "📥 Importar / Exportar"]
     )
 
-    # ---------- TAB RESUMEN ----------
+    with tab_dash:
+        _render_dashboard(df_proy)
+
     with tab_resumen:
         _render_resumen(df_proy)
 
-    # ---------- TAB DETALLE ----------
     with tab_detalle:
         _render_detalle_proyecto(df_proy)
 
-    # ---------- TAB DUPLICADOS ----------
     with tab_duplicados:
         _render_duplicados(df_proy)
 
-    # ---------- TAB IMPORT / EXPORT ----------
     with tab_import:
         _render_import_export(df_proy_empty=False, df_proy=df_proy)
 
 
-# ==========================
-# RESUMEN: DASHBOARD + pipeline + tabla
-# ==========================
+# =====================================================
+# DASHBOARD
+# =====================================================
 
+def _aplicar_filtros_basicos(df: pd.DataFrame):
+    """Devuelve df_filtrado + los valores de filtro usados."""
+    df = df.copy()
 
-def _render_resumen(df_proy):
-    st.subheader("📊 Pipeline de proyectos por estado")
-
-    df = df_proy.copy()
-
-    # --- Filtros superiores ---
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
     ciudades = (
@@ -166,7 +161,6 @@ def _render_resumen(df_proy):
     with col_f4:
         prioridad_sel = st.selectbox("Prioridad", ["Todas"] + prioridades)
 
-    # --- Aplicamos filtros ---
     mask = pd.Series([True] * len(df))
 
     if ciudad_sel != "Todas":
@@ -182,105 +176,110 @@ def _render_resumen(df_proy):
         mask &= df["prioridad"].fillna("") == prioridad_sel
 
     df_filtrado = df[mask].copy()
+    return df_filtrado
 
-    # ==========================
-    # DASHBOARD (gráfico)
-    # ==========================
-    st.markdown("### 📈 Dashboard de obras (según filtros aplicados)")
+
+def _render_dashboard(df_proy: pd.DataFrame):
+    st.subheader("📈 Dashboard de obras")
+
+    df_filtrado = _aplicar_filtros_basicos(df_proy)
 
     if df_filtrado.empty:
         st.info("No hay datos para mostrar en el dashboard con estos filtros.")
+        return
+
+    if "potencial_eur" not in df_filtrado.columns:
+        df_filtrado["potencial_eur"] = 0.0
+
+    agrupacion_opciones = [
+        "Estado / Seguimiento",
+        "Ciudad",
+        "Provincia",
+        "Tipo de proyecto",
+        "Prioridad",
+        "Rango de potencial (€)",
+    ]
+    dim_map = {
+        "Estado / Seguimiento": "estado",
+        "Ciudad": "ciudad",
+        "Provincia": "provincia",
+        "Tipo de proyecto": "tipo_proyecto",
+        "Prioridad": "prioridad",
+    }
+
+    col_d1, col_d2 = st.columns([2, 1])
+    with col_d1:
+        agrupacion = st.selectbox("Agrupar por", agrupacion_opciones, index=0)
+    with col_d2:
+        metrica = st.radio(
+            "Métrica",
+            ["Número de obras", "Potencial total (€)"],
+            horizontal=False,
+        )
+
+    df_plot = df_filtrado.copy()
+
+    if agrupacion == "Rango de potencial (€)":
+        potencial = df_plot["potencial_eur"].fillna(0)
+        bins = [0, 50000, 100000, 200000, 500000, 1_000_000_000]
+        labels = ["< 50k", "50k-100k", "100k-200k", "200k-500k", "> 500k"]
+        df_plot["rango_potencial"] = pd.cut(
+            potencial, bins=bins, labels=labels, include_lowest=True
+        )
+        group_col = "rango_potencial"
+        titulo_eje = "Rango de potencial (€)"
     else:
-        # Aseguramos columna de potencial
-        if "potencial_eur" not in df_filtrado.columns:
-            df_filtrado["potencial_eur"] = 0.0
+        group_col = dim_map.get(agrupacion)
+        if group_col not in df_plot.columns:
+            st.info("No hay datos suficientes para esta agrupación.")
+            return
+        titulo_eje = agrupacion
 
-        agrupacion_opciones = [
-            "Estado / Seguimiento",
-            "Ciudad",
-            "Provincia",
-            "Tipo de proyecto",
-            "Prioridad",
-            "Rango de potencial (€)",
-        ]
-        dim_map = {
-            "Estado / Seguimiento": "estado",
-            "Ciudad": "ciudad",
-            "Provincia": "provincia",
-            "Tipo de proyecto": "tipo_proyecto",
-            "Prioridad": "prioridad",
-        }
+    agg_df = (
+        df_plot.groupby(group_col)
+        .agg(
+            num_obras=("id", "count"),
+            potencial_total=("potencial_eur", "sum"),
+        )
+        .reset_index()
+    )
 
-        col_d1, col_d2 = st.columns([2, 1])
-        with col_d1:
-            agrupacion = st.selectbox(
-                "Agrupar por", opciones := agrupacion_opciones, index=0
-            )
-        with col_d2:
-            metrica = st.radio(
-                "Métrica",
-                ["Número de obras", "Potencial total (€)"],
-                horizontal=False,
-            )
+    if agg_df.empty:
+        st.info("No hay datos para esta agrupación.")
+        return
 
-        df_plot = df_filtrado.copy()
+    if metrica == "Número de obras":
+        y_field = "num_obras"
+        y_title = "Número de obras"
+    else:
+        y_field = "potencial_total"
+        y_title = "Potencial total (€)"
 
-        if agrupacion == "Rango de potencial (€)":
-            # Creamos rangos de potencial
-            potencial = df_plot["potencial_eur"].fillna(0)
-            bins = [0, 50000, 100000, 200000, 500000, 1_000_000_000]
-            labels = ["< 50k", "50k-100k", "100k-200k", "200k-500k", "> 500k"]
-            df_plot["rango_potencial"] = pd.cut(
-                potencial, bins=bins, labels=labels, include_lowest=True
-            )
-            group_col = "rango_potencial"
-            titulo_eje = "Rango de potencial (€)"
-        else:
-            group_col = dim_map.get(agrupacion)
-            if group_col not in df_plot.columns:
-                st.info("No hay datos suficientes para esta agrupación.")
-                group_col = None
+    chart = (
+        alt.Chart(agg_df)
+        .mark_bar()
+        .encode(
+            x=alt.X(f"{group_col}:N", sort="-y", title=titulo_eje),
+            y=alt.Y(f"{y_field}:Q", title=y_title),
+            tooltip=[group_col, "num_obras", "potencial_total"],
+        )
+        .properties(height=350)
+    )
 
-            titulo_eje = agrupacion
+    st.altair_chart(chart, use_container_width=True)
 
-        if group_col is not None:
-            agg_df = (
-                df_plot.groupby(group_col)
-                .agg(
-                    num_obras=("id", "count"),
-                    potencial_total=("potencial_eur", "sum"),
-                )
-                .reset_index()
-            )
 
-            if agg_df.empty:
-                st.info("No hay datos para esta agrupación.")
-            else:
-                if metrica == "Número de obras":
-                    y_field = "num_obras"
-                    y_title = "Número de obras"
-                else:
-                    y_field = "potencial_total"
-                    y_title = "Potencial total (€)"
+# =====================================================
+# LISTA / RESUMEN: pipeline + tabla + seleccionar/borrar
+# =====================================================
 
-                chart = (
-                    alt.Chart(agg_df)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X(f"{group_col}:N", sort="-y", title=titulo_eje),
-                        y=alt.Y(f"{y_field}:Q", title=y_title),
-                        tooltip=[group_col, "num_obras", "potencial_total"],
-                    )
-                    .properties(height=350)
-                )
+def _render_resumen(df_proy: pd.DataFrame):
+    st.subheader("📋 Resumen y lista de proyectos")
 
-                st.altair_chart(chart, use_container_width=True)
+    df_filtrado = _aplicar_filtros_basicos(df_proy)
 
-    # ==========================
-    # PIPELINE POR ESTADO
-    # ==========================
+    # --------- PIPELINE POR ESTADO ----------
     st.markdown("### 🧪 Pipeline (conteo por estado)")
-
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
             "Detectado",
@@ -298,162 +297,94 @@ def _render_resumen(df_proy):
     else:
         st.info("No hay información de estados con los filtros aplicados.")
 
-    # ==========================
-    # TABLA FILTRADA + BORRADO + IR A DETALLE
-    # ==========================
+    # --------- TABLA ---------
     st.markdown("### 📂 Lista de proyectos filtrados")
 
     if df_filtrado.empty:
         st.warning("No hay proyectos que cumplan los filtros seleccionados.")
         return
 
-    # --- Tabla sin ID visible, pero lo guardamos aparte ---
     df_ui = df_filtrado.reset_index(drop=True).copy()
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
 
-    # Insertamos columna borrar en la primera posición
-    df_ui.insert(0, "borrar", False)
+    # Primera col: seleccionar (para ir al detalle), segunda: borrar
+    df_ui.insert(0, "seleccionar", False)
+    df_ui.insert(1, "borrar", False)
 
     edited_df = st.data_editor(
         df_ui,
         column_config={
+            "seleccionar": st.column_config.CheckboxColumn(
+                "Seleccionar",
+                help="Selecciona una obra y pulsa 'Ver en Detalle'",
+                default=False,
+            ),
             "borrar": st.column_config.CheckboxColumn(
                 "Borrar",
                 help="Marca proyectos y pulsa 'Eliminar seleccionados'",
                 default=False,
-            )
+            ),
         },
         hide_index=True,
         use_container_width=True,
         key="tabla_proyectos_editor",
     )
 
-    # ---- Borrar seleccionados ----
-    if st.button("Eliminar seleccionados"):
-        if "borrar" not in edited_df.columns:
-            st.error("No se ha encontrado la columna de selección.")
-            return
+    col_acc1, col_acc2 = st.columns(2)
 
-        seleccionados = edited_df["borrar"]
-
-        if not seleccionados.any():
-            st.warning("No hay proyectos marcados para borrar.")
-            return
-
-        total = 0
-        for row_idx, marcado in seleccionados.items():
-            if marcado:
-                try:
-                    delete_proyecto(ids[row_idx])
-                    total += 1
-                except Exception as e:
-                    st.error(f"No se pudo borrar un proyecto: {e}")
-
-        st.success(f"Proyectos eliminados: {total}")
-        st.rerun()
-
-    # ---- “Simular doble click”: elegir un proyecto para abrir en Detalle ----
-    st.markdown("### 🔗 Ir al detalle de un proyecto")
-
-    opciones_detalle = [
-        f"{row['nombre_obra']} – {row.get('cliente_principal','—')} ({row.get('ciudad','—')})"
-        for _, row in df_filtrado.reset_index(drop=True).iterrows()
-    ]
-
-    idx_detalle = st.selectbox(
-        "Selecciona un proyecto (se abrirá en la pestaña Detalle)",
-        options=list(range(len(opciones_detalle))),
-        format_func=lambda i: opciones_detalle[i]
-        if 0 <= i < len(opciones_detalle)
-        else "",
-    )
-
-    if st.button("➡️ Abrir en pestaña Detalle"):
-        # Guardamos el ID en sesión para que la pestaña Detalle lo use como seleccionado
-        st.session_state["detalle_proyecto_id"] = ids[idx_detalle]
-        st.success("Ahora ve a la pestaña 'Detalle' para ver ese proyecto.")
-
-
-# ==========================
-# DUPLICADOS
-# ==========================
-
-
-def _render_duplicados(df_proy):
-    st.subheader("🧬 Revisión de posibles proyectos duplicados")
-
-    df_tmp = df_proy.copy()
-    key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
-    key_cols = [c for c in key_cols_all if c in df_tmp.columns]
-
-    if not key_cols:
-        st.info("No hay suficientes campos para detectar duplicados automáticamente.")
-        return
-
-    df_tmp["dup_key"] = df_tmp[key_cols].astype(str).agg(" | ".join, axis=1)
-    duplicated_mask = df_tmp["dup_key"].duplicated(keep=False)
-    df_dups = df_tmp[duplicated_mask].copy()
-
-    if df_dups.empty:
-        st.success(
-            "No se han detectado proyectos duplicados por nombre + cliente + ciudad + provincia. ✅"
-        )
-        return
-
-    grupos = df_dups["dup_key"].unique()
-    st.warning(
-        f"Se han detectado {len(grupos)} grupos de proyectos que podrían estar duplicados."
-    )
-    st.caption("Revisa y borra los que sobren para mantener limpio el CRM.")
-
-    for g in grupos:
-        grupo_df = df_dups[df_dups["dup_key"] == g]
-        titulo = grupo_df.iloc[0].get("nombre_obra", "Proyecto sin nombre")
-        with st.expander(f"Posibles duplicados: {titulo}"):
-            show_cols = [
-                "id",
-                "nombre_obra",
-                "cliente_principal",
-                "ciudad",
-                "provincia",
-                "estado",
-                "fecha_creacion",
-                "fecha_seguimiento",
-            ]
-            show_cols = [c for c in show_cols if c in grupo_df.columns]
-            st.dataframe(
-                grupo_df[show_cols], hide_index=True, use_container_width=True
-            )
-
-            for _, row in grupo_df.iterrows():
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(
-                        f"• {row.get('nombre_obra','')} "
-                        f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
+    # ---- Ver en Detalle (simula doble click) ----
+    with col_acc1:
+        if st.button("➡️ Ver proyecto seleccionado en Detalle"):
+            if "seleccionar" not in edited_df.columns:
+                st.error("No se ha encontrado la columna 'seleccionar'.")
+            else:
+                seleccionados = edited_df["seleccionar"]
+                idxs = [i for i, v in seleccionados.items() if v]
+                if not idxs:
+                    st.warning("No hay ninguna obra seleccionada.")
+                else:
+                    idx = idxs[0]  # si hay varias, cogemos la primera
+                    st.session_state["detalle_proyecto_id"] = ids[idx]
+                    st.success(
+                        "Proyecto seleccionado. Ve a la pestaña 'Detalle' para verlo."
                     )
-                with col2:
-                    if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
-                        delete_proyecto(row["id"])
-                        st.success("Proyecto borrado.")
-                        st.rerun()
+
+    # ---- Borrar seleccionados ----
+    with col_acc2:
+        if st.button("🗑️ Eliminar seleccionados"):
+            if "borrar" not in edited_df.columns:
+                st.error("No se ha encontrado la columna 'borrar'.")
+            else:
+                seleccionados = edited_df["borrar"]
+                if not seleccionados.any():
+                    st.warning("No hay proyectos marcados para borrar.")
+                else:
+                    total = 0
+                    for row_idx, marcado in seleccionados.items():
+                        if marcado:
+                            try:
+                                delete_proyecto(ids[row_idx])
+                                total += 1
+                            except Exception as e:
+                                st.error(f"No se pudo borrar un proyecto: {e}")
+                    st.success(f"Proyectos eliminados: {total}")
+                    st.rerun()
 
 
-# ==========================
+# =====================================================
 # DETALLE + TIMELINE + TAREAS + CHECKLIST
-# ==========================
+# =====================================================
 
-
-def _render_detalle_proyecto(df_proy):
-    st.subheader("🔍 Detalle y edición de un proyecto (con timeline y tareas)")
+def _render_detalle_proyecto(df_proy: pd.DataFrame):
+    st.subheader("🔍 Detalle y edición de un proyecto")
 
     df_proy_sorted = (
         df_proy.sort_values("fecha_creacion", ascending=False)
         .reset_index(drop=True)
     )
 
-    # Si venimos desde Resumen con un proyecto elegido, lo usamos como índice por defecto
+    # Si venimos desde Resumen, usamos ese ID como selección por defecto
     default_index = 0
     if "detalle_proyecto_id" in st.session_state:
         detalle_id = st.session_state["detalle_proyecto_id"]
@@ -708,10 +639,73 @@ def _render_detalle_proyecto(df_proy):
         st.rerun()
 
 
-# ==========================
-# IMPORTAR / EXPORTAR
-# ==========================
+# =====================================================
+# DUPLICADOS
+# =====================================================
 
+def _render_duplicados(df_proy: pd.DataFrame):
+    st.subheader("🧬 Revisión de posibles proyectos duplicados")
+
+    df_tmp = df_proy.copy()
+    key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
+    key_cols = [c for c in key_cols_all if c in df_tmp.columns]
+
+    if not key_cols:
+        st.info("No hay suficientes campos para detectar duplicados automáticamente.")
+        return
+
+    df_tmp["dup_key"] = df_tmp[key_cols].astype(str).agg(" | ".join, axis=1)
+    duplicated_mask = df_tmp["dup_key"].duplicated(keep=False)
+    df_dups = df_tmp[duplicated_mask].copy()
+
+    if df_dups.empty:
+        st.success(
+            "No se han detectado proyectos duplicados por nombre + cliente + ciudad + provincia. ✅"
+        )
+        return
+
+    grupos = df_dups["dup_key"].unique()
+    st.warning(
+        f"Se han detectado {len(grupos)} grupos de proyectos que podrían estar duplicados."
+    )
+    st.caption("Revisa y borra los que sobren para mantener limpio el CRM.")
+
+    for g in grupos:
+        grupo_df = df_dups[df_dups["dup_key"] == g]
+        titulo = grupo_df.iloc[0].get("nombre_obra", "Proyecto sin nombre")
+        with st.expander(f"Posibles duplicados: {titulo}"):
+            show_cols = [
+                "id",
+                "nombre_obra",
+                "cliente_principal",
+                "ciudad",
+                "provincia",
+                "estado",
+                "fecha_creacion",
+                "fecha_seguimiento",
+            ]
+            show_cols = [c for c in show_cols if c in grupo_df.columns]
+            st.dataframe(
+                grupo_df[show_cols], hide_index=True, use_container_width=True
+            )
+
+            for _, row in grupo_df.iterrows():
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(
+                        f"• {row.get('nombre_obra','')} "
+                        f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
+                    )
+                with col2:
+                    if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
+                        delete_proyecto(row["id"])
+                        st.success("Proyecto borrado.")
+                        st.rerun()
+
+
+# =====================================================
+# IMPORTAR / EXPORTAR
+# =====================================================
 
 def _render_import_export(df_proy_empty: bool, df_proy=None):
     st.subheader("📤 Exportar / 📥 Importar")
