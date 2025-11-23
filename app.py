@@ -1,7 +1,7 @@
 import streamlit as st
-from datetime import date, timedelta
+import pandas as pd
+from datetime import date, timedelta, datetime
 
-# Funciones de acceso a datos (Firestore) y utilidades
 from crm_utils import (
     get_clientes,
     get_proyectos,
@@ -9,190 +9,38 @@ from crm_utils import (
     actualizar_proyecto,
 )
 
-# Páginas específicas
 from proyectos_page import render_proyectos
 from buscar_page import render_buscar
+from style_injector import inject_apple_style
 
-# ==========================
-# CONFIGURACIÓN GENERAL
-# ==========================
+# =====================================================
+# CONFIG GENERAL
+# =====================================================
+
 st.set_page_config(
     page_title="CRM Prescripción",
     layout="wide",
     page_icon="🏗️",
 )
 
-# ==========================
-# ESTILO APPLE-LIKE
-# ==========================
-st.markdown("""
-<style>
-/* Fuente tipo SF / Inter */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-    background: #F3F4F6 !important;
-}
-
-/* Contenedor principal */
-.block-container {
-    padding-top: 1.5rem;
-    padding-bottom: 3rem;
-    max-width: 1200px;
-}
-
-/* Sidebar Apple style */
-[data-testid="stSidebar"] {
-    background: rgba(255,255,255,0.92) !important;
-    backdrop-filter: blur(16px);
-    border-right: 1px solid rgba(0,0,0,0.06);
-}
-
-[data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, 
-[data-testid="stSidebar"] h3 {
-    font-weight: 600 !important;
-}
-
-/* Títulos */
-h1 {
-    font-weight: 650 !important;
-    letter-spacing: -0.03em;
-    font-size: 2.1rem !important;
-}
-
-h2 {
-    font-weight: 600 !important;
-    letter-spacing: -0.02em;
-}
-
-/* Tarjetas genéricas */
-.apple-card {
-    padding: 18px 22px;
-    background: radial-gradient(circle at top left, #FFFFFF 0%, #F9FAFB 70%);
-    border-radius: 18px;
-    border: 1px solid rgba(15,23,42,0.05);
-    box-shadow: 0 18px 45px rgba(15,23,42,0.08);
-    margin-bottom: 18px;
-}
-
-/* Tarjeta ligera (para listas, tablas, etc.) */
-.apple-card-light {
-    padding: 16px 20px;
-    background: #FFFFFF;
-    border-radius: 16px;
-    border: 1px solid rgba(148,163,184,0.22);
-    box-shadow: 0 10px 25px rgba(15,23,42,0.05);
-    margin-bottom: 18px;
-}
-
-/* Métricas de cabecera tipo Apple dashboard */
-.metric-row {
-    display: flex;
-    gap: 16px;
-    margin-top: 6px;
-    margin-bottom: 6px;
-}
-
-.metric-box {
-    flex: 1;
-    padding: 16px 18px;
-    background: linear-gradient(145deg, #FFFFFF 0%, #F3F4F6 100%);
-    border-radius: 16px;
-    border: 1px solid rgba(148,163,184,0.35);
-    box-shadow: 0 14px 30px rgba(15,23,42,0.12);
-}
-
-.metric-title {
-    font-size: 0.86rem;
-    color: #6B7280;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.metric-value {
-    font-size: 1.8rem;
-    font-weight: 650;
-    margin-top: 4px;
-    color: #0F172A;
-}
-
-.metric-sub {
-    font-size: 0.78rem;
-    color: #9CA3AF;
-    margin-top: 2px;
-}
-
-/* Botones más suaves y redondeados */
-button[kind="primary"] {
-    border-radius: 999px !important;
-}
-
-/* Campos de formulario redondeados */
-textarea, input, select {
-    border-radius: 10px !important;
-}
-
-/* Pequeño badge para secciones */
-.section-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(37,99,235,0.08);
-    color: #1D4ED8;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-/* Etiqueta de estado (podrías usarlo en proyectos más adelante) */
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 500;
-}
-
-/* Colores de estados de ejemplo */
-.status-ganado {
-    background: rgba(34,197,94,0.12);
-    color: #15803D;
-}
-.status-perdido {
-    background: rgba(248,113,113,0.12);
-    color: #B91C1C;
-}
-.status-seguimiento {
-    background: rgba(59,130,246,0.12);
-    color: #1D4ED8;
-}
-
-</style>
-""", unsafe_allow_html=True)
+inject_apple_style()
 
 
-# ==========================
-# PÁGINA: PANEL DE CONTROL
-# ==========================
+# =====================================================
+# PANEL DE CONTROL
+# =====================================================
+
 def render_panel_control():
-    # Cabecera tipo Apple
-    st.markdown(
-        """
+    # ----------- CABECERA APPLE -----------
+    st.markdown("""
         <div class="apple-card">
-            <div class="section-badge">Panel general</div>
-            <h1 style="margin-top: 6px;">CRM Prescripción</h1>
-            <p style="color:#6B7280; margin-bottom: 0;">
-                Visión global de clientes y proyectos en curso. 
-                Revisa seguimientos pendientes y el pulso de la prescripción.
+            <div class="section-badge">Panel de Control</div>
+            <h1 style="margin-top:6px;">CRM Prescripción</h1>
+            <p style="color:#6B7280;margin-bottom:0;">
+                Resumen general de tu actividad, seguimientos y pipeline.
             </p>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
     df_clientes = get_clientes()
     df_proyectos = get_proyectos()
@@ -201,129 +49,208 @@ def render_panel_control():
     total_proyectos = 0 if df_proyectos is None or df_proyectos.empty else len(df_proyectos)
 
     proyectos_activos = 0
-    if df_proyectos is not None and not df_proyectos.empty and "estado" in df_proyectos.columns:
+    if df_proyectos is not None and not df_proyectos.empty:
         proyectos_activos = len(
-            df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])]
+            df_proyectos[
+                ~df_proyectos["estado"].isin(["Ganado", "Perdido"])
+            ]
         )
 
-    # Métricas Apple-style
+    # ----------- MÉTRICAS APPLE -----------
     st.markdown("<div class='metric-row'>", unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <div class="metric-box">
-            <div class="metric-title">Clientes en CRM</div>
+            <div class="metric-title">Clientes Registrados</div>
             <div class="metric-value">{total_clientes}</div>
-            <div class="metric-sub">Arquitecturas, ingenierías, promotoras, integrators</div>
+            <div class="metric-sub">Arquitecturas, ingenierías, promotoras</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <div class="metric-box">
-            <div class="metric-title">Proyectos totales</div>
+            <div class="metric-title">Proyectos Totales</div>
             <div class="metric-value">{total_proyectos}</div>
-            <div class="metric-sub">Histórico de oportunidades trabajadas</div>
+            <div class="metric-sub">Histórico global</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <div class="metric-box">
-            <div class="metric-title">Proyectos activos</div>
+            <div class="metric-title">Proyectos Activos</div>
             <div class="metric-value">{proyectos_activos}</div>
-            <div class="metric-sub">En seguimiento, prescripción, oferta o negociación</div>
+            <div class="metric-sub">Sin cerrar o perder</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Bloque de seguimientos
-    st.markdown(
-        """
-        <div class="apple-card-light">
-            <div class="section-badge">Seguimiento</div>
-            <h3 style="margin-top:10px; margin-bottom:4px;">🚨 Seguimientos pendientes</h3>
-            <p style="color:#6B7280; margin-top:0; font-size:0.9rem;">
-                Proyectos con fecha de seguimiento hoy o atrasada. 
-                Mantén el radar siempre al día.
-            </p>
-        """,
-        unsafe_allow_html=True,
-    )
+    # =====================================================
+    # NUEVO DASHBOARD APPLE PROFESSIONAL (SEPARADO)
+    # =====================================================
 
-    if df_proyectos is None or df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
-        st.info("Todavía no hay proyectos en el sistema o no hay fecha de seguimiento registrada.")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("""
+        <div class="apple-card-light">
+            <div class="section-badge">Dashboard Profesional</div>
+            <h3 style="margin-top:10px;margin-bottom:4px;">📊 Radar de Actividad</h3>
+            <p style="color:#6B7280;margin:0;font-size:0.9rem;">
+                Visualiza el pulso de tus proyectos y seguimientos.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if df_proyectos is None or df_proyectos.empty:
+        st.info("No hay datos de proyectos todavía.")
         return
 
-    hoy = date.today()
-
-    pendientes = df_proyectos[
-        df_proyectos["fecha_seguimiento"].notna()
-        & (df_proyectos["fecha_seguimiento"] <= hoy)
-        & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))
+    # ---------- RADAR DE ESTADOS (BARRAS) ----------
+    estados_orden = [
+        "Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
+        "Negociación", "Paralizado", "Ganado", "Perdido"
     ]
 
-    if pendientes.empty:
-        st.success("No tienes seguimientos atrasados. ✅")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
+    df_counts = (
+        df_proyectos.groupby("estado")
+        .size()
+        .reset_index(name="cantidad")
+    )
 
-    st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente.")
+    df_counts["estado"] = pd.Categorical(
+        df_counts["estado"], categories=estados_orden, ordered=True
+    )
 
-    pendientes = pendientes.sort_values("fecha_seguimiento")
+    df_counts = df_counts.sort_values("estado")
 
-    for _, row in pendientes.iterrows():
-        nombre = row.get("nombre_obra", "Sin nombre")
-        fecha_seg = row.get("fecha_seguimiento", "")
-        cliente = row.get("cliente_principal", "—")
-        estado = row.get("estado", "—")
-        notas = row.get("notas_seguimiento", "")
+    st.bar_chart(df_counts.set_index("estado"))
 
-        with st.expander(f"⏰ {nombre} – {fecha_seg} ({cliente})"):
-            st.write(f"**Estado actual:** {estado}")
-            st.write(f"**Notas:** {notas or '—'}")
+    # ---------- SEGUIMIENTOS PRÓXIMOS ----------
+    st.markdown("""
+        <div class='apple-card-light'>
+        <h4>⏱ Seguimientos próximos</h4>
+        <p style="color:#6B7280;margin-top:-8px;">
+            Revisa lo que te viene encima.
+        </p>
+    """, unsafe_allow_html=True)
 
-            if st.button("Posponer 1 semana", key=f"posponer_{row['id']}"):
-                nueva_fecha = (hoy + timedelta(days=7)).isoformat()
-                try:
-                    actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha})
-                    st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
-                    st.experimental_rerun()
-                except Exception as e:
-                    st.error(f"No se pudo actualizar la fecha de seguimiento: {e}")
+    opciones = {
+        "Hoy": 0,
+        "3 días": 3,
+        "7 días": 7,
+        "2 semanas": 14,
+        "1 mes": 30
+    }
+
+    col_f = st.columns(len(opciones))
+
+    for label, dias in zip(opciones.keys(), opciones.values()):
+        with col_f[list(opciones.keys()).index(label)]:
+            if st.button(label):
+                st.session_state["seg_filtro"] = dias
+
+    dias_filtrar = st.session_state.get("seg_filtro", 7)
+
+    hoy = date.today()
+    limite = hoy + timedelta(days=dias_filtrar)
+
+    df_seg = df_proyectos[
+        df_proyectos["fecha_seguimiento"].notna()
+        & (df_proyectos["fecha_seguimiento"] >= hoy)
+        & (df_proyectos["fecha_seguimiento"] <= limite)
+    ].copy()
+
+    if df_seg.empty:
+        st.info("No hay seguimientos próximos en este rango.")
+    else:
+        df_seg["dias_restantes"] = (
+            df_seg["fecha_seguimiento"].apply(lambda x: (x - hoy).days)
+        )
+
+        st.dataframe(
+            df_seg[[
+                "nombre_obra", "cliente_principal", "estado",
+                "fecha_seguimiento", "dias_restantes"
+            ]],
+            hide_index=True,
+            use_container_width=True,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------- MAPA DE CALOR DE ACTIVIDAD ----------
+    st.markdown("""
+        <div class='apple-card-light'>
+        <h4>🗺 Actividad mensual</h4>
+        <p style="color:#6B7280;margin-top:-8px;">
+            Visión macOS-style de movimiento en 12 meses.
+        </p>
+    """, unsafe_allow_html=True)
+
+    df_cal = df_proyectos.copy()
+    df_cal["mes"] = df_cal["fecha_seguimiento"].apply(lambda x: x.replace(day=1))
+
+    df_heat = df_cal.groupby("mes").size().reset_index(name="actividad")
+
+    st.line_chart(
+        df_heat.set_index("mes"),
+        height=180
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------- ALERTAS INTELIGENTES ----------
+    st.markdown("""
+        <div class='apple-card-light'>
+        <h4>⚠ Alertas inteligentes</h4>
+        <p style="color:#6B7280;margin-top:-8px;">
+            Riesgos y oportunidades de seguimiento.
+        </p>
+    """, unsafe_allow_html=True)
+
+    alertas = []
+
+    # Sin actividad 15 días
+    df_old = df_proyectos[
+        (hoy - df_proyectos["fecha_seguimiento"]) > timedelta(days=15)
+    ]
+    if not df_old.empty:
+        alertas.append(f"🔸 {len(df_old)} proyectos sin actividad en > 15 días.")
+
+    # Negociación sin movimientos
+    df_neg = df_proyectos[df_proyectos["estado"] == "Negociación"]
+    if not df_neg.empty:
+        alertas.append(f"🟠 {len(df_neg)} proyectos en negociación requieren revisión.")
+
+    # Paralizados
+    df_par = df_proyectos[df_proyectos["estado"] == "Paralizado"]
+    if not df_par.empty:
+        alertas.append(f"⚫ {len(df_par)} proyectos están paralizados.")
+
+    if not alertas:
+        st.success("Todo bajo control. No hay alertas.")
+    else:
+        for a in alertas:
+            st.warning(a)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ==========================
-# PÁGINA: CLIENTES
-# ==========================
+# =====================================================
+# CLIENTES
+# =====================================================
+
 def render_clientes():
-    st.markdown(
-        """
+    st.markdown("""
         <div class="apple-card">
-            <div class="section-badge">Relaciones</div>
-            <h1 style="margin-top: 6px;">Clientes</h1>
-            <p style="color:#6B7280; margin-bottom: 0;">
-                Gestiona ingenierías, arquitecturas, promotoras e integrators clave
-                para la prescripción.
+            <div class="section-badge">Clientes</div>
+            <h1 style="margin-top:6px;">Clientes</h1>
+            <p style="color:#6B7280;margin-bottom:0;">
+                Gestiona arquitectos, ingenierías, promotoras e integrators.
             </p>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-    # Alta de cliente
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### ➕ Añadir nuevo cliente", unsafe_allow_html=True)
+    st.subheader("➕ Añadir nuevo cliente")
 
     with st.form("form_cliente"):
         col1, col2 = st.columns(2)
@@ -340,59 +267,45 @@ def render_clientes():
             ciudad = st.text_input("Ciudad")
             provincia = st.text_input("Provincia")
 
-        notas = st.text_area("Notas (proyectos, relación, info importante)")
+        notas = st.text_area("Notas")
 
         enviar = st.form_submit_button("Guardar cliente")
 
     if enviar:
-        if not nombre and not empresa:
-            st.warning("Pon al menos un nombre o una empresa.")
-        else:
-            try:
-                add_cliente(
-                    {
-                        "nombre": nombre,
-                        "empresa": empresa,
-                        "tipo_cliente": tipo_cliente,
-                        "email": email,
-                        "telefono": telefono,
-                        "ciudad": ciudad,
-                        "provincia": provincia,
-                        "notas": notas,
-                    }
-                )
-                st.success("Cliente guardado correctamente.")
-                st.experimental_rerun()
-            except Exception as e:
-                st.error(f"No se pudo guardar el cliente: {e}")
+        add_cliente({
+            "nombre": nombre,
+            "empresa": empresa,
+            "tipo_cliente": tipo_cliente,
+            "email": email,
+            "telefono": telefono,
+            "ciudad": ciudad,
+            "provincia": provincia,
+            "notas": notas,
+        })
+        st.success("Cliente guardado correctamente.")
+        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Listado
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### 📋 Listado de clientes", unsafe_allow_html=True)
+    st.subheader("📋 Listado de clientes")
 
     df_clientes = get_clientes()
+
     if df_clientes is None or df_clientes.empty:
-        st.info("Aún no hay clientes en el CRM.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    cols_mostrar = ["nombre", "empresa", "tipo_cliente", "email", "telefono", "ciudad", "provincia"]
-    cols_mostrar = [c for c in cols_mostrar if c in df_clientes.columns]
-
-    st.dataframe(
-        df_clientes[cols_mostrar],
-        hide_index=True,
-        use_container_width=True,
-    )
+        st.info("No hay clientes todavía.")
+    else:
+        cols = ["nombre", "empresa", "tipo_cliente", "email", "telefono", "ciudad", "provincia"]
+        cols = [c for c in cols if c in df_clientes.columns]
+        st.dataframe(df_clientes[cols], hide_index=True, use_container_width=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ==========================
+# =====================================================
 # MAIN
-# ==========================
+# =====================================================
+
 def main():
     with st.sidebar:
         st.markdown("### 🏗️ CRM Prescripción")
@@ -406,10 +319,13 @@ def main():
 
     if menu == "Panel de Control":
         render_panel_control()
+
     elif menu == "Clientes":
         render_clientes()
+
     elif menu == "Proyectos":
         render_proyectos()
+
     elif menu == "Buscar":
         render_buscar()
 
