@@ -334,18 +334,23 @@ def _render_dashboard(df_proy: pd.DataFrame):
     st.altair_chart(chart, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 # =====================================================
 # LISTA / RESUMEN: pipeline + tabla + seleccionar/borrar
 # =====================================================
 def _render_resumen(df_proy: pd.DataFrame):
-    # Pipeline
+    # ---------- TARJETA RESUMEN + FILTROS ----------
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("📋 Resumen y lista de proyectos")
 
     # Prefijo "res" para filtros de esta pestaña
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="res")
 
-    st.markdown("### 🧪 Pipeline (conteo por estado)", unsafe_allow_html=True)
+    # Inicializamos filtro por estado desde pipeline visual
+    filtro_estado = st.session_state.get("pipeline_estado_filter", "Todos")
+
+    # ---------- PIPELINE 1: MÉTRICAS (st.metric) ----------
+    st.markdown("### 🧪 Pipeline (métricas por estado)", unsafe_allow_html=True)
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
             "Detectado",
@@ -363,9 +368,75 @@ def _render_resumen(df_proy: pd.DataFrame):
     else:
         st.info("No hay información de estados con los filtros aplicados.")
 
+    # ---------- PIPELINE 2: VISUAL APPLE + CLICK PARA FILTRAR ----------
+    st.markdown("### 🔁 Pipeline visual Apple (clic para filtrar)", unsafe_allow_html=True)
+    if not df_filtrado.empty and "estado" in df_filtrado.columns:
+        counts = df_filtrado["estado"].value_counts()
+
+        estado_cfg = {
+            "Detectado":       ("⚪", "rgba(148,163,184,0.16)", "#111827"),
+            "Seguimiento":     ("🔵", "rgba(59,130,246,0.16)", "#1D4ED8"),
+            "En Prescripción": ("🟣", "rgba(129,140,248,0.16)", "#4C1D95"),
+            "Oferta Enviada":  ("🟡", "rgba(250,204,21,0.22)", "#92400E"),
+            "Negociación":     ("🟠", "rgba(249,115,22,0.20)", "#9A3412"),
+            "Ganado":          ("🟢", "rgba(34,197,94,0.18)", "#15803D"),
+            "Perdido":         ("🔴", "rgba(248,113,113,0.20)", "#B91C1C"),
+        }
+
+        orden_estados = [
+            "Detectado",
+            "Seguimiento",
+            "En Prescripción",
+            "Oferta Enviada",
+            "Negociación",
+            "Ganado",
+            "Perdido",
+        ]
+
+        cols_pills = st.columns(len(orden_estados) + 1)
+
+        # Botón "Todos"
+        with cols_pills[0]:
+            if st.button("🔁 Todos", key="pill_todos"):
+                st.session_state["pipeline_estado_filter"] = "Todos"
+                st.rerun()
+
+        # Botones por estado
+        for idx, est in enumerate(orden_estados, start=1):
+            emoji, bg, color = estado_cfg[est]
+            count = int(counts.get(est, 0))
+            style = (
+                f"background:{bg};color:{color};border-radius:999px;padding:4px 10px;"
+                f"border:none;cursor:pointer;font-size:0.78rem;font-weight:600;"
+            )
+            if filtro_estado == est:
+                style += "box-shadow:0 0 0 2px rgba(37,99,235,0.35);"
+
+            label_html = f"""
+            <div style="{style}">
+                <span>{emoji}</span>
+                <span style="margin-left:4px;">{est}</span>
+                <span style="margin-left:6px;">{count}</span>
+            </div>
+            """
+
+            with cols_pills[idx]:
+                if st.button(
+                    label=" ", key=f"pill_{est}"
+                ):
+                    st.session_state["pipeline_estado_filter"] = est
+                    st.rerun()
+                st.markdown(label_html, unsafe_allow_html=True)
+
+        if filtro_estado != "Todos":
+            st.caption(f"Filtro activo desde pipeline: **{filtro_estado}**")
+
+    else:
+        st.caption("No hay datos para representar el pipeline visual.")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Tabla
+    # ---------- TABLA PRINCIPAL ----------
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown("### 📂 Lista de proyectos filtrados", unsafe_allow_html=True)
 
@@ -374,7 +445,18 @@ def _render_resumen(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    df_ui = df_filtrado.reset_index(drop=True).copy()
+    # Aplicamos filtro de estado adicional si viene del pipeline
+    if filtro_estado != "Todos" and "estado" in df_filtrado.columns:
+        df_tabla = df_filtrado[df_filtrado["estado"] == filtro_estado].copy()
+    else:
+        df_tabla = df_filtrado.copy()
+
+    if df_tabla.empty:
+        st.warning("No hay proyectos con el filtro de estado actual.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    df_ui = df_tabla.reset_index(drop=True).copy()
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
 
@@ -559,7 +641,6 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
             "Notas generales de seguimiento", value=proy.get("notas_seguimiento", "")
         )
 
-        # Historial de notas
         st.markdown("##### 📝 Historial de notas del proyecto", unsafe_allow_html=True)
         if notas_historial:
             try:
@@ -592,7 +673,6 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
             placeholder="Ejemplo: Llamada con la promotora, pendiente de enviar oferta...",
         )
 
-        # Tareas
         st.markdown("##### ✅ Tareas asociadas al proyecto", unsafe_allow_html=True)
         tareas_actualizadas = []
         if tareas:
@@ -638,7 +718,6 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
             key=f"fecha_tarea_{proy['id']}",
         )
 
-        # Checklist de pasos
         st.markdown("##### 🧭 Checklist de pasos de seguimiento", unsafe_allow_html=True)
         estados_check_pasos = []
         if not pasos:
@@ -719,6 +798,8 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
 # =====================================================
 # DUPLICADOS
 # =====================================================
@@ -840,4 +921,3 @@ def _render_import_export(df_proy_empty: bool, df_proy=None):
         st.info("Sube un Excel para poder importarlo.")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
