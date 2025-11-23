@@ -20,21 +20,58 @@ from crm_utils import (
 
 
 # =====================================================
+# ESTILO EXTRA PARA MODAL TIPO "A" (APPLE-LIKE)
+# =====================================================
+
+def _inject_modal_style():
+    st.markdown(
+        """
+        <style>
+        /* Modal Apple-like */
+        [data-testid="stModal"] > div {
+            background: radial-gradient(circle at top left, #0f172a 0%, #020617 55%);
+            border-radius: 22px !important;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            box-shadow:
+                0 28px 80px rgba(15, 23, 42, 0.85),
+                0 0 0 1px rgba(15, 23, 42, 0.9);
+            padding: 18px 22px !important;
+        }
+
+        [data-testid="stModal"] h1,
+        [data-testid="stModal"] h2,
+        [data-testid="stModal"] h3 {
+            font-size: 1.0rem !important;
+            letter-spacing: -0.02em;
+        }
+
+        [data-testid="stModal"] {
+            backdrop-filter: blur(18px);
+            background-color: rgba(15,23,42,0.75) !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# =====================================================
 # PÁGINA PRINCIPAL DE PROYECTOS
 # =====================================================
 
 def render_proyectos():
     """Página principal de Proyectos."""
     inject_apple_style()
+    _inject_modal_style()
 
-    # CABECERA (título más compacto)
+    # Cabecera compacta
     st.markdown(
         """
         <div class="apple-card">
             <div class="section-badge">Proyectos</div>
-            <h2 style="margin-top: 6px; font-size:1.55rem;">CRM de Proyectos</h2>
-            <p style="color:#9FB3D1; margin-bottom: 0; font-size:0.9rem;">
-                Vista unificada para filtrar, revisar el pipeline, listar y editar proyectos.
+            <h3 style="margin-top: 4px; font-size:1.25rem;">CRM de proyectos</h3>
+            <p style="color:#9FB3D1; margin-bottom: 0; font-size:0.85rem;">
+                Filtra, analiza y gestiona tus oportunidades de prescripción.
             </p>
         </div>
         """,
@@ -46,24 +83,13 @@ def render_proyectos():
     if df_proy is None:
         df_proy = pd.DataFrame()
 
-    # Caso sin proyectos: mostramos tabs mínimos + alta al final
-    if df_proy.empty:
-        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-        st.info("Todavía no hay proyectos creados en Firestore.")
-        _render_import_export(df_proy_empty=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # Alta al final
-        _bloque_alta_proyecto(df_clientes)
-        return
-
-    # Con proyectos: tabs para vista, dashboard, duplicados e import/export
-    tab_vista, tab_dash, tab_duplicados, tab_import = st.tabs(
+    tab_vista, tab_dash, tab_duplicados, tab_import, tab_nuevo = st.tabs(
         [
             "📂 Vista general",
-            "📈 Dashboard analítico",
+            "📊 Dashboard analítico",
             "🧬 Duplicados",
             "📥 Importar / Exportar",
+            "➕ Añadir proyecto",
         ]
     )
 
@@ -77,23 +103,27 @@ def render_proyectos():
         _render_duplicados(df_proy)
 
     with tab_import:
-        _render_import_export(df_proy_empty=False, df_proy=df_proy)
+        _render_import_export(df_proy_empty=df_proy.empty, df_proy=df_proy)
 
-    # 🔻 Alta de proyecto SIEMPRE AL FINAL
-    _bloque_alta_proyecto(df_clientes)
+    with tab_nuevo:
+        _bloque_alta_proyecto(df_clientes)
 
 
 # =====================================================
-# ALTA DE PROYECTO (AL FINAL DE LA PÁGINA)
+# ALTA DE PROYECTO (PESTAÑA “AÑADIR PROYECTO”)
 # =====================================================
 
 def _bloque_alta_proyecto(df_clientes):
-    nombres_clientes = ["(sin asignar)"]
-    if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
-        nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
+    st.markdown('<div class="apple-card-light" style="margin-top:8px;">', unsafe_allow_html=True)
+    st.markdown("##### ➕ Añadir nuevo proyecto", unsafe_allow_html=True)
 
-    st.markdown('<div class="apple-card-light" style="margin-top:24px;">', unsafe_allow_html=True)
-    st.markdown("#### ➕ Añadir nuevo proyecto", unsafe_allow_html=True)
+    nombres_clientes = ["(sin asignar)"]
+    if (
+        df_clientes is not None
+        and not df_clientes.empty
+        and "empresa" in df_clientes.columns
+    ):
+        nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
 
     with st.form("form_proyecto"):
         col1, col2 = st.columns(2)
@@ -164,13 +194,13 @@ def _bloque_alta_proyecto(df_clientes):
 
 
 # =====================================================
-# FILTROS
+# FILTROS COMUNES
 # =====================================================
 
 def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
     df = df.copy()
 
-    st.markdown("##### 🎯 Filtros rápidos", unsafe_allow_html=True)
+    st.markdown("###### 🎯 Filtros rápidos", unsafe_allow_html=True)
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
     ciudades = sorted(df["ciudad"].dropna().unique().tolist()) if "ciudad" in df.columns else []
@@ -222,12 +252,17 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
 
 
 # =====================================================
-# VISTA GENERAL (TABLA + ICONOS EDITAR/BORRAR + MODAL)
+# VISTA GENERAL: TABLA + ICONOS EDITAR/BORRAR + MODAL
 # =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("📂 Lista de proyectos")
+    st.markdown("##### 📂 Vista general de proyectos", unsafe_allow_html=True)
+
+    if df_proy.empty:
+        st.info("Todavía no hay proyectos creados.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista")
 
@@ -236,8 +271,8 @@ def _render_vista_general(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Pipeline métrico sencillo
-    st.markdown("### 🧪 Pipeline (métricas por estado)", unsafe_allow_html=True)
+    # Pipeline sencillo
+    st.markdown("###### 🧪 Pipeline por estado", unsafe_allow_html=True)
     estados_base = [
         "Detectado",
         "Seguimiento",
@@ -257,24 +292,52 @@ def _render_vista_general(df_proy: pd.DataFrame):
     else:
         st.caption("No hay columna de estado en los proyectos.")
 
-    # -------- CONTENEDOR PARA ICONOS (APARECERÁ ENCIMA DE LA TABLA) --------
-    actions_placeholder = st.container()
+    # Acciones sobre selección
+    cols_actions = st.columns([0.06, 0.06, 0.88])
+    with cols_actions[0]:
+        edit_clicked = st.button(
+            "✏️",
+            help="Editar proyecto seleccionado",
+            key="btn_edit_sel",
+        )
+    with cols_actions[1]:
+        delete_clicked = st.button(
+            "🗑️",
+            help="Eliminar proyectos seleccionados",
+            key="btn_del_sel",
+        )
+    with cols_actions[2]:
+        st.caption("Selecciona filas en la columna ✔ y usa los iconos para editar o borrar.")
 
-    # -------- TABLA A TODO EL ANCHO --------
+    # Tabla a todo el ancho
     df_lista = df_filtrado.copy()
     df_ui = df_lista.reset_index(drop=True).copy()
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
 
-    # Solo una columna de selección
-    df_ui.insert(0, "Seleccionar", False)
+    # Keep only main columns to optimizar espacio
+    columnas_principales = [
+        "nombre_obra",
+        "cliente_principal",
+        "ciudad",
+        "provincia",
+        "tipo_proyecto",
+        "estado",
+        "prioridad",
+        "potencial_eur",
+        "fecha_seguimiento",
+    ]
+    columnas_principales = [c for c in columnas_principales if c in df_ui.columns]
+    df_ui = df_ui[columnas_principales]
+
+    df_ui.insert(0, "✔", False)
 
     edited_df = st.data_editor(
         df_ui,
         column_config={
-            "Seleccionar": st.column_config.CheckboxColumn(
+            "✔": st.column_config.CheckboxColumn(
                 "✔",
-                help="Marca la fila sobre la que quieres editar o eliminar",
+                help="Selecciona una o varias obras",
                 default=False,
             ),
         },
@@ -283,62 +346,37 @@ def _render_vista_general(df_proy: pd.DataFrame):
         key="vista_tabla_proyectos",
     )
 
-    # Determinar fila seleccionada
-    selected_indices = [i for i, v in edited_df["Seleccionar"].items() if v]
-    selected_id = None
-    selected_row = None
+    selected_indices = [i for i, v in edited_df["✔"].items() if v]
 
-    if len(selected_indices) > 1:
-        st.warning("Hay varias filas seleccionadas. Solo se usará la primera.")
-    if selected_indices:
-        idx = selected_indices[0]
-        selected_id = ids[idx]
-        selected_row = df_lista.reset_index(drop=True).iloc[idx]
+    selected_ids = [ids[i] for i in selected_indices] if selected_indices else []
+    selected_id_for_edit = selected_ids[0] if selected_ids else None
 
-    # -------- ICONOS PEQUEÑOS ENCIMA DE LA TABLA (IZQUIERDA) --------
-    edit_clicked = delete_clicked = False
-    with actions_placeholder:
-        col_acc1, col_acc2, col_acc3 = st.columns([0.06, 0.06, 0.88])
-        with col_acc1:
-            edit_clicked = st.button(
-                "✏️",
-                help="Editar proyecto seleccionado",
-                key="btn_edit_sel",
-                disabled=selected_id is None,
-            )
-        with col_acc2:
-            delete_clicked = st.button(
-                "🗑️",
-                help="Eliminar proyecto seleccionado",
-                key="btn_del_sel",
-                disabled=selected_id is None,
-            )
-        with col_acc3:
-            st.caption(
-                "Selecciona una fila en la columna ✔ y usa los iconos para editar o borrar."
-            )
-
-    # -------- LÓGICA DE ICONOS --------
+    # Borrar seleccionados
     if delete_clicked:
-        if selected_id is None:
-            st.warning("Selecciona primero un proyecto en la tabla.")
+        if not selected_ids:
+            st.warning("Marca al menos un proyecto en la columna ✔ para poder borrarlo.")
         else:
-            delete_proyecto(selected_id)
-            st.success("Proyecto eliminado.")
+            borrados = 0
+            for pid in selected_ids:
+                try:
+                    delete_proyecto(pid)
+                    borrados += 1
+                except Exception as e:
+                    st.error(f"No se pudo borrar un proyecto: {e}")
+            st.success(f"Proyectos eliminados: {borrados}")
             st.rerun()
 
+    # Editar seleccionado
     if edit_clicked:
-        if selected_id is None:
-            st.warning("Selecciona primero un proyecto en la tabla.")
+        if selected_id_for_edit is None:
+            st.warning("Marca primero un proyecto para editarlo.")
         else:
-            st.session_state["edit_proyecto_id"] = selected_id
+            st.session_state["edit_proyecto_id"] = selected_id_for_edit
             st.session_state["show_edit_modal"] = True
-            st.rerun()
 
-    # -------- MODAL FLOANTE DE EDICIÓN --------
+    # Modal de edición
     if st.session_state.get("show_edit_modal") and st.session_state.get("edit_proyecto_id"):
         edit_id = st.session_state["edit_proyecto_id"]
-
         df_reset = df_lista.reset_index(drop=True)
         match = df_reset[df_reset["id"] == edit_id]
         if match.empty:
@@ -353,7 +391,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 
 # =====================================================
-# PANEL DETALLE (USADO DENTRO DEL MODAL)
+# PANEL DETALLE (USADO EN EL MODAL)
 # =====================================================
 
 def _panel_detalle_proyecto(proy):
@@ -393,11 +431,26 @@ def _panel_detalle_proyecto(proy):
             )
             estado_det = st.selectbox(
                 "Estado",
-                ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
-                 "Negociación", "Paralizado", "Ganado", "Perdido"],
-                index=["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
-                       "Negociación", "Paralizado", "Ganado", "Perdido"].index(
-                    proy.get("estado", "Detectado"))
+                [
+                    "Detectado",
+                    "Seguimiento",
+                    "En Prescripción",
+                    "Oferta Enviada",
+                    "Negociación",
+                    "Paralizado",
+                    "Ganado",
+                    "Perdido",
+                ],
+                index=[
+                    "Detectado",
+                    "Seguimiento",
+                    "En Prescripción",
+                    "Oferta Enviada",
+                    "Negociación",
+                    "Paralizado",
+                    "Ganado",
+                    "Perdido",
+                ].index(proy.get("estado", "Detectado")),
             )
 
         fecha_seg_val = proy.get("fecha_seguimiento") or date.today()
@@ -416,14 +469,14 @@ def _panel_detalle_proyecto(proy):
             value=proy.get("notas_seguimiento", ""),
         )
 
-        # ---- Historial de notas ----
-        st.markdown("##### 📝 Historial de notas")
+        # Historial de notas
+        st.markdown("###### 📝 Historial de notas", unsafe_allow_html=True)
         if notas_historial:
             for nota in sorted(notas_historial, key=lambda x: x.get("fecha", ""), reverse=True):
                 st.write(f"**[{nota.get('tipo','Nota')}] {nota.get('fecha','')}**")
                 st.write(nota.get("texto", ""))
         else:
-            st.caption("Sin notas aún.")
+            st.caption("Sin notas todavía.")
 
         nueva_nota_tipo = st.selectbox(
             "Tipo de nota",
@@ -436,8 +489,8 @@ def _panel_detalle_proyecto(proy):
             placeholder="Ejemplo: llamada con la promotora, pendiente de oferta...",
         )
 
-        # ---- Tareas ----
-        st.markdown("##### ☑️ Tareas")
+        # Tareas
+        st.markdown("###### ☑️ Tareas", unsafe_allow_html=True)
         tareas_actualizadas = []
         if tareas:
             for i, t in enumerate(tareas):
@@ -481,8 +534,8 @@ def _panel_detalle_proyecto(proy):
             key=f"fecha_tarea_{proy['id']}",
         )
 
-        # ---- Checklist ----
-        st.markdown("##### 🧭 Checklist de pasos")
+        # Checklist
+        st.markdown("###### 🧭 Checklist de pasos", unsafe_allow_html=True)
         if not pasos:
             if st.checkbox(
                 "Crear checklist base",
@@ -566,12 +619,17 @@ def _panel_detalle_proyecto(proy):
 
 def _render_dashboard(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("📈 Dashboard analítico")
+    st.markdown("##### 📊 Dashboard analítico", unsafe_allow_html=True)
+
+    if df_proy.empty:
+        st.info("Todavía no hay proyectos.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="dash")
 
     if df_filtrado.empty:
-        st.info("No hay datos.")
+        st.info("No hay datos con esos filtros.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
@@ -656,7 +714,12 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
 def _render_duplicados(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("🧬 Duplicados")
+    st.markdown("##### 🧬 Proyectos duplicados", unsafe_allow_html=True)
+
+    if df_proy.empty:
+        st.info("Todavía no hay proyectos.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
     df_tmp = df_proy.copy()
     key_cols = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
@@ -684,8 +747,16 @@ def _render_duplicados(df_proy: pd.DataFrame):
         nombre = grupo.iloc[0].get("nombre_obra", "(sin nombre)")
 
         with st.expander(f"Duplicados – {nombre}"):
-            cols = ["id", "nombre_obra", "cliente_principal", "ciudad",
-                    "provincia", "estado", "fecha_creacion", "fecha_seguimiento"]
+            cols = [
+                "id",
+                "nombre_obra",
+                "cliente_principal",
+                "ciudad",
+                "provincia",
+                "estado",
+                "fecha_creacion",
+                "fecha_seguimiento",
+            ]
             cols = [c for c in cols if c in grupo.columns]
             st.dataframe(grupo[cols], hide_index=True, use_container_width=True)
 
@@ -704,10 +775,10 @@ def _render_duplicados(df_proy: pd.DataFrame):
 
 def _render_import_export(df_proy_empty, df_proy=None):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("📤 Exportar / 📥 Importar proyectos")
+    st.markdown("##### 📥 Importar / Exportar proyectos", unsafe_allow_html=True)
 
     if not df_proy_empty and df_proy is not None:
-        st.markdown("#### Exportar Excel de obras importantes")
+        st.markdown("###### Exportar Excel de obras importantes", unsafe_allow_html=True)
         importantes = filtrar_obras_importantes(df_proy)
         if importantes.empty:
             st.info("No hay obras importantes según los criterios definidos.")
@@ -721,9 +792,9 @@ def _render_import_export(df_proy_empty, df_proy=None):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
-    st.markdown("#### Importar proyectos desde Excel generado con ChatGPT")
+    st.markdown("###### Importar proyectos desde Excel", unsafe_allow_html=True)
     st.caption(
-        "Formato de fechas: dd/mm/aa o dd/mm/aaaa. "
+        "Sube un .xlsx generado desde ChatGPT. Formato fechas: dd/mm/aa o dd/mm/aaaa. "
         "El campo 'Promotora_Fondo' se usará como cliente principal (promotor)."
     )
 
