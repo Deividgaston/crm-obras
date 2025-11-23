@@ -48,10 +48,10 @@ def normalize_fecha(value):
     if isinstance(value, date):
         return value
     if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value).date()
-        except ValueError:
-            return None
+            try:
+                return datetime.fromisoformat(value).date()
+            except ValueError:
+                return None
     return None
 
 
@@ -178,7 +178,7 @@ def importar_proyectos_desde_excel(file) -> int:
             else:
                 prioridad = "Media"
 
-            potencial = 0.0  # si quieres luego calculamos algo más fino
+            potencial = 0.0  # si quieres luego lo afinamos
 
             notas = str(row.get("Notas", "") or "").strip()
             url = str(row.get("Fuente_URL", "") or "").strip()
@@ -328,7 +328,7 @@ elif menu == "Proyectos":
     if not df_clientes.empty and "empresa" in df_clientes.columns:
         nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
 
-    # ---- Alta de proyecto ----
+    # ---- Alta de proyecto manual ----
     with st.expander("➕ Añadir nuevo proyecto manualmente"):
         with st.form("form_proyecto"):
             nombre_obra = st.text_input("Nombre del proyecto / obra")
@@ -372,7 +372,7 @@ elif menu == "Proyectos":
     df_proy = get_proyectos()
 
     if df_proy.empty:
-        st.info("Todavía no hay proyectos.")
+        st.info("Todavía no hay proyectos guardados en Firestore.")
     else:
         st.subheader("📂 Todos los proyectos")
         cols = [
@@ -428,6 +428,7 @@ elif menu == "Proyectos":
                             st.success("Pasos actualizados.")
                             st.rerun()
 
+                    hoy = date.today()
                     nueva_fecha = st.date_input(
                         "Nueva fecha de seguimiento",
                         value=row.get("fecha_seguimiento") or hoy,
@@ -471,33 +472,32 @@ elif menu == "Proyectos":
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-        # ==========================
-        # IMPORTAR DESDE EXCEL (AQUÍ ESTÁ TU BOTÓN)
-        # ==========================
-        st.markdown("### 📥 Importar proyectos desde Excel (ChatGPT)")
+    # ==========================
+    # IMPORTAR DESDE EXCEL (SIEMPRE VISIBLE)
+    # ==========================
+    st.markdown("### 📥 Importar proyectos desde Excel (ChatGPT)")
+    st.caption(
+        "Sube el Excel que te genero desde ChatGPT con columnas como "
+        "`Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado, Fuente_URL, Notas`, etc."
+    )
 
-        st.caption(
-            "Sube el Excel que te genero desde ChatGPT con columnas como "
-            "`Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado, Fuente_URL, Notas`, etc."
-        )
+    uploaded_file = st.file_uploader(
+        "Sube aquí el archivo .xlsx con los proyectos",
+        type=["xlsx"],
+        key="uploader_import"
+    )
 
-        uploaded_file = st.file_uploader(
-            "Sube aquí el archivo .xlsx con los proyectos",
-            type=["xlsx"],
-            key="uploader_import"
-        )
+    if uploaded_file is not None:
+        try:
+            df_preview = pd.read_excel(uploaded_file)
+            st.write("Vista previa de los datos a importar:")
+            st.dataframe(df_preview.head(), use_container_width=True)
 
-        if uploaded_file is not None:
-            try:
-                df_preview = pd.read_excel(uploaded_file)
-                st.write("Vista previa de los datos a importar:")
-                st.dataframe(df_preview.head(), use_container_width=True)
-
-                if st.button("🚀 Importar estos proyectos al CRM"):
-                    creados = importar_proyectos_desde_excel(uploaded_file)
-                    st.success(f"Importación completada. Proyectos creados: {creados}")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Error leyendo el Excel: {e}")
-        else:
-            st.info("Sube un Excel para poder importarlo.")
+            if st.button("🚀 Importar estos proyectos al CRM"):
+                creados = importar_proyectos_desde_excel(uploaded_file)
+                st.success(f"Importación completada. Proyectos creados: {creados}")
+                st.rerun()
+        except Exception as e:
+            st.error(f"Error leyendo el Excel: {e}")
+    else:
+        st.info("Sube un Excel para poder importarlo.")
