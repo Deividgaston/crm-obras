@@ -417,37 +417,42 @@ def _render_resumen(df_proy: pd.DataFrame):
 def _render_detalle_proyecto(df_proy: pd.DataFrame):
     st.subheader("🔍 Detalle y edición de un proyecto")
 
+    # Ordenamos por fecha de creación
     df_proy_sorted = (
         df_proy.sort_values("fecha_creacion", ascending=False)
         .reset_index(drop=True)
     )
 
-    # Si venimos desde Resumen, usamos ese ID como selección por defecto
-    default_index = 0
+    if df_proy_sorted.empty:
+        st.info("No hay proyectos para mostrar en detalle.")
+        return
+
+    # Si venimos desde la pestaña Resumen, usamos ese ID para fijar el índice
     if "detalle_proyecto_id" in st.session_state:
         detalle_id = st.session_state["detalle_proyecto_id"]
         try:
-            default_index = df_proy_sorted.index[
-                df_proy_sorted["id"] == detalle_id
-            ][0]
+            idx_from_id = df_proy_sorted.index[df_proy_sorted["id"] == detalle_id][0]
+            st.session_state["detalle_select"] = idx_from_id
         except Exception:
-            default_index = 0
+            # Si el ID ya no existe, dejamos que Streamlit use el valor actual o 0
+            if "detalle_select" not in st.session_state:
+                st.session_state["detalle_select"] = 0
+
+    # Aseguramos que el índice guardado está dentro de rango
+    if "detalle_select" in st.session_state:
+        if st.session_state["detalle_select"] >= len(df_proy_sorted):
+            st.session_state["detalle_select"] = 0
 
     opciones = [
         f"{r['nombre_obra']} – {r.get('cliente_principal','—')} ({r.get('ciudad','—')})"
         for _, r in df_proy_sorted.iterrows()
     ]
 
-    # Reset del widget cuando haya un cambio de selección externa
-    if "detalle_proyecto_id" in st.session_state:
-        st.session_state.pop("detalle_select", None)
-
     idx_sel = st.selectbox(
         "Selecciona un proyecto para ver/editar el detalle",
         options=list(range(len(df_proy_sorted))),
-        index=default_index,
         format_func=lambda i: opciones[i] if 0 <= i < len(opciones) else "",
-        key=f"detalle_select_{len(df_proy_sorted)}",
+        key="detalle_select",
     )
 
     proy = df_proy_sorted.iloc[idx_sel]
