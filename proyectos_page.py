@@ -56,8 +56,6 @@ def render_proyectos():
                 ensure_cliente_basico(arquitectura or None, "Arquitectura")
                 ensure_cliente_basico(ingenieria or None, "Ingeniería")
 
-
-
                 add_proyecto({
                     "nombre_obra": nombre_obra,
                     "cliente_principal": promotor_nombre,
@@ -78,80 +76,109 @@ def render_proyectos():
                 st.success("Proyecto creado correctamente.")
                 st.rerun()
 
-    # ---- Listado y gestión de proyectos ----
+    # ---- Datos de proyectos ----
     df_proy = get_proyectos()
 
     if df_proy.empty:
         st.info("Todavía no hay proyectos guardados en Firestore.")
-        _render_import_excel()
+        _render_import_export(df_proy_empty=True)
         return
 
-    # ===== Pipeline visual rápido =====
+    # ==========================
+    # TABS (ventanas) en Proyectos
+    # ==========================
+    tab_resumen, tab_detalle, tab_duplicados, tab_import = st.tabs(
+        ["📊 Resumen", "🔍 Detalle", "🧬 Duplicados", "📥 Importar / Exportar"]
+    )
+
+    # ---------- TAB RESUMEN ----------
+    with tab_resumen:
+        _render_resumen(df_proy)
+
+    # ---------- TAB DETALLE ----------
+    with tab_detalle:
+        _render_detalle_proyecto(df_proy)
+
+    # ---------- TAB DUPLICADOS ----------
+    with tab_duplicados:
+        _render_duplicados(df_proy)
+
+    # ---------- TAB IMPORT / EXPORT ----------
+    with tab_import:
+        _render_import_export(df_proy_empty=False, df_proy=df_proy)
+
+
+# ==========================
+# RESUMEN: pipeline + tabla tipo Excel con borrar
+# ==========================
+
+def _render_resumen(df_proy):
+    st.subheader("📊 Pipeline de proyectos por estado")
+
     if "estado" in df_proy.columns:
-        st.markdown("### 📊 Pipeline de proyectos por estado")
-        estados = ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
+        estados = ["Detectado", "Seguimiento", "En Prescripción",
+                   "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
         counts = df_proy["estado"].value_counts()
         cols_pipe = st.columns(len(estados))
         for col, est in zip(cols_pipe, estados):
             col.metric(est, int(counts.get(est, 0)))
+    else:
+        st.info("No hay información de estados todavía.")
 
-    # ===== AVISO DE DUPLICADOS =====
-    _render_duplicados(df_proy)
+    st.markdown("### 📂 Todos los proyectos (vista tipo Excel con borrar)")
 
-    # ===== LISTADO GENERAL CON BORRADO RÁPIDO =====
-    st.subheader("📂 Todos los proyectos")
+    # Tabla principal
     cols_tabla = [
-        "nombre_obra", "cliente_principal", "tipo_proyecto",
+        "id", "nombre_obra", "cliente_principal", "tipo_proyecto",
         "ciudad", "provincia", "prioridad", "potencial_eur",
         "estado", "fecha_creacion", "fecha_seguimiento"
     ]
     cols_tabla = [c for c in cols_tabla if c in df_proy.columns]
-    st.dataframe(
-        df_proy[cols_tabla].sort_values("fecha_creacion", ascending=False),
+
+    if "id" not in cols_tabla:
+        cols_tabla = ["id"] + cols_tabla
+
+    df_tabla = df_proy[cols_tabla].copy()
+    # Columna para marcar proyectos a borrar
+    df_tabla["borrar"] = False
+
+    edited_df = st.data_editor(
+        df_tabla,
+        column_config={
+            "borrar": st.column_config.CheckboxColumn(
+                "🗑️ Borrar",
+                help="Marca los proyectos que quieres eliminar y pulsa 'Eliminar seleccionados'.",
+                default=False,
+            )
+        },
+        disabled=["id"],  # no se edita el id
         hide_index=True,
-        use_container_width=True
+        use_container_width=True,
+        key="tabla_proyectos_editor",
     )
 
-    st.markdown("#### 🗑️ Borrar proyectos rápidamente")
-    for _, row in df_proy.sort_values("fecha_creacion", ascending=False).iterrows():
-        c1, c2 = st.columns([6, 1])
-        with c1:
-            st.write(
-                f"- {row.get('nombre_obra','(sin nombre)')} "
-                f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
-            )
-        with c2:
-            if st.button("🗑️ Borrar", key=f"del_row_{row['id']}"):
-                delete_proyecto(row["id"])
-                st.success("Proyecto borrado.")
-                st.rerun()
+    if st.button("Eliminar seleccionados"):
+        marcados = edited_df[edited_df["borrar"] == True]
+        if marcados.empty:
+            st.warning("No hay proyectos marcados para borrar.")
+        else:
+            num = 0
+            for _, row in marcados.iterrows():
+                try:
+                    delete_proyecto(row["id"])
+                    num += 1
+                except Exception as e:
+                    st.error(f"No se pudo borrar un proyecto: {e}")
+            st.success(f"Proyectos borrados: {num}")
+            st.rerun()
 
-    # ===== DETALLE DE PROYECTO (con timeline + tareas + pasos) =====
-    _render_detalle_proyecto(df_proy)
 
-    # ===== EXPORTAR EXCEL OBRAS IMPORTANTES =====
-    st.markdown("### 📤 Exportar Excel de obras importantes")
-    df_importantes = filtrar_obras_importantes(df_proy)
-    if df_importantes.empty:
-        st.info("No hay obras importantes según criterios (prioridad Alta o potencial ≥ 50k€).")
-    else:
-        output = generar_excel_obras_importantes(df_proy)
-        fecha_str = date.today().isoformat()
-        st.download_button(
-            label=f"⬇️ Descargar Excel obras importantes ({fecha_str})",
-            data=output,
-            file_name=f"obras_importantes_{fecha_str}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-    # ===== IMPORTAR DESDE EXCEL =====
-    _render_import_excel()
-
+# ==========================
+# DUPLICADOS
+# ==========================
 
 def _render_duplicados(df_proy):
-    st.markdown("### ⚠️ Revisión de posibles proyectos duplicados")
-
-
+    st.subheader("🧬 Revisión de posibles proyectos duplicados")
 
     df_tmp = df_proy.copy()
     key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
@@ -196,10 +223,12 @@ def _render_duplicados(df_proy):
                         st.rerun()
 
 
+# ==========================
+# DETALLE + TIMELINE + TAREAS + CHECKLIST
+# ==========================
+
 def _render_detalle_proyecto(df_proy):
-    st.markdown("### 🔍 Detalle y edición de un proyecto (con timeline y tareas)")
-
-
+    st.subheader("🔍 Detalle y edición de un proyecto (con timeline y tareas)")
 
     df_proy_sorted = df_proy.sort_values("fecha_creacion", ascending=False).reset_index(drop=True)
     opciones = [
@@ -214,8 +243,6 @@ def _render_detalle_proyecto(df_proy):
 
     proy = df_proy_sorted.iloc[idx_sel]
     st.markdown(f"#### Proyecto seleccionado: **{proy['nombre_obra']}**")
-
-
 
     # Sacamos listas existentes (notas_historial, tareas, pasos)
     notas_historial = proy.get("notas_historial") or []
@@ -258,10 +285,8 @@ def _render_detalle_proyecto(df_proy):
         )
         notas_det = st.text_area("Notas generales de seguimiento", value=proy.get("notas_seguimiento", ""))
 
-        # === TIMELINE DE NOTAS ===
         st.markdown("##### 📝 Historial de notas del proyecto")
         if notas_historial:
-            # mostramos notas ordenadas por fecha descendente
             try:
                 notas_historial_sorted = sorted(
                     notas_historial,
@@ -276,15 +301,11 @@ def _render_detalle_proyecto(df_proy):
                 tipo_txt = nota.get("tipo", "Nota")
                 texto_txt = nota.get("texto", "")
                 st.markdown(f"**[{tipo_txt}] {fecha_txt}**  ")
-
-
                 st.write(texto_txt)
         else:
             st.caption("Todavía no hay notas históricas para este proyecto.")
 
         st.markdown("**Añadir nueva nota al historial**")
-
-
         nueva_nota_tipo = st.selectbox(
             "Tipo de nota",
             ["Nota", "Llamada", "Reunión", "Visita", "Otro"],
@@ -296,17 +317,15 @@ def _render_detalle_proyecto(df_proy):
             placeholder="Ejemplo: Llamada con la promotora, pendiente de enviar oferta..."
         )
 
-        # === TAREAS ===
         st.markdown("##### ✅ Tareas asociadas al proyecto")
-
-
         tareas_actualizadas = []
         if tareas:
             for i, tarea in enumerate(tareas):
                 cols_t = st.columns([0.05, 0.45, 0.25, 0.25])
                 with cols_t[0]:
                     completado = st.checkbox(
-                        "", value=tarea.get("completado", False),
+                        "",
+                        value=tarea.get("completado", False),
                         key=f"chk_tarea_{proy['id']}_{i}"
                     )
                 with cols_t[1]:
@@ -341,10 +360,7 @@ def _render_detalle_proyecto(df_proy):
             key=f"fecha_tarea_{proy['id']}",
         )
 
-        # === CHECKLIST DE PASOS ===
         st.markdown("##### 🧭 Checklist de pasos de seguimiento")
-
-
         estados_check_pasos = []
         if not pasos:
             if st.checkbox("Crear checklist base para este proyecto", key=f"chk_crear_pasos_{proy['id']}"):
@@ -360,14 +376,11 @@ def _render_detalle_proyecto(df_proy):
 
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            guardar_det = st.form_submit_button("💾 Guardar cambios (notas, tareas, datos)")
+            guardar_det = st.form_submit_button("💾 Guardar cambios (datos, notas, tareas)")
         with col_btn2:
             borrar_det = st.form_submit_button("🗑️ Borrar este proyecto")
 
-
-
     if guardar_det:
-        # manejamos nueva nota
         if nueva_nota_texto.strip():
             notas_historial.append({
                 "fecha": datetime.utcnow().isoformat(timespec="seconds"),
@@ -375,7 +388,6 @@ def _render_detalle_proyecto(df_proy):
                 "texto": nueva_nota_texto.strip(),
             })
 
-        # manejamos nueva tarea
         if nueva_tarea_titulo.strip():
             tareas_actualizadas.append({
                 "titulo": nueva_tarea_titulo.strip(),
@@ -384,7 +396,6 @@ def _render_detalle_proyecto(df_proy):
                 "tipo": nueva_tarea_tipo,
             })
 
-        # actualizamos pasos
         if pasos and estados_check_pasos:
             for i, chk in enumerate(estados_check_pasos):
                 pasos[i]["completado"] = chk
@@ -409,11 +420,7 @@ def _render_detalle_proyecto(df_proy):
         }
 
         actualizar_proyecto(proy["id"], update_data)
-        st.success("Cambios guardados en el proyecto (datos, notas, tareas y pasos)."
-
-
-
-        )
+        st.success("Cambios guardados en el proyecto (datos, notas, tareas y pasos).")
         st.rerun()
 
     if borrar_det:
@@ -422,8 +429,29 @@ def _render_detalle_proyecto(df_proy):
         st.rerun()
 
 
-def _render_import_excel():
-    st.markdown("### 📥 Importar proyectos desde Excel (ChatGPT)")
+# ==========================
+# IMPORTAR / EXPORTAR
+# ==========================
+
+def _render_import_export(df_proy_empty: bool, df_proy=None):
+    st.subheader("📤 Exportar / 📥 Importar")
+
+    if not df_proy_empty and df_proy is not None:
+        st.markdown("#### Exportar Excel de obras importantes")
+        df_importantes = filtrar_obras_importantes(df_proy)
+        if df_importantes.empty:
+            st.info("No hay obras importantes según criterios (prioridad Alta o potencial ≥ 50k€).")
+        else:
+            output = generar_excel_obras_importantes(df_proy)
+            fecha_str = date.today().isoformat()
+            st.download_button(
+                label=f"⬇️ Descargar Excel obras importantes ({fecha_str})",
+                data=output,
+                file_name=f"obras_importantes_{fecha_str}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    st.markdown("#### Importar proyectos desde Excel (ChatGPT)")
     st.caption(
         "Sube el Excel que te genero desde ChatGPT. "
         "Formato de fechas: 30/11/25 o 30/11/2025 (dd/mm/aa). "
