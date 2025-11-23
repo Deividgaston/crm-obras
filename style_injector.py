@@ -1,197 +1,140 @@
 import streamlit as st
 
-def inject_apple_style():
+def inject_global_styles():
     st.markdown("""
     <style>
 
-    /* =========================================
-       APPLE BLUE THEME — DUAL MODE
-       ========================================= */
+    /* ------------------------------------------------------------------------------------
+       TIPOGRAFÍA & BASE
+    ------------------------------------------------------------------------------------ */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Dark Mode */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --bg-main: #0E1A2B;                /* Navy profundo */
-            --bg-card: rgba(21, 36, 58, 0.65); /* Semi transparente */
-            --bg-card-light: rgba(28, 49, 78, 0.90);
-            --border-color: rgba(255,255,255,0.08);
-            --text-color: #E9EEF6;
-            --text-muted: #9FB3D1;
-            --accent: #3EA0FF;
-            --accent-soft: rgba(62,160,255,0.18);
-            --pill-shadow: rgba(62,160,255,0.45);
-        }
-    }
-
-    /* Light Mode */
-    @media (prefers-color-scheme: light) {
-        :root {
-            --bg-main: #EAF4FF;                /* Azul Apple súper claro */
-            --bg-card: rgba(255,255,255,0.82);
-            --bg-card-light: rgba(255,255,255,0.96);
-            --border-color: rgba(0,0,0,0.08);
-            --text-color: #0A1A2F;
-            --text-muted: #4B5E74;
-            --accent: #0077FF;
-            --accent-soft: rgba(0,119,255,0.12);
-            --pill-shadow: rgba(0,119,255,0.35);
-        }
-    }
-
-    /* Global font and background */
     html, body, [class*="css"] {
-        font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif !important;
-        background: var(--bg-main) !important;
-        color: var(--text-color) !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+        background: #0F172A !important;  /* Azul oscuro profesional */
+        color: #E2E8F0 !important;      /* Texto gris-azulado suave */
     }
 
-    /* Streamlit block container width */
     .block-container {
-        max-width: 1200px;
         padding-top: 1.5rem;
         padding-bottom: 3rem;
+        max-width: 1250px;
     }
 
-    /* Sidebar */
+    /* ------------------------------------------------------------------------------------
+       SIDEBAR (Cristal, estilo Apple)
+    ------------------------------------------------------------------------------------ */
     [data-testid="stSidebar"] {
-        background: var(--bg-card-light) !important;
+        background: rgba(30, 41, 59, 0.45) !important;
         backdrop-filter: blur(18px);
-        border-right: 1px solid var(--border-color);
-        color: var(--text-color);
+        border-right: 1px solid rgba(255,255,255,0.07);
     }
 
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3 {
-        color: var(--text-color) !important;
+    [data-testid="stSidebar"] * {
+        color: #E2E8F0 !important;
     }
 
-    /* HEADERS */
-    h1, h2, h3, h4 {
-        color: var(--text-color) !important;
-        letter-spacing: -0.02em !important;
-    }
-
-    h1 {
-        font-size: 2.1rem !important;
-        font-weight: 650 !important;
-    }
-
-    h2 {
-        font-size: 1.5rem !important;
-        font-weight: 600 !important;
-    }
-
-    /* Apple Card */
+    /* ------------------------------------------------------------------------------------
+       TARJETAS TIPO APPLE
+    ------------------------------------------------------------------------------------ */
     .apple-card {
-        padding: 22px 26px;
-        background: var(--bg-card);
-        backdrop-filter: blur(18px);
-        border-radius: 20px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 14px 40px rgba(0,0,0,0.25);
-        margin-bottom: 20px;
+        padding: 18px 22px;
+        background: linear-gradient(145deg, #1E293B 0%, #0F172A 100%);
+        border-radius: 18px;
+        border: 1px solid rgba(148,163,184,0.18);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+        margin-bottom: 18px;
     }
 
     .apple-card-light {
-        padding: 20px 24px;
-        background: var(--bg-card-light);
-        border-radius: 18px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.10);
-        margin-bottom: 20px;
-    }
-
-    /* Metrics Apple */
-    .metric-row { 
-        display: flex; 
-        gap: 14px; 
-        margin: 12px 0; 
-    }
-    .metric-box {
-        flex: 1;
-        padding: 18px;
-        background: var(--bg-card-light);
+        padding: 16px 20px;
+        background: rgba(30,41,59,0.65);
         border-radius: 16px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.12);
-    }
-    .metric-title { 
-        font-size: 0.8rem; 
-        color: var(--text-muted); 
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-    }
-    .metric-value { 
-        font-size: 1.8rem; 
-        margin-top: 4px; 
-        color: var(--accent); 
-        font-weight: 650;
-    }
-    .metric-sub { 
-        font-size: 0.78rem; 
-        color: var(--text-muted); 
-        margin-top: 3px;
+        border: 1px solid rgba(148,163,184,0.25);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+        margin-bottom: 18px;
     }
 
-    /* Section badge */
+    /* ------------------------------------------------------------------------------------
+       PESTAÑAS
+    ------------------------------------------------------------------------------------ */
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(30,41,59,0.6);
+        border-radius: 16px;
+        padding: 4px 6px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        color: #CBD5E1 !important;
+        font-weight: 500;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: #1E40AF !important;   /* Azul fuerte Apple */
+        color: white !important;
+        border-radius: 10px;
+        font-weight: 600 !important;
+    }
+
+    /* ------------------------------------------------------------------------------------
+       BADGES (SECCIÓN)
+    ------------------------------------------------------------------------------------ */
     .section-badge {
         display: inline-flex;
         align-items: center;
-        padding: 4px 12px;
+        gap: 6px;
+        padding: 4px 10px;
         border-radius: 999px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        font-weight: 600;
+        background: rgba(96,165,250,0.18);
+        color: #60A5FA;
         font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.03em;
     }
 
-    /* DataFrames */
-    .stDataFrame table {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .stDataFrame tbody tr td {
-        background-color: var(--bg-card) !important;
-        color: var(--text-color) !important;
-        border-color: var(--border-color) !important;
-    }
-    .stDataFrame thead tr th {
-        background-color: var(--bg-card-light) !important;
-        color: var(--text-color) !important;
-        border-color: var(--border-color) !important;
+    /* ------------------------------------------------------------------------------------
+       FORMULARIOS & BOTONES
+    ------------------------------------------------------------------------------------ */
+    textarea, input, select {
+        border-radius: 10px !important;
+        background: rgba(255,255,255,0.04) !important;
+        color: #F1F5F9 !important;
     }
 
-    /* Buttons */
     button[kind="primary"] {
-        background: var(--accent) !important;
-        color: white !important;
         border-radius: 999px !important;
-        border: none !important;
-        padding: 8px 20px !important;
-        font-weight: 600 !important;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-    }
-    button[kind="primary"]:hover {
-        background: white !important;
-        color: var(--accent) !important;
-        border: 1px solid var(--accent) !important;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+        background: #1E40AF !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
     }
 
-    /* Inputs */
-    input, textarea, select {
-        background: var(--bg-card-light) !important;
-        border-radius: 12px !important;
-        border: 1px solid var(--border-color) !important;
-        color: var(--text-color) !important;
+    button {
+        color: white !important;
     }
 
-    /* Code block (para el prompt de Buscar) */
-    pre, code {
-        background: #020617 !important;
-        color: #E5E7EB !important;
+    /* ------------------------------------------------------------------------------------
+       TABLAS
+    ------------------------------------------------------------------------------------ */
+    .data-editor-container {
+        background-color: rgba(255,255,255,0.04) !important;
         border-radius: 12px !important;
+    }
+
+    /* ------------------------------------------------------------------------------------
+       MODALES SIMULADOS
+    ------------------------------------------------------------------------------------ */
+    .modal-card {
+        background: rgba(30,41,59,0.75);
+        border: 1px solid rgba(148,163,184,0.25);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+        margin-top: 20px;
+        animation: fadeIn 0.18s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     </style>
