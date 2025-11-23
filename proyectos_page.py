@@ -113,29 +113,107 @@ def render_proyectos():
 
 
 # ==========================
-# RESUMEN: pipeline + tabla tipo Excel con borrar
+# RESUMEN: pipeline + tabla tipo Excel con filtros y borrar
 # ==========================
 
 def _render_resumen(df_proy):
     st.subheader("📊 Pipeline de proyectos por estado")
 
 
-    if "estado" in df_proy.columns:
+    df = df_proy.copy()
+
+    # --- Filtros superiores ---
+    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+
+    # Filtro ciudad
+    if "ciudad" in df.columns:
+        ciudades = sorted([c for c in df["ciudad"].dropna().unique().tolist() if c])
+    else:
+        ciudades = []
+    with col_f1:
+        ciudad_sel = st.selectbox(
+            "Ciudad",
+            options=["Todas"] + ciudades,
+            index=0,
+        )
+
+    # Filtro estado (seguimiento)
+    if "estado" in df.columns:
+        estados_list = sorted(df["estado"].dropna().unique().tolist())
+    else:
+        estados_list = []
+    with col_f2:
+        estado_sel = st.selectbox(
+            "Estado / Seguimiento",
+            options=["Todos"] + estados_list,
+            index=0,
+        )
+
+    # Filtro tipo de proyecto
+    if "tipo_proyecto" in df.columns:
+        tipos_list = sorted([t for t in df["tipo_proyecto"].dropna().unique().tolist() if t])
+    else:
+        tipos_list = []
+    with col_f3:
+        tipo_sel = st.selectbox(
+            "Tipo de proyecto",
+            options=["Todos"] + tipos_list,
+            index=0,
+        )
+
+    # Filtro prioridad
+    if "prioridad" in df.columns:
+        prioridades = sorted(df["prioridad"].dropna().unique().tolist())
+    else:
+        prioridades = []
+    with col_f4:
+        prioridad_sel = st.selectbox(
+            "Prioridad",
+            options=["Todas"] + prioridades,
+            index=0,
+        )
+
+    # --- Aplicamos filtros ---
+    mask = [True] * len(df)
+    df = df.reset_index(drop=True)
+
+    if ciudad_sel != "Todas" and "ciudad" in df.columns:
+        mask = df["ciudad"].fillna("") == ciudad_sel
+    else:
+        mask = pd.Series([True] * len(df))
+
+    if estado_sel != "Todos" and "estado" in df.columns:
+        mask &= df["estado"].fillna("") == estado_sel
+
+    if tipo_sel != "Todos" and "tipo_proyecto" in df.columns:
+        mask &= df["tipo_proyecto"].fillna("") == tipo_sel
+
+    if prioridad_sel != "Todas" and "prioridad" in df.columns:
+        mask &= df["prioridad"].fillna("") == prioridad_sel
+
+    df_filtrado = df[mask].copy()
+
+    # --- Pipeline sobre el filtrado ---
+    if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = ["Detectado", "Seguimiento", "En Prescripción",
                    "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
-        counts = df_proy["estado"].value_counts()
+        counts = df_filtrado["estado"].value_counts()
         cols_pipe = st.columns(len(estados))
         for col, est in zip(cols_pipe, estados):
             col.metric(est, int(counts.get(est, 0)))
     else:
-        st.info("No hay información de estados todavía.")
+        st.info("No hay información de estados con los filtros aplicados.")
 
 
-    st.markdown("### 📂 Lista de proyectos (selección a la izquierda, sin ID)")
+    st.markdown("### 📂 Lista de proyectos filtrados (selección a la izquierda, sin ID)")
 
+
+    if df_filtrado.empty:
+        st.warning("No hay proyectos que cumplan los filtros seleccionados.")
+        return
 
     # --- Tabla sin ID visible, pero lo guardamos aparte ---
-    df_ui = df_proy.copy()
+    df_ui = df_filtrado.reset_index(drop=True).copy()
     ids = df_ui["id"].tolist()   # Guardamos IDs para borrado
     df_ui = df_ui.drop(columns=["id"])  # OCULTAMOS el id visualmente
 
