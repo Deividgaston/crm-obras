@@ -437,12 +437,17 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         f"{r['nombre_obra']} – {r.get('cliente_principal','—')} ({r.get('ciudad','—')})"
         for _, r in df_proy_sorted.iterrows()
     ]
+
+    # Reset del widget cuando haya un cambio de selección externa
+    if "detalle_proyecto_id" in st.session_state:
+        st.session_state.pop("detalle_select", None)
+
     idx_sel = st.selectbox(
         "Selecciona un proyecto para ver/editar el detalle",
         options=list(range(len(df_proy_sorted))),
         index=default_index,
         format_func=lambda i: opciones[i] if 0 <= i < len(opciones) else "",
-        key="detalle_select",
+        key=f"detalle_select_{len(df_proy_sorted)}",
     )
 
     proy = df_proy_sorted.iloc[idx_sel]
