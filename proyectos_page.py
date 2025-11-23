@@ -333,6 +333,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
     st.altair_chart(chart, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
 # =====================================================
 # LISTA / RESUMEN: pipeline + tabla + seleccionar/borrar
 # =====================================================
@@ -839,3 +840,4 @@ def _render_import_export(df_proy_empty: bool, df_proy=None):
         st.info("Sube un Excel para poder importarlo.")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
