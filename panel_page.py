@@ -4,51 +4,55 @@ from datetime import date
 from crm_utils import get_clientes, get_proyectos
 
 
-def render_panel_control():
+def render_panel():
     st.title("⚡ Panel de Control")
+
 
     df_clientes = get_clientes()
     df_proyectos = get_proyectos()
 
     total_clientes = len(df_clientes) if not df_clientes.empty else 0
     total_proyectos = len(df_proyectos) if not df_proyectos.empty else 0
+
     proyectos_activos = 0
     if not df_proyectos.empty and "estado" in df_proyectos.columns:
         proyectos_activos = len(df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])])
+
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Clientes en CRM", total_clientes)
     c2.metric("Proyectos totales", total_proyectos)
     c3.metric("Proyectos activos", proyectos_activos)
 
-    # Pipeline visual por estado
-    if not df_proyectos.empty and "estado" in df_proyectos.columns:
-        st.markdown("### 📊 Pipeline de proyectos por estado")
-        estados = ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
-        counts = df_proyectos["estado"].value_counts()
-        cols = st.columns(len(estados))
-        for col, est in zip(cols, estados):
-            col.metric(est, int(counts.get(est, 0)))
 
-    st.divider()
+    st.markdown("---")
     st.subheader("🚨 Seguimientos pendientes (hoy o pasados)")
 
-    if not df_proyectos.empty and "fecha_seguimiento" in df_proyectos.columns:
-        hoy = date.today()
-        pendientes = df_proyectos[
-            df_proyectos["fecha_seguimiento"].notna()
-            & (df_proyectos["fecha_seguimiento"] <= hoy)
-            & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))
-        ]
 
-        if pendientes.empty:
-            st.success("No tienes seguimientos atrasados. ✅")
-        else:
-            st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente.")
-            for _, row in pendientes.sort_values("fecha_seguimiento").iterrows():
-                with st.expander(f"⏰ {row.get('nombre_obra', 'Sin nombre')} – {row['fecha_seguimiento']}"):
-                    st.write(f"**Cliente principal (promotor):** {row.get('cliente_principal', '—')}")
-                    st.write(f"**Estado:** {row.get('estado', '—')}")
-                    st.write(f"**Notas:** {row.get('notas_seguimiento', '')}")
-    else:
-        st.info("Todavía no hay proyectos en el sistema.")
+    if df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
+        st.info("Todavía no hay proyectos con fecha de seguimiento.")
+        return
+
+    hoy = date.today()
+    pendientes = df_proyectos[
+        df_proyectos["fecha_seguimiento"].notna()
+        & (df_proyectos["fecha_seguimiento"] <= hoy)
+        & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))  # type: ignore
+    ]
+
+    if pendientes.empty:
+        st.success("No tienes seguimientos atrasados. ✅")
+        return
+
+    st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente.")
+
+
+    for _, row in pendientes.sort_values("fecha_seguimiento").iterrows():
+        nombre = row.get("nombre_obra", "Sin nombre")
+        cliente = row.get("cliente_principal", "—")
+        fecha = row.get("fecha_seguimiento")
+        notas = row.get("notas_seguimiento", "")
+
+
+        with st.expander(f"⏰ {nombre} – {cliente} ({fecha})"):
+            st.write(notas or "Sin notas adicionales.")
