@@ -231,7 +231,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Pipeline métricas
+        # Pipeline métricas
     st.markdown("### 🧪 Pipeline (métricas por estado)", unsafe_allow_html=True)
     estados_base = [
         "Detectado",
@@ -243,6 +243,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
         "Ganado",
         "Perdido",
     ]
+
     if "estado" in df_filtrado.columns:
         counts = df_filtrado["estado"].value_counts()
         cols = st.columns(len(estados_base))
@@ -251,68 +252,17 @@ def _render_vista_general(df_proy: pd.DataFrame):
     else:
         st.caption("No hay columna de estado en los proyectos.")
 
-    # Pipeline visual
-    st.markdown("### 🔁 Pipeline visual Apple (clic para filtrar)", unsafe_allow_html=True)
+    # ⚠️ A partir de aquí ya NO hay Pipeline visual Apple
+    #     Eliminamos pills, botones y filtros adicionales.
 
-    filtro_estado = st.session_state.get("vista_estado_pipeline", "Todos")
-    if "estado" in df_filtrado.columns:
-        counts = df_filtrado["estado"].value_counts()
-
-        estado_cfg = {
-            "Detectado":       ("⚪", "rgba(148,163,184,0.16)", "#E5E7EB"),
-            "Seguimiento":     ("🔵", "rgba(59,130,246,0.16)", "#BFDBFE"),
-            "En Prescripción": ("🟣", "rgba(129,140,248,0.16)", "#DDD6FE"),
-            "Oferta Enviada":  ("🟡", "rgba(250,204,21,0.22)", "#FCD34D"),
-            "Negociación":     ("🟠", "rgba(249,115,22,0.20)", "#FDBA74"),
-            "Paralizado":      ("⚫", "rgba(107,114,128,0.16)", "#9CA3AF"),
-            "Ganado":          ("🟢", "rgba(34,197,94,0.18)", "#86EFAC"),
-            "Perdido":         ("🔴", "rgba(248,113,113,0.20)", "#FCA5A5"),
-        }
-        orden_estados = list(estado_cfg.keys())
-
-        cols_pills = st.columns(len(orden_estados) + 1)
-
-        with cols_pills[0]:
-            if st.button("🔁 Todos", key="vista_pill_todos"):
-                st.session_state["vista_estado_pipeline"] = "Todos"
-                st.rerun()
-
-        for idx, est in enumerate(orden_estados, start=1):
-            emoji, bg, color = estado_cfg[est]
-            count = int(counts.get(est, 0))
-            style = (
-                f"background:{bg};color:{color};border-radius:999px;"
-                f"padding:6px 12px;font-size:0.80rem;font-weight:600;"
-                f"cursor:pointer;border:1px solid transparent;"
-            )
-            if filtro_estado == est:
-                style += "box-shadow:0 0 0 2px var(--pill-shadow);"
-            pill_html = f"""
-            <div style="{style}">
-                {emoji} {est} <span style="margin-left:4px;"><b>{count}</b></span>
-            </div>
-            """
-            with cols_pills[idx]:
-                if st.button(" ", key=f"vista_pill_{est}"):
-                    st.session_state["vista_estado_pipeline"] = est
-                    st.rerun()
-                st.markdown(pill_html, unsafe_allow_html=True)
-
-        if filtro_estado != "Todos":
-            st.caption(f"Filtro de pipeline activo: **{filtro_estado}**")
-    else:
-        st.caption("No hay estados definidos para este conjunto de proyectos.")
-
-    # Aplicar filtro de pipeline a la lista
-    if filtro_estado != "Todos" and "estado" in df_filtrado.columns:
-        df_lista = df_filtrado[df_filtrado["estado"] == filtro_estado].copy()
-    else:
-        df_lista = df_filtrado.copy()
+    # La lista directamente usa los filtros normales:
+    df_lista = df_filtrado.copy()
 
     if df_lista.empty:
-        st.warning("No hay proyectos tras aplicar el filtro de pipeline.")
+        st.warning("No hay proyectos que cumplan los filtros seleccionados.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
+
 
     col_left, col_right = st.columns([1.25, 1.75])
 
