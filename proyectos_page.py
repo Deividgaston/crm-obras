@@ -46,17 +46,18 @@ def render_proyectos():
     if df_proy is None:
         df_proy = pd.DataFrame()
 
-    # Alta rápida
-    _bloque_alta_proyecto(df_clientes)
-
+    # Caso sin proyectos: mostramos tabs mínimos + alta al final
     if df_proy.empty:
         st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-        st.info("Todavía no hay proyectos creadados en Firestore.")
+        st.info("Todavía no hay proyectos creados en Firestore.")
         _render_import_export(df_proy_empty=True)
         st.markdown("</div>", unsafe_allow_html=True)
+
+        # Alta al final
+        _bloque_alta_proyecto(df_clientes)
         return
 
-    # Pestañas
+    # Con proyectos: tabs para vista, dashboard, duplicados e import/export
     tab_vista, tab_dash, tab_duplicados, tab_import = st.tabs(
         [
             "📂 Vista general",
@@ -78,9 +79,12 @@ def render_proyectos():
     with tab_import:
         _render_import_export(df_proy_empty=False, df_proy=df_proy)
 
+    # 🔻 Alta de proyecto SIEMPRE AL FINAL
+    _bloque_alta_proyecto(df_clientes)
+
 
 # =====================================================
-# ALTA DE PROYECTO
+# ALTA DE PROYECTO (AL FINAL DE LA PÁGINA)
 # =====================================================
 
 def _bloque_alta_proyecto(df_clientes):
@@ -88,7 +92,7 @@ def _bloque_alta_proyecto(df_clientes):
     if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
         nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
 
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown('<div class="apple-card-light" style="margin-top:24px;">', unsafe_allow_html=True)
     st.markdown("#### ➕ Añadir nuevo proyecto", unsafe_allow_html=True)
 
     with st.form("form_proyecto"):
@@ -218,7 +222,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
 
 
 # =====================================================
-# VISTA GENERAL (TABLA + MODAL DE EDICIÓN)
+# VISTA GENERAL (TABLA + ICONOS EDITAR/BORRAR + MODAL)
 # =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
@@ -253,9 +257,11 @@ def _render_vista_general(df_proy: pd.DataFrame):
     else:
         st.caption("No hay columna de estado en los proyectos.")
 
+    # -------- CONTENEDOR PARA ICONOS (APARECERÁ ENCIMA DE LA TABLA) --------
+    actions_placeholder = st.container()
+
     # -------- TABLA A TODO EL ANCHO --------
     df_lista = df_filtrado.copy()
-
     df_ui = df_lista.reset_index(drop=True).copy()
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
@@ -289,43 +295,53 @@ def _render_vista_general(df_proy: pd.DataFrame):
         selected_id = ids[idx]
         selected_row = df_lista.reset_index(drop=True).iloc[idx]
 
-    # -------- BOTONES DE ACCIÓN BAJO LA TABLA --------
-    col_acc1, col_acc2 = st.columns(2)
-    with col_acc1:
-        if st.button(
-            "✏️ Editar seleccionado",
-            use_container_width=True,
-            disabled=selected_id is None,
-        ):
-            if selected_id is None:
-                st.warning("Selecciona primero un proyecto en la tabla.")
-            else:
-                st.session_state["edit_proyecto_id"] = selected_id
-                st.session_state["show_edit_modal"] = True
-                st.rerun()
+    # -------- ICONOS PEQUEÑOS ENCIMA DE LA TABLA (IZQUIERDA) --------
+    edit_clicked = delete_clicked = False
+    with actions_placeholder:
+        col_acc1, col_acc2, col_acc3 = st.columns([0.06, 0.06, 0.88])
+        with col_acc1:
+            edit_clicked = st.button(
+                "✏️",
+                help="Editar proyecto seleccionado",
+                key="btn_edit_sel",
+                disabled=selected_id is None,
+            )
+        with col_acc2:
+            delete_clicked = st.button(
+                "🗑️",
+                help="Eliminar proyecto seleccionado",
+                key="btn_del_sel",
+                disabled=selected_id is None,
+            )
+        with col_acc3:
+            st.caption(
+                "Selecciona una fila en la columna ✔ y usa los iconos para editar o borrar."
+            )
 
-    with col_acc2:
-        if st.button(
-            "🗑️ Eliminar seleccionado",
-            use_container_width=True,
-            disabled=selected_id is None,
-        ):
-            if selected_id is None:
-                st.warning("Selecciona primero un proyecto en la tabla.")
-            else:
-                delete_proyecto(selected_id)
-                st.success("Proyecto eliminado.")
-                st.rerun()
+    # -------- LÓGICA DE ICONOS --------
+    if delete_clicked:
+        if selected_id is None:
+            st.warning("Selecciona primero un proyecto en la tabla.")
+        else:
+            delete_proyecto(selected_id)
+            st.success("Proyecto eliminado.")
+            st.rerun()
+
+    if edit_clicked:
+        if selected_id is None:
+            st.warning("Selecciona primero un proyecto en la tabla.")
+        else:
+            st.session_state["edit_proyecto_id"] = selected_id
+            st.session_state["show_edit_modal"] = True
+            st.rerun()
 
     # -------- MODAL FLOANTE DE EDICIÓN --------
     if st.session_state.get("show_edit_modal") and st.session_state.get("edit_proyecto_id"):
         edit_id = st.session_state["edit_proyecto_id"]
 
-        # Buscamos el proyecto en el DF filtrado (por si han cambiado filtros)
         df_reset = df_lista.reset_index(drop=True)
         match = df_reset[df_reset["id"] == edit_id]
         if match.empty:
-            # Si no está, cerramos modal
             st.session_state["show_edit_modal"] = False
             st.session_state["edit_proyecto_id"] = None
         else:
@@ -488,13 +504,11 @@ def _panel_detalle_proyecto(proy):
         cancelar_det = col2.form_submit_button("Cancelar")
 
     if cancelar_det:
-        # Cerrar modal sin guardar
         st.session_state["show_edit_modal"] = False
         st.session_state["edit_proyecto_id"] = None
         st.rerun()
 
     if guardar_det:
-        # Nueva nota
         if nueva_nota_texto.strip():
             notas_historial.append(
                 {
@@ -504,7 +518,6 @@ def _panel_detalle_proyecto(proy):
                 }
             )
 
-        # Nueva tarea
         if nueva_tarea_titulo.strip():
             tareas_actualizadas.append(
                 {
@@ -515,7 +528,6 @@ def _panel_detalle_proyecto(proy):
                 }
             )
 
-        # Checklist
         if pasos and estados_check_pasos:
             for i, chk in enumerate(estados_check_pasos):
                 pasos[i]["completado"] = chk
@@ -542,7 +554,6 @@ def _panel_detalle_proyecto(proy):
             },
         )
 
-        # Cerramos modal y refrescamos
         st.session_state["show_edit_modal"] = False
         st.session_state["edit_proyecto_id"] = None
         st.success("Proyecto actualizado.")
