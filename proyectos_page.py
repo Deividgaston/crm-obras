@@ -33,9 +33,8 @@ def render_proyectos():
         <div class="apple-card">
             <div class="section-badge">Proyectos</div>
             <h1 style="margin-top: 6px;">CRM de Proyectos</h1>
-            <p style="color:#6B7280; margin-bottom: 0;">
+            <p style="color:#9FB3D1; margin-bottom: 0;">
                 Vista unificada: filtros, pipeline, lista y detalle del proyecto en la misma pantalla.
-                Sin perder funcionalidades avanzadas.
             </p>
         </div>
         """,
@@ -47,7 +46,7 @@ def render_proyectos():
     if df_proy is None:
         df_proy = pd.DataFrame()
 
-    # Alta rápida siempre visible arriba
+    # Alta rápida arriba
     _bloque_alta_proyecto(df_clientes)
 
     if df_proy.empty:
@@ -57,7 +56,7 @@ def render_proyectos():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Pestañas simplificadas: vista general + extras
+    # Pestañas: vista general + extras
     tab_vista, tab_dash, tab_duplicados, tab_import = st.tabs(
         [
             "📂 Vista general",
@@ -169,7 +168,6 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
     st.markdown("##### 🎯 Filtros rápidos", unsafe_allow_html=True)
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
-    # Ciudad
     ciudades = sorted(df["ciudad"].dropna().unique().tolist()) if "ciudad" in df.columns else []
     with col_f1:
         ciudad_sel = st.selectbox(
@@ -178,7 +176,6 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_ciudad",
         )
 
-    # Estado
     estados_list = sorted(df["estado"].dropna().unique().tolist()) if "estado" in df.columns else []
     if "Paralizado" not in estados_list:
         estados_list.append("Paralizado")
@@ -189,7 +186,6 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_estado",
         )
 
-    # Tipo
     tipos_list = sorted(df["tipo_proyecto"].dropna().unique().tolist()) if "tipo_proyecto" in df.columns else []
     with col_f3:
         tipo_sel = st.selectbox(
@@ -198,7 +194,6 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_tipo",
         )
 
-    # Prioridad
     prioridades = sorted(df["prioridad"].dropna().unique().tolist()) if "prioridad" in df.columns else []
     with col_f4:
         prioridad_sel = st.selectbox(
@@ -222,14 +217,13 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
 
 
 # =====================================================
-# VISTA GENERAL (LISTA + DETALLE EN MISMA PANTALLA)
+# VISTA GENERAL (LISTA + DETALLE)
 # =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("📂 Lista de proyectos + detalle")
 
-    # 1) Filtros
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista")
 
     if df_filtrado.empty:
@@ -237,7 +231,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # 2) Pipeline de métricas rápido
+    # Pipeline métricas
     st.markdown("### 🧪 Pipeline (métricas por estado)", unsafe_allow_html=True)
     estados_base = [
         "Detectado",
@@ -257,7 +251,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
     else:
         st.caption("No hay columna de estado en los proyectos.")
 
-    # 3) Pipeline visual Apple con filtro
+    # Pipeline visual
     st.markdown("### 🔁 Pipeline visual Apple (clic para filtrar)", unsafe_allow_html=True)
 
     filtro_estado = st.session_state.get("vista_estado_pipeline", "Todos")
@@ -265,20 +259,19 @@ def _render_vista_general(df_proy: pd.DataFrame):
         counts = df_filtrado["estado"].value_counts()
 
         estado_cfg = {
-            "Detectado":       ("⚪", "rgba(148,163,184,0.16)", "#111827"),
-            "Seguimiento":     ("🔵", "rgba(59,130,246,0.16)", "#1D4ED8"),
-            "En Prescripción": ("🟣", "rgba(129,140,248,0.16)", "#4C1D95"),
-            "Oferta Enviada":  ("🟡", "rgba(250,204,21,0.22)", "#92400E"),
-            "Negociación":     ("🟠", "rgba(249,115,22,0.20)", "#9A3412"),
-            "Paralizado":      ("⚫", "rgba(107,114,128,0.16)", "#374151"),
-            "Ganado":          ("🟢", "rgba(34,197,94,0.18)", "#15803D"),
-            "Perdido":         ("🔴", "rgba(248,113,113,0.20)", "#B91C1C"),
+            "Detectado":       ("⚪", "rgba(148,163,184,0.16)", "#E5E7EB"),
+            "Seguimiento":     ("🔵", "rgba(59,130,246,0.16)", "#BFDBFE"),
+            "En Prescripción": ("🟣", "rgba(129,140,248,0.16)", "#DDD6FE"),
+            "Oferta Enviada":  ("🟡", "rgba(250,204,21,0.22)", "#FCD34D"),
+            "Negociación":     ("🟠", "rgba(249,115,22,0.20)", "#FDBA74"),
+            "Paralizado":      ("⚫", "rgba(107,114,128,0.16)", "#9CA3AF"),
+            "Ganado":          ("🟢", "rgba(34,197,94,0.18)", "#86EFAC"),
+            "Perdido":         ("🔴", "rgba(248,113,113,0.20)", "#FCA5A5"),
         }
         orden_estados = list(estado_cfg.keys())
 
         cols_pills = st.columns(len(orden_estados) + 1)
 
-        # "Todos"
         with cols_pills[0]:
             if st.button("🔁 Todos", key="vista_pill_todos"):
                 st.session_state["vista_estado_pipeline"] = "Todos"
@@ -293,7 +286,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
                 f"cursor:pointer;border:1px solid transparent;"
             )
             if filtro_estado == est:
-                style += "box-shadow:0 0 0 2px rgba(37,99,235,0.40);"
+                style += "box-shadow:0 0 0 2px var(--pill-shadow);"
             pill_html = f"""
             <div style="{style}">
                 {emoji} {est} <span style="margin-left:4px;"><b>{count}</b></span>
@@ -310,7 +303,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
     else:
         st.caption("No hay estados definidos para este conjunto de proyectos.")
 
-    # Aplicamos filtro de estado de pipeline a la tabla
+    # Aplicar filtro de pipeline a la lista
     if filtro_estado != "Todos" and "estado" in df_filtrado.columns:
         df_lista = df_filtrado[df_filtrado["estado"] == filtro_estado].copy()
     else:
@@ -321,10 +314,9 @@ def _render_vista_general(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # 4) LAYOUT: izquierda (tabla) / derecha (detalle)
-    col_left, col_right = st.columns([1.3, 1.7])
+    col_left, col_right = st.columns([1.25, 1.75])
 
-    # -------- IZQUIERDA: TABLA --------
+    # Izquierda: tabla
     with col_left:
         st.markdown("#### 📋 Lista de proyectos", unsafe_allow_html=True)
         df_ui = df_lista.reset_index(drop=True).copy()
@@ -338,12 +330,10 @@ def _render_vista_general(df_proy: pd.DataFrame):
             df_ui,
             column_config={
                 "Seleccionar": st.column_config.CheckboxColumn(
-                    "✔",
-                    help="Marca un proyecto para ver su detalle a la derecha",
+                    "✔", help="Marca un proyecto para ver su detalle a la derecha"
                 ),
                 "Borrar": st.column_config.CheckboxColumn(
-                    "🗑",
-                    help="Marca proyectos a eliminar",
+                    "🗑", help="Marca proyectos a eliminar"
                 ),
             },
             hide_index=True,
@@ -351,7 +341,6 @@ def _render_vista_general(df_proy: pd.DataFrame):
             key="vista_tabla_proyectos",
         )
 
-        # Determinar selección actual
         seleccionados = edited_df["Seleccionar"]
         idx_sel = None
         for i, v in seleccionados.items():
@@ -359,14 +348,9 @@ def _render_vista_general(df_proy: pd.DataFrame):
                 idx_sel = i
                 break
 
-        # Si no hay selección en la tabla, usamos lo que haya en sesión o el primero
         if idx_sel is None:
             if "detalle_proyecto_id" in st.session_state:
                 try:
-                    idx_sel = df_lista.index[
-                        df_lista["id"] == st.session_state["detalle_proyecto_id"]
-                    ][0]
-                    # adaptar al índice de df_ui
                     idx_sel = df_lista.reset_index(drop=True).index[
                         df_lista.reset_index(drop=True)["id"] == st.session_state["detalle_proyecto_id"]
                     ][0]
@@ -375,10 +359,8 @@ def _render_vista_general(df_proy: pd.DataFrame):
             else:
                 idx_sel = 0
         else:
-            # guardar selección en sesión
             st.session_state["detalle_proyecto_id"] = ids[idx_sel]
 
-        # Botón borrar desde la tabla
         if st.button("🗑️ Eliminar proyectos marcados", key="vista_btn_borrar"):
             marcados = edited_df["Borrar"]
             if not marcados.any():
@@ -392,16 +374,16 @@ def _render_vista_general(df_proy: pd.DataFrame):
                 st.success(f"Proyectos eliminados: {total}")
                 st.rerun()
 
-    # -------- DERECHA: DETALLE DEL PROYECTO --------
+    # Derecha: detalle
     with col_right:
         st.markdown("#### 🔍 Detalle del proyecto seleccionado", unsafe_allow_html=True)
-
         df_lista_reset = df_lista.reset_index(drop=True)
         if idx_sel < 0 or idx_sel >= len(df_lista_reset):
             idx_sel = 0
-
         proy = df_lista_reset.iloc[idx_sel]
         _panel_detalle_proyecto(proy)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =====================================================
@@ -607,6 +589,9 @@ def _panel_detalle_proyecto(proy_row: pd.Series):
                     "texto": nueva_nota_texto.strip(),
                 }
             )
+        if tareas_actualizadas is None:
+            tareas_actualizadas = []
+
         if nueva_tarea_titulo.strip():
             tareas_actualizadas.append(
                 {
@@ -616,6 +601,7 @@ def _panel_detalle_proyecto(proy_row: pd.Series):
                     "tipo": nueva_tarea_tipo,
                 }
             )
+
         if pasos and estados_check_pasos:
             for i, chk in enumerate(estados_check_pasos):
                 pasos[i]["completado"] = chk
@@ -649,7 +635,7 @@ def _panel_detalle_proyecto(proy_row: pd.Series):
 
 
 # =====================================================
-# DASHBOARD ANALÍTICO (igual que antes)
+# DASHBOARD ANALÍTICO
 # =====================================================
 
 def _render_dashboard(df_proy: pd.DataFrame):
