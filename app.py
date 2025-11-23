@@ -225,6 +225,13 @@ def importar_proyectos_desde_excel(file) -> int:
             estado = str(row.get("Estado", "Detectado")).strip() or "Detectado"
             segmento = str(row.get("Segmento", "") or "").lower()
 
+            # NUEVO: promotor como cliente_principal
+            promotor = str(row.get("Promotora_Fondo", "") or "").strip() or None
+
+            # Arquitectura e ingeniería desde Excel
+            arquitectura = str(row.get("Arquitectura", "") or "").strip() or None
+            ingenieria = str(row.get("Ingenieria", "") or "").strip() or None
+
             # Prioridad simple basada en segmento
             if "ultra" in segmento or "lujo" in segmento:
                 prioridad = "Alta"
@@ -248,7 +255,10 @@ def importar_proyectos_desde_excel(file) -> int:
 
             data = {
                 "nombre_obra": nombre_obra,
-                "cliente_principal": None,
+                "cliente_principal": promotor,          # promotor como cliente principal
+                "promotora": promotor,                  # también guardamos promotor explícito
+                "arquitectura": arquitectura,
+                "ingenieria": ingenieria,
                 "tipo_proyecto": tipo_proyecto,
                 "ciudad": ciudad,
                 "provincia": provincia,
@@ -315,7 +325,7 @@ if menu == "Panel de Control":
             st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente.")
             for _, row in pendientes.sort_values("fecha_seguimiento").iterrows():
                 with st.expander(f"⏰ {row.get('nombre_obra', 'Sin nombre')} – {row['fecha_seguimiento']}"):
-                    st.write(f"**Cliente principal:** {row.get('cliente_principal', '—')}")
+                    st.write(f"**Cliente principal (promotor):** {row.get('cliente_principal', '—')}")
                     st.write(f"**Estado:** {row.get('estado', '—')}")
                     st.write(f"**Notas:** {row.get('notas_seguimiento', '')}")
                     if st.button("Posponer 1 semana", key=f"posponer_{row['id']}"):
@@ -391,13 +401,15 @@ elif menu == "Proyectos":
     with st.expander("➕ Añadir nuevo proyecto manualmente"):
         with st.form("form_proyecto"):
             nombre_obra = st.text_input("Nombre del proyecto / obra")
-            cliente_principal = st.selectbox("Cliente principal", nombres_clientes)
+            cliente_principal = st.selectbox("Cliente principal (normalmente promotor)", nombres_clientes)
             tipo_proyecto = st.selectbox(
                 "Tipo de proyecto",
                 ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"]
             )
             ciudad = st.text_input("Ciudad")
             provincia = st.text_input("Provincia")
+            arquitectura = st.text_input("Arquitectura")
+            ingenieria = st.text_input("Ingeniería")
             prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
             potencial_eur = st.number_input(
                 "Potencial estimado 2N (€)", min_value=0.0, step=10000.0, value=50000.0
@@ -418,6 +430,8 @@ elif menu == "Proyectos":
                     "tipo_proyecto": tipo_proyecto,
                     "ciudad": ciudad,
                     "provincia": provincia,
+                    "arquitectura": arquitectura or None,
+                    "ingenieria": ingenieria or None,
                     "prioridad": prioridad,
                     "potencial_eur": float(potencial_eur),
                     "estado": estado_inicial,
@@ -432,130 +446,4 @@ elif menu == "Proyectos":
 
     if df_proy.empty:
         st.info("Todavía no hay proyectos guardados en Firestore.")
-    else:
-        st.subheader("📂 Todos los proyectos")
-        cols = [
-            "nombre_obra", "cliente_principal", "tipo_proyecto",
-            "ciudad", "provincia", "prioridad", "potencial_eur",
-            "estado", "fecha_creacion", "fecha_seguimiento"
-        ]
-        cols = [c for c in cols if c in df_proy.columns]
-        st.dataframe(
-            df_proy[cols].sort_values("fecha_creacion", ascending=False),
-            hide_index=True,
-            use_container_width=True
-        )
-
-        st.markdown("### 📌 Proyectos en seguimiento")
-        en_seg = df_proy[df_proy["estado"].isin(["Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación"])]
-
-        if en_seg.empty:
-            st.info("No hay proyectos en seguimiento todavía.")
-        else:
-            hoy = date.today()
-            for _, row in en_seg.sort_values("fecha_seguimiento", ascending=True).iterrows():
-                with st.expander(f"📌 {row['nombre_obra']} – próximo seguimiento {row.get('fecha_seguimiento','—')}"):
-                    st.write(f"**Cliente:** {row.get('cliente_principal','—')}")
-                    st.write(f"**Tipo:** {row.get('tipo_proyecto','—')}")
-                    st.write(f"**Estado:** {row.get('estado','—')}")
-                    st.write(f"**Prioridad:** {row.get('prioridad','Media')}")
-                    st.write(f"**Potencial 2N (€):** {row.get('potencial_eur','—')}")
-                    st.write(f"**Notas de seguimiento:** {row.get('notas_seguimiento','')}")
-
-                    pasos = row.get("pasos_seguimiento")
-                    if not pasos:
-                        if st.button("Crear checklist de pasos", key=f"crear_pasos_{row['id']}"):
-                            pasos = default_pasos_seguimiento()
-                            actualizar_proyecto(row["id"], {"pasos_seguimiento": pasos})
-                            st.success("Checklist creado.")
-                            st.rerun()
-                    else:
-                        st.markdown("#### ✅ Pasos de seguimiento")
-                        estados = []
-                        for i, paso in enumerate(pasos):
-                            checked = st.checkbox(
-                                paso.get("nombre", f"Paso {i+1}"),
-                                value=paso.get("completado", False),
-                                key=f"chk_{row['id']}_{i}"
-                            )
-                            estados.append(checked)
-
-                        if st.button("💾 Guardar pasos", key=f"save_pasos_{row['id']}"):
-                            for i, chk in enumerate(estados):
-                                pasos[i]["completado"] = chk
-                            actualizar_proyecto(row["id"], {"pasos_seguimiento": pasos})
-                            st.success("Pasos actualizados.")
-                            st.rerun()
-
-                    nueva_fecha = st.date_input(
-                        "Nueva fecha de seguimiento",
-                        value=row.get("fecha_seguimiento") or hoy,
-                        key=f"fecha_seg_{row['id']}"
-                    )
-                    if st.button("Actualizar fecha de seguimiento", key=f"upd_fecha_{row['id']}"):
-                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha.isoformat()})
-                        st.success("Fecha de seguimiento actualizada.")
-                        st.rerun()
-
-        # ==========================
-        # EXPORTAR EXCEL OBRAS IMPORTANTES
-        # ==========================
-        st.markdown("### 📤 Exportar Excel de obras importantes")
-
-        df_importantes = filtrar_obras_importantes(df_proy)
-
-        if df_importantes.empty:
-            st.info("Ahora mismo no hay obras marcadas como importantes según los criterios definidos.")
-            st.caption("Criterios: prioridad Alta o potencial ≥ 50.000 € y estado en seguimiento/detección.")
-        else:
-            st.write("Obras consideradas *importantes*:")
-            cols_imp = [
-                "nombre_obra", "cliente_principal", "tipo_proyecto",
-                "ciudad", "provincia", "prioridad", "potencial_eur",
-                "estado", "fecha_creacion", "fecha_seguimiento"
-            ]
-            cols_imp = [c for c in cols_imp if c in df_importantes.columns]
-            st.dataframe(df_importantes[cols_imp], hide_index=True, use_container_width=True)
-
-            output = BytesIO()
-            fecha_str = date.today().isoformat()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df_importantes[cols_imp].to_excel(writer, index=False, sheet_name="Obras importantes")
-            output.seek(0)
-
-            st.download_button(
-                label=f"⬇️ Descargar Excel obras importantes ({fecha_str})",
-                data=output,
-                file_name=f"obras_importantes_{fecha_str}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-    # ==========================
-    # IMPORTAR DESDE EXCEL (SIEMPRE VISIBLE)
-    # ==========================
-    st.markdown("### 📥 Importar proyectos desde Excel (ChatGPT)")
-    st.caption(
-        "Sube el Excel que te genero desde ChatGPT. "
-        "En las columnas de fecha puedes escribir, por ejemplo: 30/11/25 o 30/11/2025 (formato dd/mm/aa)."
-    )
-
-    uploaded_file = st.file_uploader(
-        "Sube aquí el archivo .xlsx con los proyectos",
-        type=["xlsx"],
-        key="uploader_import"
-    )
-
-    if uploaded_file is not None:
-        try:
-            df_preview = pd.read_excel(uploaded_file)
-            st.write("Vista previa de los datos a importar:")
-            st.dataframe(df_preview.head(), use_container_width=True)
-
-            if st.button("🚀 Importar estos proyectos al CRM"):
-                creados = importar_proyectos_desde_excel(uploaded_file)
-                st.success(f"Importación completada. Proyectos creados: {creados}")
-                st.rerun()
-        except Exception as e:
-            st.error(f"Error leyendo el Excel: {e}")
-    else:
-        st.info("Sube un Excel para poder importarlo.")
+    else
