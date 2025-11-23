@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import date, timedelta, datetime
 import json
+from io import BytesIO  # para generar Excel en memoria
 
 # ==========================
 # CONFIGURACIÓN STREAMLIT
@@ -114,6 +115,117 @@ def add_proyecto(data):
 
 def actualizar_proyecto(proyecto_id, data):
     db.collection("obras").document(proyecto_id).update(data)
+
+
+def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
+    """
+    Define qué es una 'obra importante':
+    - Estado en seguimiento (no perdido, no ganado), Y
+    - Prioridad Alta, O
+    - Potencial estimado >= 50.000 €
+    """
+    if df_proy.empty:
+        return df_proy
+
+    df = df_proy.copy()
+
+    if "prioridad" not in df.columns:
+        df["prioridad"] = "Media"
+    if "potencial_eur" not in df.columns:
+        df["potencial_eur"] = 0.0
+    if "estado" not in df.columns:
+        df["estado"] = "Detectado"
+
+    estados_seguimiento = ["Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación", "Detectado"]
+
+    mask_estado = df["estado"].isin(estados_seguimiento)
+    mask_prioridad = df["prioridad"] == "Alta"
+    mask_potencial = df["potencial_eur"].fillna(0) >= 50000
+
+    importantes = df[mask_estado & (mask_prioridad | mask_potencial)].copy()
+    return importantes
+
+
+def importar_proyectos_desde_excel(file) -> int:
+    """
+    Importa proyectos desde un Excel generado por ChatGPT y los guarda en Firestore.
+    Devuelve el número de proyectos creados.
+    """
+    try:
+        df = pd.read_excel(file)
+    except Exception as e:
+        st.error(f"Error leyendo el Excel: {e}")
+        return 0
+
+    # Esperamos columnas tipo:
+    # Proyecto, Ciudad, Provincia, Comunidad_Autonoma, Pais,
+    # Tipo_Proyecto, Segmento, Num_Unidades, Promotora_Fondo,
+    # Arquitectura, Ingenieria, Integrator_Partner,
+    # Estado, Fecha_Inicio_Estimada, Fecha_Entrega_Estimada,
+    # Fuente_URL, Notas
+
+    creados = 0
+    hoy = date.today()
+    for _, row in df.iterrows():
+        try:
+            nombre_obra = str(row.get("Proyecto", "")).strip()
+            if not nombre_obra:
+                continue
+
+            ciudad = str(row.get("Ciudad", "")).strip() or None
+            provincia = str(row.get("Provincia", "")).strip() or None
+            tipo_proyecto = str(row.get("Tipo_Proyecto", "")).strip() or None
+            estado = str(row.get("Estado", "Detectado")).strip() or "Detectado"
+            segmento = str(row.get("Segmento", "")).lower()
+
+            # Prioridad según segmento (muy simple, se puede mejorar)
+            if "ultra" in segmento or "lujo" in segmento:
+                prioridad = "Alta"
+            else:
+                prioridad = "Media"
+
+            # Potencial, si quieres luego lo afinamos
+            potencial = 0.0
+
+            # Notas + URL fuente
+            notas = str(row.get("Notas", "") or "").strip()
+            url = str(row.get("Fuente_URL", "") or "").strip()
+            notas_full = notas
+            if url:
+                if notas_full:
+                    notas_full += f"\nFuente: {url}"
+                else:
+                    notas_full = f"Fuente: {url}"
+
+            data = {
+                "nombre_obra": nombre_obra,
+                "cliente_principal": None,
+                "tipo_proyecto": tipo_proyecto,
+                "ciudad": ciudad,
+                "provincia": provincia,
+                "prioridad": prioridad,
+                "potencial_eur": float(potencial),
+                "estado": estado,
+                "fecha_creacion": datetime.utcnow(),
+                "fecha_seguimiento": hoy + timedelta(days=7),
+                "notas_seguimiento": notas_full,
+            }
+
+            add_proyecto(data)
+            creados += 1
+
+        except Exception as e:
+            st.warning(f"No se pudo importar una fila: {e}")
+            continue
+
+    return creados
+
+
+# ==========================
+# ESTADO PARA BÚSQUEDA AVANZADA (si lo quieres luego)
+# ==========================
+if "busqueda_params" not in st.session_state:
+    st.session_state.busqueda_params = None
 
 
 # ==========================
@@ -236,9 +348,16 @@ elif menu == "Proyectos":
         with st.form("form_proyecto"):
             nombre_obra = st.text_input("Nombre del proyecto / obra")
             cliente_principal = st.selectbox("Cliente principal", nombres_clientes)
-            tipo_proyecto = st.selectbox("Tipo de proyecto", ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"])
+            tipo_proyecto = st.selectbox(
+                "Tipo de proyecto",
+                ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"]
+            )
             ciudad = st.text_input("Ciudad")
             provincia = st.text_input("Provincia")
+            prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
+            potencial_eur = st.number_input(
+                "Potencial estimado 2N (€)", min_value=0.0, step=10000.0, value=50000.0
+            )
             estado_inicial = "Detectado"
             fecha_seg = st.date_input("Primera fecha de seguimiento", value=date.today() + timedelta(days=7))
             notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
@@ -255,6 +374,8 @@ elif menu == "Proyectos":
                     "tipo_proyecto": tipo_proyecto,
                     "ciudad": ciudad,
                     "provincia": provincia,
+                    "prioridad": prioridad,
+                    "potencial_eur": float(potencial_eur),
                     "estado": estado_inicial,
                     "fecha_seguimiento": fecha_seg,
                     "notas_seguimiento": notas,
@@ -268,8 +389,8 @@ elif menu == "Proyectos":
     if df_proy.empty:
         st.info("Todavía no hay proyectos.")
     else:
-        tab_nuevos, tab_seguimiento, tab_todos = st.tabs(
-            ["🆕 Nuevos esta semana", "📌 En seguimiento", "📂 Todos"]
+        tab_nuevos, tab_seguimiento, tab_todos, tab_export, tab_import = st.tabs(
+            ["🆕 Nuevos esta semana", "📌 En seguimiento", "📂 Todos", "📤 Exportar Excel", "📥 Importar desde Excel"]
         )
 
         hoy = date.today()
@@ -294,6 +415,8 @@ elif menu == "Proyectos":
                             st.write(f"**Tipo:** {row.get('tipo_proyecto', '—')}")
                             st.write(f"**Zona:** {row.get('ciudad','')} ({row.get('provincia','')})")
                             st.write(f"**Estado actual:** {row.get('estado','Detectado')}")
+                            st.write(f"**Prioridad:** {row.get('prioridad','Media')}")
+                            st.write(f"**Potencial 2N (€):** {row.get('potencial_eur','—')}")
                             st.write(f"**Fecha creación:** {row.get('fecha_creacion','—')}")
                             st.write(f"**Notas:** {row.get('notas_seguimiento','')}")
 
@@ -319,6 +442,8 @@ elif menu == "Proyectos":
                         st.write(f"**Cliente:** {row.get('cliente_principal','—')}")
                         st.write(f"**Tipo:** {row.get('tipo_proyecto','—')}")
                         st.write(f"**Estado:** {row.get('estado','—')}")
+                        st.write(f"**Prioridad:** {row.get('prioridad','Media')}")
+                        st.write(f"**Potencial 2N (€):** {row.get('potencial_eur','—')}")
                         st.write(f"**Notas de seguimiento:** {row.get('notas_seguimiento','')}")
 
                         # Checklist de pasos
@@ -361,6 +486,76 @@ elif menu == "Proyectos":
         # 3) TODOS LOS PROYECTOS
         with tab_todos:
             st.subheader("📂 Todos los proyectos")
-            cols = ["nombre_obra", "cliente_principal", "tipo_proyecto", "ciudad", "provincia", "estado", "fecha_creacion", "fecha_seguimiento"]
+            cols = [
+                "nombre_obra", "cliente_principal", "tipo_proyecto",
+                "ciudad", "provincia", "prioridad", "potencial_eur",
+                "estado", "fecha_creacion", "fecha_seguimiento"
+            ]
             cols = [c for c in cols if c in df_proy.columns]
-            st.dataframe(df_proy[cols].sort_values("fecha_creacion", ascending=False), hide_index=True, use_container_width=True)
+            st.dataframe(
+                df_proy[cols].sort_values("fecha_creacion", ascending=False),
+                hide_index=True,
+                use_container_width=True
+            )
+
+        # 4) EXPORTAR EXCEL
+        with tab_export:
+            st.subheader("📤 Exportar Excel de obras importantes")
+
+            df_importantes = filtrar_obras_importantes(df_proy)
+
+            if df_importantes.empty:
+                st.info("Ahora mismo no hay obras marcadas como importantes según los criterios definidos.")
+                st.caption("Criterios por defecto: prioridad Alta o potencial ≥ 50.000 € y estado en seguimiento.")
+            else:
+                st.write("Estas son las obras que se consideran *importantes* esta semana:")
+                cols = [
+                    "nombre_obra", "cliente_principal", "tipo_proyecto", "ciudad", "provincia",
+                    "prioridad", "potencial_eur", "estado", "fecha_creacion", "fecha_seguimiento"
+                ]
+                cols = [c for c in cols if c in df_importantes.columns]
+                st.dataframe(df_importantes[cols], hide_index=True, use_container_width=True)
+
+                # Generar Excel en memoria
+                output = BytesIO()
+                fecha_str = hoy.isoformat()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    df_importantes[cols].to_excel(writer, index=False, sheet_name="Obras importantes")
+                output.seek(0)
+
+                st.download_button(
+                    label=f"⬇️ Descargar Excel obras importantes ({fecha_str})",
+                    data=output,
+                    file_name=f"obras_importantes_{fecha_str}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+        # 5) IMPORTAR DESDE EXCEL (nuevo botón)
+        with tab_import:
+            st.subheader("📥 Importar proyectos desde Excel generado por ChatGPT")
+
+            st.caption(
+                "Sube el Excel que te genero desde ChatGPT con columnas como "
+                "`Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado, Fuente_URL, Notas`, etc."
+            )
+
+            uploaded_file = st.file_uploader(
+                "Sube el archivo .xlsx con los proyectos",
+                type=["xlsx"],
+                help="Usa el Excel que te he generado con la búsqueda de proyectos."
+            )
+
+            if uploaded_file is not None:
+                try:
+                    df_preview = pd.read_excel(uploaded_file)
+                    st.write("Vista previa de los datos a importar:")
+                    st.dataframe(df_preview.head(), use_container_width=True)
+
+                    if st.button("🚀 Importar estos proyectos al CRM"):
+                        creados = importar_proyectos_desde_excel(uploaded_file)
+                        st.success(f"Importación completada. Proyectos creados: {creados}")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Error leyendo el Excel: {e}")
+            else:
+                st.info("Sube un Excel para poder importarlo.")
