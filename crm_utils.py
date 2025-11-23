@@ -248,11 +248,16 @@ def importar_proyectos_desde_excel(file) -> int:
                 "fecha_inicio": fecha_inicio,
                 "fecha_entrega": fecha_entrega,
                 "notas_seguimiento": notas_full,
+                # campos nuevos inicializados vacíos
+                "notas_historial": [],
+                "tareas": [],
             }
 
             ensure_cliente_basico(promotor, "Promotora")
             ensure_cliente_basico(arquitectura, "Arquitectura")
             ensure_cliente_basico(ingenieria, "Ingeniería")
+
+
 
             add_proyecto(data)
             creados += 1

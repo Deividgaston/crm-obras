@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import date
+from datetime import date, datetime
 
 from crm_utils import (
     get_clientes,
@@ -56,6 +56,8 @@ def render_proyectos():
                 ensure_cliente_basico(arquitectura or None, "Arquitectura")
                 ensure_cliente_basico(ingenieria or None, "Ingeniería")
 
+
+
                 add_proyecto({
                     "nombre_obra": nombre_obra,
                     "cliente_principal": promotor_nombre,
@@ -70,6 +72,8 @@ def render_proyectos():
                     "estado": estado_inicial,
                     "fecha_seguimiento": fecha_seg.isoformat(),
                     "notas_seguimiento": notas,
+                    "notas_historial": [],
+                    "tareas": [],
                 })
                 st.success("Proyecto creado correctamente.")
                 st.rerun()
@@ -81,6 +85,15 @@ def render_proyectos():
         st.info("Todavía no hay proyectos guardados en Firestore.")
         _render_import_excel()
         return
+
+    # ===== Pipeline visual rápido =====
+    if "estado" in df_proy.columns:
+        st.markdown("### 📊 Pipeline de proyectos por estado")
+        estados = ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
+        counts = df_proy["estado"].value_counts()
+        cols_pipe = st.columns(len(estados))
+        for col, est in zip(cols_pipe, estados):
+            col.metric(est, int(counts.get(est, 0)))
 
     # ===== AVISO DE DUPLICADOS =====
     _render_duplicados(df_proy)
@@ -113,7 +126,7 @@ def render_proyectos():
                 st.success("Proyecto borrado.")
                 st.rerun()
 
-    # ===== DETALLE DE PROYECTO =====
+    # ===== DETALLE DE PROYECTO (con timeline + tareas + pasos) =====
     _render_detalle_proyecto(df_proy)
 
     # ===== EXPORTAR EXCEL OBRAS IMPORTANTES =====
@@ -137,6 +150,8 @@ def render_proyectos():
 
 def _render_duplicados(df_proy):
     st.markdown("### ⚠️ Revisión de posibles proyectos duplicados")
+
+
 
     df_tmp = df_proy.copy()
     key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
@@ -182,7 +197,9 @@ def _render_duplicados(df_proy):
 
 
 def _render_detalle_proyecto(df_proy):
-    st.markdown("### 🔍 Detalle y edición de un proyecto")
+    st.markdown("### 🔍 Detalle y edición de un proyecto (con timeline y tareas)")
+
+
 
     df_proy_sorted = df_proy.sort_values("fecha_creacion", ascending=False).reset_index(drop=True)
     opciones = [
@@ -197,6 +214,13 @@ def _render_detalle_proyecto(df_proy):
 
     proy = df_proy_sorted.iloc[idx_sel]
     st.markdown(f"#### Proyecto seleccionado: **{proy['nombre_obra']}**")
+
+
+
+    # Sacamos listas existentes (notas_historial, tareas, pasos)
+    notas_historial = proy.get("notas_historial") or []
+    tareas = proy.get("tareas") or []
+    pasos = proy.get("pasos_seguimiento") or []
 
     with st.form(f"form_detalle_{proy['id']}"):
         col_a, col_b = st.columns(2)
@@ -232,14 +256,99 @@ def _render_detalle_proyecto(df_proy):
             "Próxima fecha de seguimiento",
             value=proy.get("fecha_seguimiento") or date.today()
         )
-        notas_det = st.text_area("Notas de seguimiento", value=proy.get("notas_seguimiento", ""))
+        notas_det = st.text_area("Notas generales de seguimiento", value=proy.get("notas_seguimiento", ""))
 
-        st.markdown("##### Checklist de pasos")
-        pasos = proy.get("pasos_seguimiento")
+        # === TIMELINE DE NOTAS ===
+        st.markdown("##### 📝 Historial de notas del proyecto")
+        if notas_historial:
+            # mostramos notas ordenadas por fecha descendente
+            try:
+                notas_historial_sorted = sorted(
+                    notas_historial,
+                    key=lambda x: x.get("fecha", ""),
+                    reverse=True
+                )
+            except Exception:
+                notas_historial_sorted = notas_historial
+
+            for nota in notas_historial_sorted:
+                fecha_txt = nota.get("fecha", "")
+                tipo_txt = nota.get("tipo", "Nota")
+                texto_txt = nota.get("texto", "")
+                st.markdown(f"**[{tipo_txt}] {fecha_txt}**  ")
+
+
+                st.write(texto_txt)
+        else:
+            st.caption("Todavía no hay notas históricas para este proyecto.")
+
+        st.markdown("**Añadir nueva nota al historial**")
+
+
+        nueva_nota_tipo = st.selectbox(
+            "Tipo de nota",
+            ["Nota", "Llamada", "Reunión", "Visita", "Otro"],
+            key=f"tipo_nota_{proy['id']}",
+        )
+        nueva_nota_texto = st.text_area(
+            "Texto de la nota",
+            key=f"texto_nota_{proy['id']}",
+            placeholder="Ejemplo: Llamada con la promotora, pendiente de enviar oferta..."
+        )
+
+        # === TAREAS ===
+        st.markdown("##### ✅ Tareas asociadas al proyecto")
+
+
+        tareas_actualizadas = []
+        if tareas:
+            for i, tarea in enumerate(tareas):
+                cols_t = st.columns([0.05, 0.45, 0.25, 0.25])
+                with cols_t[0]:
+                    completado = st.checkbox(
+                        "", value=tarea.get("completado", False),
+                        key=f"chk_tarea_{proy['id']}_{i}"
+                    )
+                with cols_t[1]:
+                    st.write(tarea.get("titulo", "(sin título)"))
+                with cols_t[2]:
+                    st.write(tarea.get("fecha_limite", ""))
+                with cols_t[3]:
+                    st.write(tarea.get("tipo", "Tarea"))
+                tareas_actualizadas.append({
+                    "titulo": tarea.get("titulo", ""),
+                    "fecha_limite": tarea.get("fecha_limite", None),
+                    "completado": completado,
+                    "tipo": tarea.get("tipo", "Tarea"),
+                })
+        else:
+            st.caption("No hay tareas creadas todavía.")
+
+        st.markdown("**Añadir nueva tarea**")
+        nueva_tarea_titulo = st.text_input(
+            "Título de la tarea",
+            key=f"titulo_tarea_{proy['id']}",
+            placeholder="Ejemplo: Llamar a la ingeniería para revisar planos..."
+        )
+        nueva_tarea_tipo = st.selectbox(
+            "Tipo de tarea",
+            ["Llamada", "Email", "Reunión", "Visita", "Otro"],
+            key=f"tipo_tarea_{proy['id']}",
+        )
+        nueva_tarea_fecha = st.date_input(
+            "Fecha límite de la tarea",
+            value=date.today(),
+            key=f"fecha_tarea_{proy['id']}",
+        )
+
+        # === CHECKLIST DE PASOS ===
+        st.markdown("##### 🧭 Checklist de pasos de seguimiento")
+
+
+        estados_check_pasos = []
         if not pasos:
             if st.checkbox("Crear checklist base para este proyecto", key=f"chk_crear_pasos_{proy['id']}"):
                 pasos = default_pasos_seguimiento()
-        estados_check = []
         if pasos:
             for i, paso in enumerate(pasos):
                 chk = st.checkbox(
@@ -247,15 +356,39 @@ def _render_detalle_proyecto(df_proy):
                     value=paso.get("completado", False),
                     key=f"detalle_chk_{proy['id']}_{i}"
                 )
-                estados_check.append(chk)
+                estados_check_pasos.append(chk)
 
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            guardar_det = st.form_submit_button("💾 Guardar cambios")
+            guardar_det = st.form_submit_button("💾 Guardar cambios (notas, tareas, datos)")
         with col_btn2:
             borrar_det = st.form_submit_button("🗑️ Borrar este proyecto")
 
+
+
     if guardar_det:
+        # manejamos nueva nota
+        if nueva_nota_texto.strip():
+            notas_historial.append({
+                "fecha": datetime.utcnow().isoformat(timespec="seconds"),
+                "tipo": nueva_nota_tipo,
+                "texto": nueva_nota_texto.strip(),
+            })
+
+        # manejamos nueva tarea
+        if nueva_tarea_titulo.strip():
+            tareas_actualizadas.append({
+                "titulo": nueva_tarea_titulo.strip(),
+                "fecha_limite": nueva_tarea_fecha.isoformat(),
+                "completado": False,
+                "tipo": nueva_tarea_tipo,
+            })
+
+        # actualizamos pasos
+        if pasos and estados_check_pasos:
+            for i, chk in enumerate(estados_check_pasos):
+                pasos[i]["completado"] = chk
+
         update_data = {
             "nombre_obra": nombre_det,
             "tipo_proyecto": tipo_det,
@@ -270,15 +403,17 @@ def _render_detalle_proyecto(df_proy):
             "estado": estado_det,
             "fecha_seguimiento": fecha_seg_det.isoformat(),
             "notas_seguimiento": notas_det,
+            "notas_historial": notas_historial,
+            "tareas": tareas_actualizadas,
+            "pasos_seguimiento": pasos,
         }
 
-        if pasos and estados_check:
-            for i, chk in enumerate(estados_check):
-                pasos[i]["completado"] = chk
-            update_data["pasos_seguimiento"] = pasos
-
         actualizar_proyecto(proy["id"], update_data)
-        st.success("Cambios guardados en el proyecto.")
+        st.success("Cambios guardados en el proyecto (datos, notas, tareas y pasos)."
+
+
+
+        )
         st.rerun()
 
     if borrar_det:

@@ -21,6 +21,15 @@ def render_panel_control():
     c2.metric("Proyectos totales", total_proyectos)
     c3.metric("Proyectos activos", proyectos_activos)
 
+    # Pipeline visual por estado
+    if not df_proyectos.empty and "estado" in df_proyectos.columns:
+        st.markdown("### 📊 Pipeline de proyectos por estado")
+        estados = ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada", "Negociación", "Ganado", "Perdido"]
+        counts = df_proyectos["estado"].value_counts()
+        cols = st.columns(len(estados))
+        for col, est in zip(cols, estados):
+            col.metric(est, int(counts.get(est, 0)))
+
     st.divider()
     st.subheader("🚨 Seguimientos pendientes (hoy o pasados)")
 
