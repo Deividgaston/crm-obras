@@ -100,7 +100,13 @@ def render_proyectos():
 
     # =============== PESTAÑAS ===============
     tab_dash, tab_resumen, tab_detalle, tab_duplicados, tab_import = st.tabs(
-        ["📈 Dashboard", "📋 Lista / Resumen", "🔍 Detalle", "🧬 Duplicados", "📥 Importar / Exportar"]
+        [
+            "📈 Dashboard",
+            "📋 Lista / Resumen",
+            "🔍 Detalle",
+            "🧬 Duplicados",
+            "📥 Importar / Exportar",
+        ]
     )
 
     with tab_dash:
@@ -120,11 +126,15 @@ def render_proyectos():
 
 
 # =====================================================
-# DASHBOARD
+# FILTROS COMUNES (con prefijo de key para evitar duplicados)
 # =====================================================
 
-def _aplicar_filtros_basicos(df: pd.DataFrame):
-    """Devuelve df_filtrado + los valores de filtro usados."""
+
+def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
+    """
+    Devuelve df_filtrado usando los mismos filtros básicos,
+    pero con keys únicos por pestaña gracias al key_prefix.
+    """
     df = df.copy()
 
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
@@ -135,7 +145,11 @@ def _aplicar_filtros_basicos(df: pd.DataFrame):
         else []
     )
     with col_f1:
-        ciudad_sel = st.selectbox("Ciudad", ["Todas"] + ciudades)
+        ciudad_sel = st.selectbox(
+            "Ciudad",
+            ["Todas"] + ciudades,
+            key=f"{key_prefix}_ciudad",
+        )
 
     estados_list = (
         sorted(df["estado"].dropna().unique().tolist())
@@ -143,7 +157,11 @@ def _aplicar_filtros_basicos(df: pd.DataFrame):
         else []
     )
     with col_f2:
-        estado_sel = st.selectbox("Estado / Seguimiento", ["Todos"] + estados_list)
+        estado_sel = st.selectbox(
+            "Estado / Seguimiento",
+            ["Todos"] + estados_list,
+            key=f"{key_prefix}_estado",
+        )
 
     tipos_list = (
         sorted(df["tipo_proyecto"].dropna().unique().tolist())
@@ -151,7 +169,11 @@ def _aplicar_filtros_basicos(df: pd.DataFrame):
         else []
     )
     with col_f3:
-        tipo_sel = st.selectbox("Tipo de proyecto", ["Todos"] + tipos_list)
+        tipo_sel = st.selectbox(
+            "Tipo de proyecto",
+            ["Todos"] + tipos_list,
+            key=f"{key_prefix}_tipo",
+        )
 
     prioridades = (
         sorted(df["prioridad"].dropna().unique().tolist())
@@ -159,7 +181,11 @@ def _aplicar_filtros_basicos(df: pd.DataFrame):
         else []
     )
     with col_f4:
-        prioridad_sel = st.selectbox("Prioridad", ["Todas"] + prioridades)
+        prioridad_sel = st.selectbox(
+            "Prioridad",
+            ["Todas"] + prioridades,
+            key=f"{key_prefix}_prioridad",
+        )
 
     mask = pd.Series([True] * len(df))
 
@@ -179,10 +205,16 @@ def _aplicar_filtros_basicos(df: pd.DataFrame):
     return df_filtrado
 
 
+# =====================================================
+# DASHBOARD
+# =====================================================
+
+
 def _render_dashboard(df_proy: pd.DataFrame):
     st.subheader("📈 Dashboard de obras")
 
-    df_filtrado = _aplicar_filtros_basicos(df_proy)
+    # Prefijo "dash" para las keys de los filtros
+    df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="dash")
 
     if df_filtrado.empty:
         st.info("No hay datos para mostrar en el dashboard con estos filtros.")
@@ -209,12 +241,15 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
     col_d1, col_d2 = st.columns([2, 1])
     with col_d1:
-        agrupacion = st.selectbox("Agrupar por", agrupacion_opciones, index=0)
+        agrupacion = st.selectbox(
+            "Agrupar por", agrupacion_opciones, index=0, key="dash_agrupacion"
+        )
     with col_d2:
         metrica = st.radio(
             "Métrica",
             ["Número de obras", "Potencial total (€)"],
             horizontal=False,
+            key="dash_metrica",
         )
 
     df_plot = df_filtrado.copy()
@@ -273,10 +308,12 @@ def _render_dashboard(df_proy: pd.DataFrame):
 # LISTA / RESUMEN: pipeline + tabla + seleccionar/borrar
 # =====================================================
 
+
 def _render_resumen(df_proy: pd.DataFrame):
     st.subheader("📋 Resumen y lista de proyectos")
 
-    df_filtrado = _aplicar_filtros_basicos(df_proy)
+    # Prefijo "res" para filtros de esta pestaña
+    df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="res")
 
     # --------- PIPELINE POR ESTADO ----------
     st.markdown("### 🧪 Pipeline (conteo por estado)")
@@ -376,6 +413,7 @@ def _render_resumen(df_proy: pd.DataFrame):
 # DETALLE + TIMELINE + TAREAS + CHECKLIST
 # =====================================================
 
+
 def _render_detalle_proyecto(df_proy: pd.DataFrame):
     st.subheader("🔍 Detalle y edición de un proyecto")
 
@@ -404,6 +442,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
         options=list(range(len(df_proy_sorted))),
         index=default_index,
         format_func=lambda i: opciones[i] if 0 <= i < len(opciones) else "",
+        key="detalle_select",
     )
 
     proy = df_proy_sorted.iloc[idx_sel]
@@ -643,6 +682,7 @@ def _render_detalle_proyecto(df_proy: pd.DataFrame):
 # DUPLICADOS
 # =====================================================
 
+
 def _render_duplicados(df_proy: pd.DataFrame):
     st.subheader("🧬 Revisión de posibles proyectos duplicados")
 
@@ -706,6 +746,7 @@ def _render_duplicados(df_proy: pd.DataFrame):
 # =====================================================
 # IMPORTAR / EXPORTAR
 # =====================================================
+
 
 def _render_import_export(df_proy_empty: bool, df_proy=None):
     st.subheader("📤 Exportar / 📥 Importar")
