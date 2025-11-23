@@ -48,10 +48,10 @@ def normalize_fecha(value):
     if isinstance(value, date):
         return value
     if isinstance(value, str):
-            try:
-                return datetime.fromisoformat(value).date()
-            except ValueError:
-                return None
+        try:
+            return datetime.fromisoformat(value).date()
+        except ValueError:
+            return None
     return None
 
 
@@ -146,6 +146,10 @@ def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
     return importantes
 
 
+# ==========================
+# IMPORTAR PROYECTOS DESDE EXCEL
+# ==========================
+
 def importar_proyectos_desde_excel(file) -> int:
     """
     Importa proyectos desde un Excel generado por ChatGPT y los guarda en Firestore.
@@ -159,6 +163,18 @@ def importar_proyectos_desde_excel(file) -> int:
 
     creados = 0
     hoy = date.today()
+
+    # Función interna para convertir fechas a string o None
+    def convertir_fecha(valor):
+        if pd.isna(valor):
+            return None
+        try:
+            if isinstance(valor, (datetime, date)):
+                return valor.isoformat()
+            # Si viene como Timestamp o similar
+            return str(valor)
+        except Exception:
+            return None
 
     for _, row in df.iterrows():
         try:
@@ -180,6 +196,10 @@ def importar_proyectos_desde_excel(file) -> int:
 
             potencial = 0.0  # si quieres luego lo afinamos
 
+            # Fechas opcionales del Excel
+            fecha_inicio = convertir_fecha(row.get("Fecha_Inicio_Estimada"))
+            fecha_entrega = convertir_fecha(row.get("Fecha_Entrega_Estimada"))
+
             notas = str(row.get("Notas", "") or "").strip()
             url = str(row.get("Fuente_URL", "") or "").strip()
             notas_full = notas
@@ -200,6 +220,8 @@ def importar_proyectos_desde_excel(file) -> int:
                 "estado": estado,
                 "fecha_creacion": datetime.utcnow(),
                 "fecha_seguimiento": hoy + timedelta(days=7),
+                "fecha_inicio": fecha_inicio,        # guardadas como string o None
+                "fecha_entrega": fecha_entrega,      # guardadas como string o None
                 "notas_seguimiento": notas_full,
             }
 
@@ -428,7 +450,6 @@ elif menu == "Proyectos":
                             st.success("Pasos actualizados.")
                             st.rerun()
 
-                    hoy = date.today()
                     nueva_fecha = st.date_input(
                         "Nueva fecha de seguimiento",
                         value=row.get("fecha_seguimiento") or hoy,
@@ -478,7 +499,7 @@ elif menu == "Proyectos":
     st.markdown("### 📥 Importar proyectos desde Excel (ChatGPT)")
     st.caption(
         "Sube el Excel que te genero desde ChatGPT con columnas como "
-        "`Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado, Fuente_URL, Notas`, etc."
+        "`Proyecto, Ciudad, Provincia, Tipo_Proyecto, Segmento, Estado, Fuente_URL, Notas, Fecha_Inicio_Estimada, Fecha_Entrega_Estimada`."
     )
 
     uploaded_file = st.file_uploader(
