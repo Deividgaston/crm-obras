@@ -32,6 +32,120 @@ def _parse_fecha_iso(valor):
 
 
 # =====================================================
+# HELPERS PARA DIALOG DE EDICIÓN
+# =====================================================
+
+def _render_edit_form(row_data: dict, proy_id: str):
+    """Formulario de edición reutilizable (se usa en dialog o inline)."""
+    df_clientes = get_clientes()
+    nombres_clientes = ["(sin asignar)"]
+    if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
+        nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
+
+    fecha_seg_default = _parse_fecha_iso(row_data.get("fecha_seguimiento")) or date.today()
+
+    with st.form(f"form_edit_proyecto_{proy_id}"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre_obra = st.text_input(
+                "Nombre del proyecto / obra",
+                value=row_data.get("nombre_obra", ""),
+            )
+            cliente_principal = st.selectbox(
+                "Cliente principal (promotor)",
+                nombres_clientes,
+                index=nombres_clientes.index(row_data.get("cliente_principal")) if row_data.get("cliente_principal") in nombres_clientes else 0,
+            )
+            tipo_proyecto = st.selectbox(
+                "Tipo de proyecto",
+                ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"],
+                index=["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"].index(
+                    row_data.get("tipo_proyecto", "Residencial lujo")
+                )
+                if row_data.get("tipo_proyecto") in ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"]
+                else 0,
+            )
+            ciudad = st.text_input("Ciudad", value=row_data.get("ciudad", ""))
+            provincia = st.text_input("Provincia", value=row_data.get("provincia", ""))
+        with col2:
+            arquitectura = st.text_input("Arquitectura", value=row_data.get("arquitectura", "") or "")
+            ingenieria = st.text_input("Ingeniería", value=row_data.get("ingenieria", "") or "")
+            prioridad = st.selectbox(
+                "Prioridad",
+                ["Alta", "Media", "Baja"],
+                index=["Alta", "Media", "Baja"].index(row_data.get("prioridad", "Media")),
+            )
+            potencial_eur = st.number_input(
+                "Potencial estimado 2N (€)",
+                min_value=0.0,
+                step=10000.0,
+                value=float(row_data.get("potencial_eur", 50000.0) or 0.0),
+            )
+            fecha_seg = st.date_input(
+                "Fecha de seguimiento",
+                value=fecha_seg_default,
+            )
+
+        notas = st.text_area(
+            "Notas de seguimiento",
+            value=row_data.get("notas_seguimiento", "") or "",
+        )
+
+        guardar = st.form_submit_button("💾 Guardar cambios")
+
+    if guardar:
+        if not nombre_obra:
+            st.warning("El nombre del proyecto es obligatorio.")
+            return
+
+        promotor_nombre = None if cliente_principal == "(sin asignar)" else cliente_principal
+
+        data_update = {
+            "nombre_obra": nombre_obra,
+            "cliente_principal": promotor_nombre,
+            "promotora": promotor_nombre,
+            "tipo_proyecto": tipo_proyecto,
+            "ciudad": ciudad,
+            "provincia": provincia,
+            "arquitectura": arquitectura or None,
+            "ingenieria": ingenieria or None,
+            "prioridad": prioridad,
+            "potencial_eur": float(potencial_eur),
+            "fecha_seguimiento": fecha_seg.isoformat(),
+            "notas_seguimiento": notas,
+        }
+
+        try:
+            actualizar_proyecto(proy_id, data_update)
+            st.success("Proyecto actualizado correctamente.")
+            st.rerun()
+        except Exception as e:
+            st.error(f"No se pudo actualizar el proyecto: {e}")
+
+
+def _open_edit_dialog(row_data: dict, proy_id: str):
+    """Abre un cuadro flotante de edición (o fallback inline si la versión no soporta dialog)."""
+    # Streamlit >= 1.33 tiene st.dialog
+    if hasattr(st, "dialog"):
+        @st.dialog("✏️ Editar proyecto")
+        def _dlg():
+            st.caption("Modifica los datos y guarda para actualizar el proyecto.")
+            _render_edit_form(row_data, proy_id)
+
+        _dlg()
+    else:
+        # Fallback: lo mostramos inline con aspecto de tarjeta
+        st.markdown("---")
+        st.markdown(
+            "<div class='apple-card-light'><div class='section-badge'>Edición rápida</div>"
+            "<h3 style='margin-top:8px; margin-bottom:4px;'>✏️ Editar proyecto seleccionado</h3>",
+            unsafe_allow_html=True,
+        )
+        _render_edit_form(row_data, proy_id)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =====================================================
 # PÁGINA PRINCIPAL DE PROYECTOS
 # =====================================================
 
@@ -214,20 +328,34 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
         st.warning("No hay proyectos que cumplan los filtros seleccionados.")
         return
 
-    df_ui = df_filtrado.reset_index(drop=True).copy()
-    ids = df_ui["id"].tolist()
-    df_ui = df_ui.drop(columns=["id"])
+    # df_raw mantiene todos los campos, incluido id, para poder editar
+    df_raw = df_filtrado.reset_index(drop=True).copy()
+    ids = df_raw["id"].tolist()
+
+    # df_ui es lo que mostramos en la tabla (sin id)
+    df_ui = df_raw.drop(columns=["id"])
 
     # columna seleccionar
-    df_ui.insert(0, "seleccionar", False)
+    df_ui["seleccionar"] = False
+
+    # Reordenamos columnas: primero nombre_obra, luego seleccionar y después resto
+    cols = list(df_ui.columns)
+    if "nombre_obra" in cols:
+        cols.remove("nombre_obra")
+        cols.insert(0, "nombre_obra")
+    if "seleccionar" in cols:
+        cols.remove("seleccionar")
+        # queremos seleccionar justo después del nombre
+        insert_pos = 1 if "nombre_obra" in cols else 0
+        cols.insert(insert_pos, "seleccionar")
 
     st.markdown(
-        "<p style='font-size:0.82rem; color:#9CA3AF;'>Selecciona una obra y usa los botones inferiores para verla en detalle o borrarla.</p>",
+        "<p style='font-size:0.82rem; color:#9CA3AF;'>Selecciona una obra y usa los botones inferiores para editarla o borrarla.</p>",
         unsafe_allow_html=True,
     )
 
     edited_df = st.data_editor(
-        df_ui,
+        df_ui[cols],
         column_config={
             "seleccionar": st.column_config.CheckboxColumn(
                 "Seleccionar",
@@ -243,7 +371,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
     col_acc1, col_acc2 = st.columns(2)
 
     with col_acc1:
-        if st.button("➡️ Ver proyecto seleccionado en detalle"):
+        if st.button("✏️ Editar proyecto seleccionado"):
             if "seleccionar" not in edited_df.columns:
                 st.error("No se ha encontrado la columna 'seleccionar'.")
             else:
@@ -253,8 +381,10 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                     st.warning("No hay ninguna obra seleccionada.")
                 else:
                     idx = idxs[0]
-                    st.session_state["detalle_proyecto_id"] = ids[idx]
-                    st.success("Proyecto seleccionado. Ve a la pestaña 'Alta proyecto / Detalle' si lo quieres editar.")
+                    proy_id = ids[idx]
+                    row_data = df_raw.iloc[idx].to_dict()
+                    _open_edit_dialog(row_data, proy_id)
+
     with col_acc2:
         if st.button("🗑️ Borrar proyectos seleccionados"):
             if "seleccionar" not in edited_df.columns:
