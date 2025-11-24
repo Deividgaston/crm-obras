@@ -20,178 +20,175 @@ def _init_firebase():
     Admite tanto dict como cadena JSON.
     """
     if firebase_admin._apps:
-        return  # ya está iniciado
+        return  # ya está inicializado
 
-    firebase_key = st.secrets.get("firebase_key", None)
-    if not firebase_key:
-        raise RuntimeError("No se encontró 'firebase_key' en st.secrets.")
+    if "firebase_key" not in st.secrets:
+        raise RuntimeError(
+            "No se ha encontrado 'firebase_key' en st.secrets. "
+            "Configúralo en la sección 'Secrets' de Streamlit."
+        )
 
-    if isinstance(firebase_key, str):
-        firebase_key = json.loads(firebase_key)
+    key_data = st.secrets["firebase_key"]
 
-    cred = credentials.Certificate(firebase_key)
+    # Puede venir como string JSON o como dict
+    if isinstance(key_data, str):
+        try:
+            key_data = json.loads(key_data)
+        except Exception as e:
+            raise ValueError(f"'firebase_key' debe ser un JSON válido: {e}")
+
+    cred = credentials.Certificate(key_data)
     firebase_admin.initialize_app(cred)
 
 
 def _get_db():
-    """
-    Retorna el cliente Firestore, inicializando Firebase si es necesario.
-    """
+    """Devuelve el cliente de Firestore asegurando que Firebase está inicializado."""
     _init_firebase()
     return firestore.client()
 
 
 # ============================================================
-#  UTILIDADES GENERALES
+#  PROYECTOS — CRUD BÁSICO
 # ============================================================
+
+def get_clientes():
+    db = _get_db()
+    docs = db.collection("clientes").stream()
+    data = []
+    for d in docs:
+        row = d.to_dict()
+        row["id"] = d.id
+        data.append(row)
+    if not data:
+        return pd.DataFrame()
+    return pd.DataFrame(data)
+
+
+def get_proyectos():
+    db = _get_db()
+    docs = db.collection("proyectos").stream()
+    data = []
+    for d in docs:
+        row = d.to_dict()
+        row["id"] = d.id
+        data.append(row)
+    if not data:
+        return pd.DataFrame()
+    return pd.DataFrame(data)
+
+
+def add_proyecto(data: dict):
+    db = _get_db()
+    db.collection("proyectos").add(data)
+
+
+def actualizar_proyecto(doc_id: str, data: dict):
+    db = _get_db()
+    db.collection("proyectos").document(doc_id).update(data)
+
+
+def delete_proyecto(doc_id: str):
+    db = _get_db()
+    db.collection("proyectos").document(doc_id).delete()
+
+
+def default_pasos_seguimiento():
+    """
+    Checklist base que se puede guardar dentro del proyecto
+    en el campo 'pasos_seguimiento'.
+    """
+    return [
+        {"nombre": "Detectado", "completado": False},
+        {"nombre": "Primer contacto", "completado": False},
+        {"nombre": "Visita / demo", "completado": False},
+        {"nombre": "Oferta enviada", "completado": False},
+        {"nombre": "Negociación", "completado": False},
+        {"nombre": "Cerrado / Ganado", "completado": False},
+    ]
+
+
+# ============================================================
+#  FUNCIONES DE APOYO PARA EXCEL / OBRAS IMPORTANTES
+# ============================================================
+
+def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
+    """
+    Devuelve sólo las obras "importantes":
+    - prioridad = 'Alta' (case-insensitive) O
+    - potencial_eur >= 50k
+    Si el dataframe está vacío, devuelve DataFrame vacío.
+    """
+    if df_proy is None or df_proy.empty:
+        return pd.DataFrame()
+
+    df = df_proy.copy()
+
+    if "prioridad" in df.columns:
+        prio = df["prioridad"].fillna("").str.lower()
+        mask_prio = prio.eq("alta")
+    else:
+        mask_prio = pd.Series(False, index=df.index)
+
+    if "potencial_eur" in df.columns:
+        pot = pd.to_numeric(df["potencial_eur"], errors="coerce").fillna(0.0)
+        mask_pot = pot >= 50000
+    else:
+        mask_pot = pd.Series(False, index=df.index)
+
+    mask = mask_prio | mask_pot
+    return df[mask].copy()
+
+
+def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> bytes:
+    """
+    Genera un Excel en memoria (bytes) con la hoja 'Obras_importantes'.
+    Se usa en la página de proyectos para el botón de descarga.
+    """
+    df_imp = filtrar_obras_importantes(df_proy)
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_imp.to_excel(writer, index=False, sheet_name="Obras_importantes")
+    output.seek(0)
+    return output.getvalue()
+
+
+# --------------------- IMPORTAR DESDE EXCEL ---------------------
 
 def _parse_fecha_excel(valor):
     """
-    Intenta parsear un valor de fecha proveniente de Excel.
-    Acepta:
-      - datetime / date directamente
-      - cadenas con formato 'YYYY-MM-DD' o similares
-      - números (fechas seriales de Excel)
-    Devuelve un objeto date o None si no se puede parsear.
+    Convierte valores de Excel a date o None.
+    Admite datetime/date y strings tipo '30/11/25', '30/11/2025', ISO, etc.
     """
+    if pd.isna(valor):
+        return None
+
     if isinstance(valor, datetime):
         return valor.date()
     if isinstance(valor, date):
         return valor
-    if isinstance(valor, (int, float)):
-        # Interpretar como fecha serial de Excel
-        try:
-            # Excel base 1899-12-30
-            base = datetime(1899, 12, 30)
-            return (base + pd.to_timedelta(valor, unit="D")).date()
-        except Exception:
-            return None
+
     if isinstance(valor, str):
         valor = valor.strip()
         if not valor:
             return None
-        # Intentar varios formatos
-        formatos = [
-            "%Y-%m-%d",
-            "%d/%m/%Y",
-            "%d-%m-%Y",
-            "%Y/%m/%d",
-            "%d.%m.%Y",
-        ]
+
+        # Intentamos varios formatos comunes
+        formatos = ["%d/%m/%y", "%d/%m/%Y", "%Y-%m-%d"]
         for fmt in formatos:
             try:
                 return datetime.strptime(valor, fmt).date()
             except ValueError:
                 continue
+
+        # Último intento: fromisoformat
+        try:
+            return datetime.fromisoformat(valor).date()
+        except Exception:
+            return None
+
     return None
 
-
-# ============================================================
-#  CRUD PROYECTOS
-# ============================================================
-
-def get_proyectos():
-    """
-    Lee todos los proyectos de Firestore (colección 'proyectos').
-    Devuelve una lista de diccionarios con id incluido.
-    """
-    db = _get_db()
-    docs = db.collection("proyectos").stream()
-    proyectos = []
-    for doc in docs:
-        d = doc.to_dict()
-        d["id"] = doc.id
-        proyectos.append(d)
-    return proyectos
-
-
-def add_proyecto(data: dict):
-    """
-    Crea un nuevo proyecto en Firestore.
-    """
-    db = _get_db()
-    db.collection("proyectos").add(data)
-
-
-def actualizar_proyecto(proyecto_id: str, data: dict):
-    """
-    Actualiza los datos de un proyecto.
-    """
-    db = _get_db()
-    db.collection("proyectos").document(proyecto_id).update(data)
-
-
-def delete_proyecto(proyecto_id: str):
-    """
-    Elimina un proyecto de la colección 'proyectos'.
-    """
-    db = _get_db()
-    db.collection("proyectos").document(proyecto_id).delete()
-
-
-# ============================================================
-#  CRUD CLIENTES
-# ============================================================
-
-def get_clientes():
-    """
-    Lee todos los clientes de Firestore (colección 'clientes').
-    """
-    db = _get_db()
-    docs = db.collection("clientes").stream()
-    clientes = []
-    for doc in docs:
-        d = doc.to_dict()
-        d["id"] = doc.id
-        clientes.append(d)
-    return clientes
-
-
-def add_cliente(data: dict):
-    """
-    Crea un nuevo cliente en Firestore.
-    """
-    db = _get_db()
-    db.collection("clientes").add(data)
-
-
-def actualizar_cliente(cliente_id: str, data: dict):
-    """
-    Actualiza los datos de un cliente existente.
-    """
-    db = _get_db()
-    db.collection("clientes").document(cliente_id).update(data)
-
-
-def delete_cliente(cliente_id: str):
-    """
-    Elimina un cliente de Firestore.
-    """
-    db = _get_db()
-    db.collection("clientes").document(cliente_id).delete()
-
-
-# ============================================================
-#  PASOS SEGUIMIENTO / PLANTILLA
-# ============================================================
-
-def default_pasos_seguimiento():
-    """
-    Devuelve la lista de pasos por defecto para el seguimiento de una obra.
-    """
-    return [
-        {"nombre": "Contacto inicial", "completado": False},
-        {"nombre": "Reunión técnica", "completado": False},
-        {"nombre": "Envío de documentación", "completado": False},
-        {"nombre": "Oferta enviada", "completado": False},
-        {"nombre": "Negociación", "completado": False},
-        {"nombre": "Cierre / Decisión", "completado": False},
-    ]
-
-
-# ============================================================
-#  IMPORTAR PROYECTOS DESDE EXCEL
-# ============================================================
 
 def importar_proyectos_desde_excel(uploaded_file) -> int:
     """
@@ -251,7 +248,6 @@ def importar_proyectos_desde_excel(uploaded_file) -> int:
 
         data = {
             "nombre_obra": nombre_obra,
-            "cliente": promotora,                 # 🔴 NUEVO: también rellenamos 'cliente'
             "cliente_principal": promotora,
             "promotora": promotora,
             "tipo_proyecto": tipo_proyecto,
@@ -277,52 +273,31 @@ def importar_proyectos_desde_excel(uploaded_file) -> int:
 
 
 # ============================================================
-#  EXPORT / FILTROS (resumen de obras importantes)
+#  CLIENTES — CRUD BÁSICO
 # ============================================================
 
-def filtrar_obras_importantes(df_proyectos: pd.DataFrame) -> pd.DataFrame:
+def add_cliente(data: dict):
     """
-    Dado un DataFrame de proyectos, filtra aquellos considerados
-    "importantes" según prioridad o potencial_2N.
-    """
-    if df_proyectos.empty:
-        return df_proyectos
-
-    df = df_proyectos.copy()
-
-    if "prioridad" in df.columns:
-        mask_prio = df["prioridad"].isin(["Alta", "Muy alta"])
-    else:
-        mask_prio = pd.Series(False, index=df.index)
-
-    if "potencial_eur" in df.columns:
-        pot = pd.to_numeric(df["potencial_eur"], errors="coerce").fillna(0.0)
-        mask_pot = pot >= 50000
-    else:
-        mask_pot = pd.Series(False, index=df.index)
-
-    mask = mask_prio | mask_pot
-    return df[mask].copy()
-
-
-def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> bytes:
-    """
-    Genera un Excel con las obras importantes filtradas.
-    """
-    buffer = BytesIO()
-    df_proy.to_excel(buffer, index=False)
-    buffer.seek(0)
-    return buffer.getvalue()
-def delete_all_proyectos():
-    """
-    Elimina TODOS los documentos de la colección 'proyectos'.
+    Crea un nuevo cliente en Firestore.
+    Se usa para arquitecturas, ingenierías, promotoras o integradores.
     """
     db = _get_db()
-    docs = db.collection("proyectos").stream()
+    data = dict(data) if data is not None else {}
+    data.setdefault("fecha_alta", datetime.utcnow().isoformat())
+    db.collection("clientes").add(data)
 
-    borrados = 0
-    for doc in docs:
-        db.collection("proyectos").document(doc.id).delete()
-        borrados += 1
 
-    return borrados
+def actualizar_cliente(cliente_id: str, data: dict):
+    """
+    Actualiza los datos de un cliente existente.
+    """
+    db = _get_db()
+    db.collection("clientes").document(cliente_id).update(data)
+
+
+def delete_cliente(cliente_id: str):
+    """
+    Elimina un cliente de Firestore.
+    """
+    db = _get_db()
+    db.collection("clientes").document(cliente_id).delete()
