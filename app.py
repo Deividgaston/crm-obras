@@ -1,596 +1,348 @@
 import streamlit as st
 from datetime import date, timedelta
 
-# ⬇️ ENVOLVEMOS EL IMPORT DE crm_utils EN UN try/except
-try:
-    from crm_utils import (
-        get_clientes,
-        get_proyectos,
-        add_cliente,
-        add_proyecto,
-        actualizar_proyecto,
-        delete_proyecto,
-        default_pasos_seguimiento,
-        filtrar_obras_importantes,
-        importar_proyectos_desde_excel,
-        generar_excel_obras_importantes,
-    )
-except Exception as e:
-    st.error(
-        "❌ Error al importar `crm_utils.py`.\n\n"
-        "Comprueba que el fichero `crm_utils.py` está en el mismo directorio que `app.py` "
-        "y que las credenciales de Firebase (`firebase_key`) en `st.secrets` son correctas.\n\n"
-        f"Detalle técnico: {type(e).__name__}: {e}"
-    )
-    st.stop()
+# Funciones backend mínimas que usa el panel
+from crm_utils import get_clientes, get_proyectos, actualizar_proyecto
 
-# A partir de aquí, el resto de tu app.py como lo tenías
+# Páginas específicas
 from proyectos_page import render_proyectos
-from buscar_page import render_buscar
 from clientes_page import render_clientes_page
+from buscar_page import render_buscar
 
 
-
-# ======================================================
-# CONFIGURACIÓN GENERAL + ESTILO
-# ======================================================
-
-inicializar_firebase_si_necesario()
-
+# ==========================
+# CONFIGURACIÓN GENERAL
+# ==========================
 st.set_page_config(
     page_title="CRM Prescripción",
     layout="wide",
     page_icon="🏗️",
 )
 
-# ---------- Estilos globales ----------
-st.markdown(
-    """
+# ==========================
+# ESTILO APPLE-LIKE
+# ==========================
+st.markdown("""
 <style>
 /* Fuente tipo SF / Inter */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Fondo general dark azul */
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-    background: radial-gradient(circle at top left, #020617 0%, #020617 40%, #020617 100%) !important;
+    background: #0F172A !important; /* fondo oscuro azul marino */
 }
 
 /* Contenedor principal */
 .block-container {
     padding-top: 1.0rem;
-    padding-bottom: 2.5rem;
-    max-width: 1300px;
+    padding-bottom: 3rem;
+    max-width: 1200px;
 }
 
-/* Sidebar */
+/* Sidebar Apple style */
 [data-testid="stSidebar"] {
-    background: #020617;
-    border-right: 1px solid rgba(148,163,184,0.25);
+    background: rgba(15,23,42,0.98) !important;
+    backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(148,163,184,0.35);
 }
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span {
+
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3 {
+    font-weight: 600 !important;
     color: #E5E7EB !important;
 }
 
-/* Top bar & cards */
-.crm-top-bar {
-    padding: 10px 18px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #020617 0%, #020617 50%, #020617 100%);
-    border: 1px solid rgba(148,163,184,0.35);
-    box-shadow: 0 22px 50px rgba(15,23,42,0.75);
-    margin-bottom: 14px;
-}
-
-.crm-metric-row {
-    display: flex;
-    gap: 16px;
-    margin-top: 8px;
-}
-.crm-metric-card {
-    flex: 1;
-    padding: 12px 16px;
-    border-radius: 14px;
-    background: radial-gradient(circle at top left, #020617 0%, #020617 70%);
-    border: 1px solid rgba(148,163,184,0.4);
-}
-.crm-metric-title {
-    font-size: 0.70rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: #9CA3AF;
-}
-.crm-metric-value {
-    font-size: 1.4rem;
-    font-weight: 650;
-    color: #F9FAFB;
-    margin-top: 2px;
-}
-.crm-metric-sub {
-    font-size: 0.78rem;
-    color: #9CA3AF;
-    margin-top: 2px;
-}
-
-/* Tarjetas de contenido */
-.crm-card {
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: radial-gradient(circle at top left, #020617 0%, #020617 70%);
-    border: 1px solid rgba(148,163,184,0.45);
-    box-shadow: 0 16px 35px rgba(15,23,42,0.65);
-    margin-bottom: 14px;
-}
-.crm-card-light {
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: #020617;
-    border: 1px solid rgba(148,163,184,0.32);
-    margin-bottom: 14px;
+[data-testid="stSidebar"] p, 
+[data-testid="stSidebar"] span {
+    color: #9CA3AF !important;
 }
 
 /* Títulos */
 h1 {
-    font-size: 1.35rem !important;
-    font-weight: 640 !important;
+    font-weight: 650 !important;
     letter-spacing: -0.03em;
-    color: #F9FAFB !important;
-    margin-bottom: 0.15rem !important;
-}
-h2 {
-    font-size: 1.05rem !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.01em;
-    color: #E5E7EB !important;
-}
-h3 {
-    font-size: 0.96rem !important;
-    font-weight: 580 !important;
+    font-size: 1.6rem !important;
     color: #E5E7EB !important;
 }
 
-/* Badges */
+h2 {
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+    color: #E5E7EB !important;
+}
+
+/* Tarjetas genéricas */
+.apple-card {
+    padding: 14px 18px;
+    background: radial-gradient(circle at top left, #1F2937 0%, #020617 70%);
+    border-radius: 18px;
+    border: 1px solid rgba(148,163,184,0.35);
+    box-shadow: 0 20px 60px rgba(15,23,42,0.8);
+    margin-bottom: 16px;
+}
+
+/* Tarjeta ligera (para listas, tablas, etc.) */
+.apple-card-light {
+    padding: 14px 18px;
+    background: #020617;
+    border-radius: 16px;
+    border: 1px solid rgba(31,41,55,0.9);
+    box-shadow: 0 14px 35px rgba(15,23,42,0.9);
+    margin-bottom: 18px;
+}
+
+/* Métricas de cabecera tipo Apple dashboard */
+.metric-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.metric-box {
+    flex: 1;
+    padding: 12px 14px;
+    background: linear-gradient(145deg, #020617 0%, #111827 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(55,65,81,0.9);
+    box-shadow: 0 18px 45px rgba(15,23,42,1);
+}
+
+.metric-title {
+    font-size: 0.8rem;
+    color: #9CA3AF;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 1.4rem;
+    font-weight: 650;
+    margin-top: 4px;
+    color: #F9FAFB;
+}
+
+.metric-sub {
+    font-size: 0.78rem;
+    color: #6B7280;
+    margin-top: 2px;
+}
+
+/* Botones más suaves y redondeados */
+button[kind="primary"] {
+    border-radius: 999px !important;
+}
+
+/* Pequeño badge para secciones */
 .section-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 3px 9px;
     border-radius: 999px;
-    background: rgba(59,130,246,0.23);
-    color: #BFDBFE;
-    font-size: 0.70rem;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-/* Texto pequeño gris */
-.text-muted {
-    font-size: 0.8rem;
-    color: #9CA3AF;
-}
-
-/* Checklist status pills */
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.72rem;
+    background: rgba(59,130,246,0.15);
+    color: #93C5FD;
+    font-size: 0.7rem;
     font-weight: 500;
 }
-.status-green { background: rgba(34,197,94,0.12); color:#22C55E; }
-.status-red   { background: rgba(248,113,113,0.12); color:#F97373; }
-.status-amber { background: rgba(251,191,36,0.12); color:#FBBF24; }
 
-/* Tab labels algo más compactos */
-button[data-baseweb="tab"] > div {
-    font-size: 0.86rem;
+/* Texto general en tarjetas */
+.apple-card p,
+.apple-card-light p,
+.apple-card-light h3,
+.apple-card-light h4 {
+    color: #E5E7EB !important;
 }
 
-/* Dataframes oscuros */
-[data-testid="stDataFrame"] {
-    background-color: #020617 !important;
+/* Dataframes: bordes más sutiles en oscuro */
+[data-testid="stDataFrame"] div {
+    color: #E5E7EB !important;
+}
+
+/* Ajuste de radio buttons / selects en oscuro */
+label, .stSelectbox label {
+    color: #E5E7EB !important;
 }
 </style>
-""",
-    unsafe_allow_html=True,
-)
-
-# ======================================================
-# FUNCIONES AUXILIARES
-# ======================================================
+""", unsafe_allow_html=True)
 
 
-def _formato_millones(euros: float) -> str:
-    if euros is None:
-        return "0 €"
-    try:
-        millones = euros / 1_000_000
-        if millones >= 1:
-            return f"{millones:,.1f} M€".replace(",", ".")
-        return f"{euros:,.0f} €".replace(",", ".")
-    except Exception:
-        return str(euros)
-
-
-def _get_modo_compacto() -> bool:
-    """Lee el toggle global de la barra lateral."""
-    return bool(st.session_state.get("modo_compacto", False))
-
-
-# ======================================================
-# PANEL DE CONTROL (Dashboard principal)
-# ======================================================
-
+# ==========================
+# PÁGINA: PANEL DE CONTROL
+# ==========================
 def render_panel_control():
-    compacto = _get_modo_compacto()
+    # Cabecera tipo Apple
+    st.markdown(
+        """
+        <div class="apple-card">
+            <div class="section-badge">Panel general</div>
+            <h1 style="margin-top: 4px; margin-bottom: 4px;">CRM Prescripción</h1>
+            <p style="color:#9CA3AF; margin-bottom: 0; font-size:0.9rem;">
+                Visión global de clientes y proyectos. Revisa seguimientos pendientes y
+                qué tareas vienen a corto plazo, tanto por cliente como por obra.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     df_clientes = get_clientes()
     df_proyectos = get_proyectos()
 
-    if df_proyectos is None:
-        df_proyectos = df_clientes = None
-
-    # --------- Métricas generales ----------
     total_clientes = 0 if df_clientes is None or df_clientes.empty else len(df_clientes)
     total_proyectos = 0 if df_proyectos is None or df_proyectos.empty else len(df_proyectos)
 
     proyectos_activos = 0
-    potencial_total = 0.0
-    seg_atrasados = 0
-    tareas_abiertas = 0
-
-    if df_proyectos is not None and not df_proyectos.empty:
-        activos_mask = ~df_proyectos["estado"].isin(["Ganado", "Perdido"])
-        proyectos_activos = int(activos_mask.sum())
-
-        if "potencial_eur" in df_proyectos.columns:
-            potencial_total = float(df_proyectos["potencial_eur"].fillna(0).sum())
-
-        hoy = date.today()
-        if "fecha_seguimiento" in df_proyectos.columns:
-            seg_atrasados = int(
-                df_proyectos[
-                    df_proyectos["fecha_seguimiento"].notna()
-                    & (df_proyectos["fecha_seguimiento"] <= hoy)
-                    & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))
-                ].shape[0]
-            )
-
-        # Tareas
-        for _, row in df_proyectos.iterrows():
-            tareas = row.get("tareas") or []
-            for t in tareas:
-                if not t.get("completado", False):
-                    tareas_abiertas += 1
-
-    # ---------- TOP BAR ----------
-    with st.container():
-        st.markdown(
-            """
-            <div class="crm-top-bar">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                        <div class="section-badge">Agenda &amp; Pipeline</div>
-                        <h1>CRM Prescripción</h1>
-                        <p class="text-muted" style="margin-top:2px;">
-                            Vista ejecutiva de proyectos, seguimientos y tareas.
-                        </p>
-                    </div>
-                </div>
-            """,
-            unsafe_allow_html=True,
+    if df_proyectos is not None and not df_proyectos.empty and "estado" in df_proyectos.columns:
+        proyectos_activos = len(
+            df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])]
         )
 
-        # Fila de métricas
-        st.markdown('<div class="crm-metric-row">', unsafe_allow_html=True)
-        st.markdown(
-            f"""
-            <div class="crm-metric-card">
-                <div class="crm-metric-title">Proyectos activos</div>
-                <div class="crm-metric-value">{proyectos_activos}</div>
-                <div class="crm-metric-sub">En seguimiento / prescripción / oferta</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div class="crm-metric-card">
-                <div class="crm-metric-title">Potencial total</div>
-                <div class="crm-metric-value">{_formato_millones(potencial_total)}</div>
-                <div class="crm-metric-sub">Suma del potencial estimado 2N</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div class="crm-metric-card">
-                <div class="crm-metric-title">Seguimientos atrasados</div>
-                <div class="crm-metric-value">{seg_atrasados}</div>
-                <div class="crm-metric-sub">Hasta hoy incluido</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div class="crm-metric-card">
-                <div class="crm-metric-title">Tareas abiertas</div>
-                <div class="crm-metric-value">{tareas_abiertas}</div>
-                <div class="crm-metric-sub">Pendientes en todos los proyectos</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div></div>", unsafe_allow_html=True)
+    # Métricas Apple-style
+    st.markdown("<div class='metric-row'>", unsafe_allow_html=True)
 
-    st.markdown("")  # pequeño espacio
+    st.markdown(
+        f"""
+        <div class="metric-box">
+            <div class="metric-title">CLIENTES EN CRM</div>
+            <div class="metric-value">{total_clientes}</div>
+            <div class="metric-sub">Arquitecturas, ingenierías, promotoras, integrators</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # ========== BLOQUES PRINCIPALES ==========
-    if df_proyectos is None or df_proyectos.empty:
-        st.info("Todavía no hay proyectos en el CRM.")
+    st.markdown(
+        f"""
+        <div class="metric-box">
+            <div class="metric-title">PROYECTOS TOTALES</div>
+            <div class="metric-value">{total_proyectos}</div>
+            <div class="metric-sub">Histórico de oportunidades trabajadas</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+        <div class="metric-box">
+            <div class="metric-title">PROYECTOS ACTIVOS</div>
+            <div class="metric-value">{proyectos_activos}</div>
+            <div class="metric-sub">En seguimiento, prescripción, oferta o negociación</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Bloque de seguimientos próximos / atrasados
+    st.markdown(
+        """
+        <div class="apple-card-light">
+            <div class="section-badge">Seguimiento</div>
+            <h3 style="margin-top:8px; margin-bottom:4px; font-size:1.0rem;">🚨 Agenda de seguimientos</h3>
+            <p style="color:#9CA3AF; margin-top:0; font-size:0.9rem;">
+                Proyectos con fecha de seguimiento hoy, atrasada o en los próximos días.
+            </p>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if df_proyectos is None or df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
+        st.info("Todavía no hay proyectos en el sistema o no hay fecha de seguimiento registrada.")
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
     hoy = date.today()
-    dentro_14 = hoy + timedelta(days=14)
 
-    # --- Hoy & atrasados ---
-    pendientes = df_proyectos[
-        df_proyectos["fecha_seguimiento"].notna()
-        & (df_proyectos["fecha_seguimiento"] <= hoy)
-        & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))
-    ].copy()
+    # Aseguramos que fecha_seguimiento sea comparable como string ISO o date
+    df = df_proyectos.copy()
+    fechas = []
+    for v in df["fecha_seguimiento"]:
+        if v is None:
+            fechas.append(None)
+        elif isinstance(v, date):
+            fechas.append(v)
+        elif isinstance(v, str):
+            try:
+                fechas.append(date.fromisoformat(v))
+            except Exception:
+                fechas.append(None)
+        else:
+            fechas.append(None)
 
-    proximos = df_proyectos[
-        df_proyectos["fecha_seguimiento"].notna()
-        & (df_proyectos["fecha_seguimiento"] > hoy)
-        & (df_proyectos["fecha_seguimiento"] <= dentro_14)
-        & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))
-    ].copy()
+    df["fecha_seg_parsed"] = fechas
+    pendientes = df[
+        df["fecha_seg_parsed"].notna()
+        & (df["fecha_seg_parsed"] <= hoy)
+        & (~df["estado"].isin(["Ganado", "Perdido"]))
+    ]
 
-    pendientes = pendientes.sort_values("fecha_seguimiento")
-    proximos = proximos.sort_values("fecha_seguimiento")
+    proximos = df[
+        df["fecha_seg_parsed"].notna()
+        & (df["fecha_seg_parsed"] > hoy)
+        & (df["fecha_seg_parsed"] <= hoy + timedelta(days=7))
+        & (~df["estado"].isin(["Ganado", "Perdido"]))
+    ]
 
-    # --- Top 10 obras por potencial ---
-    df_top_obras = df_proyectos.copy()
-    if "potencial_eur" in df_top_obras.columns:
-        df_top_obras["potencial_eur"] = df_top_obras["potencial_eur"].fillna(0)
-        df_top_obras = df_top_obras.sort_values("potencial_eur", ascending=False).head(10)
-    else:
-        df_top_obras["potencial_eur"] = 0
+    if pendientes.empty and proximos.empty:
+        st.success("No tienes seguimientos atrasados ni en los próximos 7 días. ✅")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
-    # --- Top promotoras ---
-    df_promotoras = df_proyectos.copy()
-    if "cliente_principal" in df_promotoras.columns:
-        df_promotoras["potencial_eur"] = df_promotoras.get("potencial_eur", 0).fillna(0)
-        df_promotoras = (
-            df_promotoras.groupby("cliente_principal", dropna=True)
-            .agg(
-                potencial_total=("potencial_eur", "sum"),
-                proyectos=("id", "count"),
-            )
-            .reset_index()
-            .sort_values("potencial_total", ascending=False)
-            .head(10)
-        )
-    else:
-        df_promotoras = None
+    if not pendientes.empty:
+        st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente o atrasado.")
+        pendientes = pendientes.sort_values("fecha_seg_parsed")
+        for _, row in pendientes.iterrows():
+            nombre = row.get("nombre_obra", "Sin nombre")
+            fecha_seg = row.get("fecha_seg_parsed", "")
+            cliente = row.get("cliente_principal", "—")
+            estado = row.get("estado", "—")
+            notas = row.get("notas_seguimiento", "")
 
-    # Layout diferente según modo
-    if not compacto:
-        # ---------- Escritorio: dos columnas ----------
-        col_left, col_right = st.columns([1.4, 1])
+            with st.expander(f"⏰ {nombre} – {fecha_seg} ({cliente})"):
+                st.write(f"**Estado actual:** {estado}")
+                st.write(f"**Notas:** {notas or '—'}")
 
-        # ---- Columna izquierda: Hoy y atrasados + Próximos 14 días ----
-        with col_left:
-            st.markdown(
-                '<div class="crm-card"><h2>Hoy y atrasados</h2>',
-                unsafe_allow_html=True,
-            )
-            if pendientes.empty:
-                st.markdown(
-                    "<p class='text-muted'>No tienes seguimientos atrasados. ✅</p>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                for _, row in pendientes.iterrows():
-                    nombre = row.get("nombre_obra", "Sin nombre")
-                    ciudad = row.get("ciudad", "—")
-                    cli = row.get("cliente_principal", "—")
-                    estado = row.get("estado", "Detectado")
-                    fecha_seg = row.get("fecha_seguimiento")
-                    fecha_txt = fecha_seg.strftime("%d/%m/%y") if fecha_seg else "—"
-                    st.markdown(
-                        f"""
-                        <div style="padding:6px 2px;border-bottom:1px solid rgba(55,65,81,0.6);">
-                            <div style="display:flex;justify-content:space-between;">
-                                <span style="color:#F9FAFB;font-weight:500;font-size:0.92rem;">{nombre}</span>
-                                <span class="status-pill status-red">{fecha_txt}</span>
-                            </div>
-                            <div class="text-muted">
-                                {ciudad} · {cli} · {estado}
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+                if st.button("Posponer 1 semana", key=f"posponer_{row['id']}"):
+                    nueva_fecha = (hoy + timedelta(days=7)).isoformat()
+                    try:
+                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha})
+                        st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"No se pudo actualizar la fecha de seguimiento: {e}")
 
-            # Próximos 14 días
-            st.markdown(
-                '<div class="crm-card-light"><h3>Próximos 14 días</h3>',
-                unsafe_allow_html=True,
-            )
-            if proximos.empty:
-                st.markdown(
-                    "<p class='text-muted'>No hay seguimientos en los próximos 14 días.</p>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                for _, row in proximos.iterrows():
-                    nombre = row.get("nombre_obra", "Sin nombre")
-                    ciudad = row.get("ciudad", "—")
-                    cli = row.get("cliente_principal", "—")
-                    estado = row.get("estado", "Detectado")
-                    fecha_seg = row.get("fecha_seguimiento")
-                    fecha_txt = fecha_seg.strftime("%d/%m/%y") if fecha_seg else "—"
-                    st.markdown(
-                        f"""
-                        <div style="padding:6px 2px;border-bottom:1px solid rgba(55,65,81,0.6);">
-                            <div style="display:flex;justify-content:space-between;">
-                                <span style="color:#F9FAFB;font-weight:500;font-size:0.90rem;">{nombre}</span>
-                                <span class="status-pill status-amber">{fecha_txt}</span>
-                            </div>
-                            <div class="text-muted">
-                                {ciudad} · {cli} · {estado}
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+    if not proximos.empty:
+        st.markdown("---")
+        st.markdown("#### 📆 Próximos 7 días")
+        proximos = proximos.sort_values("fecha_seg_parsed")
+        for _, row in proximos.iterrows():
+            nombre = row.get("nombre_obra", "Sin nombre")
+            fecha_seg = row.get("fecha_seg_parsed", "")
+            cliente = row.get("cliente_principal", "—")
+            estado = row.get("estado", "—")
 
-        # ---- Columna derecha: Top obras + Top promotoras ----
-        with col_right:
-            st.markdown(
-                '<div class="crm-card"><h2>Top 10 obras por potencial</h2>',
-                unsafe_allow_html=True,
-            )
-            if df_top_obras.empty:
-                st.markdown(
-                    "<p class='text-muted'>No hay datos de potencial disponibles.</p>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                for _, row in df_top_obras.iterrows():
-                    nombre = row.get("nombre_obra", "Sin nombre")
-                    ciudad = row.get("ciudad", "—")
-                    pot = _formato_millones(float(row.get("potencial_eur", 0)))
-                    st.markdown(
-                        f"""
-                        <div style="padding:6px 2px;border-bottom:1px solid rgba(55,65,81,0.6);display:flex;justify-content:space-between;">
-                            <div>
-                                <div style="color:#F9FAFB;font-weight:500;font-size:0.90rem;">{nombre}</div>
-                                <div class="text-muted">{ciudad}</div>
-                            </div>
-                            <div style="font-weight:600;color:#E5E7EB;font-size:0.9rem;">{pot}</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.write(f"• **{nombre}** – {fecha_seg} ({cliente}) · _{estado}_")
 
-            st.markdown(
-                '<div class="crm-card-light"><h3>Top promotoras más activas</h3>',
-                unsafe_allow_html=True,
-            )
-            if df_promotoras is None or df_promotoras.empty:
-                st.markdown(
-                    "<p class='text-muted'>Todavía no hay suficientes datos de promotoras.</p>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                for _, row in df_promotoras.iterrows():
-                    prom = row.get("cliente_principal", "—")
-                    pot = _formato_millones(float(row.get("potencial_total", 0)))
-                    n = int(row.get("proyectos", 0))
-                    st.markdown(
-                        f"""
-                        <div style="padding:6px 2px;border-bottom:1px solid rgba(55,65,81,0.6);display:flex;justify-content:space-between;">
-                            <div>
-                                <div style="color:#F9FAFB;font-weight:500;font-size:0.90rem;">{prom}</div>
-                                <div class="text-muted">{n} proyectos</div>
-                            </div>
-                            <div style="font-weight:600;color:#E5E7EB;font-size:0.9rem;">{pot}</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    else:
-        # ---------- Modo compacto (móvil) ----------
-        with st.container():
-            st.markdown('<div class="crm-card"><h2>Hoy & próximos días</h2>', unsafe_allow_html=True)
-            if pendientes.empty and proximos.empty:
-                st.markdown(
-                    "<p class='text-muted'>No tienes seguimientos pendientes en los próximos días. ✅</p>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                df_comp = (
-                    pd.concat([pendientes.assign(_tipo="Hoy / Atrasado"), proximos.assign(_tipo="Próx. 14 días")])
-                    .sort_values("fecha_seguimiento")
-                )
-                for _, row in df_comp.iterrows():
-                    nombre = row.get("nombre_obra", "Sin nombre")
-                    tipo = row.get("_tipo", "")
-                    fecha_seg = row.get("fecha_seguimiento")
-                    fecha_txt = fecha_seg.strftime("%d/%m/%y") if fecha_seg else "—"
-                    st.markdown(
-                        f"""
-                        <div style="padding:4px 0;border-bottom:1px solid rgba(55,65,81,0.6);">
-                            <div style="display:flex;justify-content:space-between;">
-                                <span style="color:#F9FAFB;font-weight:500;font-size:0.88rem;">{nombre}</span>
-                                <span class="status-pill status-amber">{fecha_txt}</span>
-                            </div>
-                            <div class="text-muted" style="font-size:0.76rem;">{tipo}</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown('<div class="crm-card-light"><h3>Top obras por potencial</h3>', unsafe_allow_html=True)
-            if df_top_obras.empty:
-                st.markdown(
-                    "<p class='text-muted'>Sin datos de potencial.</p>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                for _, row in df_top_obras.head(5).iterrows():
-                    nombre = row.get("nombre_obra", "Sin nombre")
-                    pot = _formato_millones(float(row.get("potencial_eur", 0)))
-                    st.markdown(
-                        f"""
-                        <div style="padding:4px 0;border-bottom:1px solid rgba(55,65,81,0.6);display:flex;justify-content:space-between;">
-                            <span style="color:#F9FAFB;font-size:0.86rem;">{nombre}</span>
-                            <span style="font-weight:600;color:#E5E7EB;font-size:0.86rem;">{pot}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ======================================================
+# ==========================
 # MAIN
-# ======================================================
-
+# ==========================
 def main():
-    # ----- Sidebar -----
     with st.sidebar:
         st.markdown("### 🏗️ CRM Prescripción")
         st.caption("Tu cockpit de proyectos, clientes y scouting.")
         st.markdown("---")
 
-        # Toggle global de modo compacto (móvil)
-        compact_toggle = st.toggle(
-            "Vista esencial (modo móvil)",
-            value=st.session_state.get("modo_compacto", False),
-        )
-        st.session_state["modo_compacto"] = compact_toggle
-
-        menu = st.radio(
-            "Ir a:",
-            ["Panel de Control", "Clientes", "Proyectos", "Buscar"],
-        )
+    menu = st.sidebar.radio(
+        "Ir a:",
+        ["Panel de Control", "Clientes", "Proyectos", "Buscar"],
+    )
 
     if menu == "Panel de Control":
         render_panel_control()
