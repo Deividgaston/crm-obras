@@ -1,5 +1,6 @@
 import json
 from io import BytesIO
+from datetime import datetime, date
 
 import pandas as pd
 import streamlit as st
@@ -8,7 +9,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 
-# ----------- INICIALIZACIÓN ROBUSTA DE FIREBASE -----------
+# ============================================================
+#  INICIALIZACIÓN ROBUSTA DE FIREBASE
+# ============================================================
 
 def _init_firebase():
     """
@@ -44,8 +47,9 @@ def _get_db():
     return firestore.client()
 
 
-# A partir de aquí tus funciones pueden usar _get_db()
-# Ejemplos:
+# ============================================================
+#  PROYECTOS — CRUD BÁSICO
+# ============================================================
 
 def get_clientes():
     db = _get_db()
@@ -89,6 +93,10 @@ def delete_proyecto(doc_id: str):
 
 
 def default_pasos_seguimiento():
+    """
+    Checklist base que se puede guardar dentro del proyecto
+    en el campo 'pasos_seguimiento'.
+    """
     return [
         {"nombre": "Detectado", "completado": False},
         {"nombre": "Primer contacto", "completado": False},
@@ -99,13 +107,174 @@ def default_pasos_seguimiento():
     ]
 
 
-# ... y aquí debajo dejas/añades el resto:
-# - filtrar_obras_importantes(df)
-# - importar_proyectos_desde_excel(file)
-# - generar_excel_obras_importantes(df)
-# etc.
 # ============================================================
-#  CLIENTES — CRUD básico
+#  FUNCIONES DE APOYO PARA EXCEL / OBRAS IMPORTANTES
+# ============================================================
+
+def filtrar_obras_importantes(df_proy: pd.DataFrame) -> pd.DataFrame:
+    """
+    Devuelve sólo las obras "importantes":
+    - prioridad = 'Alta' (case-insensitive) O
+    - potencial_eur >= 50k
+    Si el dataframe está vacío, devuelve DataFrame vacío.
+    """
+    if df_proy is None or df_proy.empty:
+        return pd.DataFrame()
+
+    df = df_proy.copy()
+
+    if "prioridad" in df.columns:
+        prio = df["prioridad"].fillna("").str.lower()
+        mask_prio = prio.eq("alta")
+    else:
+        mask_prio = pd.Series(False, index=df.index)
+
+    if "potencial_eur" in df.columns:
+        pot = pd.to_numeric(df["potencial_eur"], errors="coerce").fillna(0.0)
+        mask_pot = pot >= 50000
+    else:
+        mask_pot = pd.Series(False, index=df.index)
+
+    mask = mask_prio | mask_pot
+    return df[mask].copy()
+
+
+def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> bytes:
+    """
+    Genera un Excel en memoria (bytes) con la hoja 'Obras_importantes'.
+    Se usa en la página de proyectos para el botón de descarga.
+    """
+    df_imp = filtrar_obras_importantes(df_proy)
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_imp.to_excel(writer, index=False, sheet_name="Obras_importantes")
+    output.seek(0)
+    return output.getvalue()
+
+
+# --------------------- IMPORTAR DESDE EXCEL ---------------------
+
+def _parse_fecha_excel(valor):
+    """
+    Convierte valores de Excel a date o None.
+    Admite datetime/date y strings tipo '30/11/25', '30/11/2025', ISO, etc.
+    """
+    if pd.isna(valor):
+        return None
+
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, date):
+        return valor
+
+    if isinstance(valor, str):
+        valor = valor.strip()
+        if not valor:
+            return None
+
+        # Intentamos varios formatos comunes
+        formatos = ["%d/%m/%y", "%d/%m/%Y", "%Y-%m-%d"]
+        for fmt in formatos:
+            try:
+                return datetime.strptime(valor, fmt).date()
+            except ValueError:
+                continue
+
+        # Último intento: fromisoformat
+        try:
+            return datetime.fromisoformat(valor).date()
+        except Exception:
+            return None
+
+    return None
+
+
+def importar_proyectos_desde_excel(uploaded_file) -> int:
+    """
+    Importa proyectos desde un Excel subido.
+
+    Columnas recomendadas (pero el código es tolerante con los nombres):
+    - Nombre_obra
+    - Ciudad
+    - Provincia
+    - Tipo_proyecto
+    - Promotora_Fondo  (=> cliente_principal / promotora)
+    - Arquitectura
+    - Ingenieria
+    - Prioridad
+    - Potencial_2N
+    - Fecha_creacion
+    - Fecha_seguimiento
+    - Notas
+    """
+    df = pd.read_excel(uploaded_file)
+    if df.empty:
+        return 0
+
+    db = _get_db()
+    creados = 0
+
+    for _, row in df.iterrows():
+        # helpers para sacar campos tolerando diferentes nombres
+        def get_col(*nombres, default=""):
+            for n in nombres:
+                if n in df.columns and not pd.isna(row.get(n)):
+                    return row.get(n)
+            return default
+
+        nombre_obra = get_col("Nombre_obra", "nombre_obra", "Proyecto", default="Sin nombre")
+        ciudad = get_col("Ciudad", "ciudad")
+        provincia = get_col("Provincia", "provincia")
+        tipo_proyecto = get_col("Tipo_proyecto", "tipo_proyecto", default="Residencial")
+        promotora = get_col("Promotora_Fondo", "Promotora", "promotora", default=None)
+        arquitectura = get_col("Arquitectura", "arquitectura", default=None)
+        ingenieria = get_col("Ingenieria", "ingenieria", default=None)
+        prioridad = str(get_col("Prioridad", "prioridad", default="Media") or "Media")
+        potencial_raw = get_col("Potencial_2N", "potencial_eur", default=0)
+        try:
+            potencial_eur = float(potencial_raw or 0)
+        except Exception:
+            potencial_eur = 0.0
+
+        fecha_creacion = _parse_fecha_excel(get_col("Fecha_creacion", "fecha_creacion", default=None))
+        if fecha_creacion is None:
+            fecha_creacion = datetime.utcnow().date()
+
+        fecha_seguimiento = _parse_fecha_excel(get_col("Fecha_seguimiento", "fecha_seguimiento", default=None))
+        if fecha_seguimiento is None:
+            fecha_seguimiento = fecha_creacion
+
+        notas = get_col("Notas", "notas", default="")
+
+        data = {
+            "nombre_obra": nombre_obra,
+            "cliente_principal": promotora,
+            "promotora": promotora,
+            "tipo_proyecto": tipo_proyecto,
+            "ciudad": ciudad,
+            "provincia": provincia,
+            "arquitectura": arquitectura,
+            "ingenieria": ingenieria,
+            "prioridad": prioridad,
+            "potencial_eur": potencial_eur,
+            "estado": "Detectado",
+            "fecha_creacion": fecha_creacion.isoformat(),
+            "fecha_seguimiento": fecha_seguimiento.isoformat(),
+            "notas_seguimiento": notas,
+            "notas_historial": [],
+            "tareas": [],
+            "pasos_seguimiento": default_pasos_seguimiento(),
+        }
+
+        db.collection("proyectos").add(data)
+        creados += 1
+
+    return creados
+
+
+# ============================================================
+#  CLIENTES — CRUD BÁSICO
 # ============================================================
 
 def add_cliente(data: dict):
@@ -114,7 +283,8 @@ def add_cliente(data: dict):
     Se usa para arquitecturas, ingenierías, promotoras o integradores.
     """
     db = _get_db()
-    data["fecha_alta"] = datetime.utcnow().isoformat()
+    data = dict(data) if data is not None else {}
+    data.setdefault("fecha_alta", datetime.utcnow().isoformat())
     db.collection("clientes").add(data)
 
 
