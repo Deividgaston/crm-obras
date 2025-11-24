@@ -139,3 +139,12 @@ def inject_global_styles():
 
     </style>
     """, unsafe_allow_html=True)
+
+# Alias para compatibilidad con el resto de la app
+def inject_apple_style():
+    """
+    Mantiene el nombre antiguo para no tocar el resto del código.
+    Internamente solo llama a inject_global_styles().
+    """
+    inject_global_styles()
+
