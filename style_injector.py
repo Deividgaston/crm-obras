@@ -1,141 +1,97 @@
 import streamlit as st
 
-def inject_global_styles():
-    st.markdown("""
+
+def inject_apple_style():
+    """
+    Inyecta estilos modernos tipo Apple en toda la app.
+    Si ya se inyectó antes, evita duplicaciones.
+    """
+    if "apple_style_injected" in st.session_state:
+        return
+
+    style = """
     <style>
 
-    /* ------------------------------------------------------------------------------------
-       TIPOGRAFÍA & BASE
-    ------------------------------------------------------------------------------------ */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+    /* Tipografía tipo SF / Apple */
     html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-        background: #0F172A !important;  /* Azul oscuro profesional */
-        color: #E2E8F0 !important;      /* Texto gris-azulado suave */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+        "Helvetica Neue", sans-serif !important;
+        font-size: 15px;
     }
 
-    .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 3rem;
-        max-width: 1250px;
+    /* Títulos principales */
+    h1 {
+        font-weight: 700 !important;
+        letter-spacing: -1px;
+        margin-bottom: 0.5rem;
     }
 
-    /* ------------------------------------------------------------------------------------
-       SIDEBAR (Cristal, estilo Apple)
-    ------------------------------------------------------------------------------------ */
-    [data-testid="stSidebar"] {
-        background: rgba(30, 41, 59, 0.45) !important;
-        backdrop-filter: blur(18px);
-        border-right: 1px solid rgba(255,255,255,0.07);
-    }
-
-    [data-testid="stSidebar"] * {
-        color: #E2E8F0 !important;
-    }
-
-    /* ------------------------------------------------------------------------------------
-       TARJETAS TIPO APPLE
-    ------------------------------------------------------------------------------------ */
-    .apple-card {
-        padding: 18px 22px;
-        background: linear-gradient(145deg, #1E293B 0%, #0F172A 100%);
-        border-radius: 18px;
-        border: 1px solid rgba(148,163,184,0.18);
-        box-shadow: 0 12px 28px rgba(0,0,0,0.45);
-        margin-bottom: 18px;
-    }
-
-    .apple-card-light {
-        padding: 16px 20px;
-        background: rgba(30,41,59,0.65);
-        border-radius: 16px;
-        border: 1px solid rgba(148,163,184,0.25);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-        margin-bottom: 18px;
-    }
-
-    /* ------------------------------------------------------------------------------------
-       PESTAÑAS
-    ------------------------------------------------------------------------------------ */
-    .stTabs [data-baseweb="tab-list"] {
-        background: rgba(30,41,59,0.6);
-        border-radius: 16px;
-        padding: 4px 6px;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        color: #CBD5E1 !important;
-        font-weight: 500;
-    }
-
-    .stTabs [aria-selected="true"] {
-        background: #1E40AF !important;   /* Azul fuerte Apple */
-        color: white !important;
-        border-radius: 10px;
+    /* Subtítulos */
+    h2, h3, h4 {
         font-weight: 600 !important;
+        margin-top: 1.5rem;
     }
 
-    /* ------------------------------------------------------------------------------------
-       BADGES (SECCIÓN)
-    ------------------------------------------------------------------------------------ */
-    .section-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: rgba(96,165,250,0.18);
-        color: #60A5FA;
-        font-size: 0.75rem;
-        font-weight: 500;
-        letter-spacing: 0.03em;
-    }
-
-    /* ------------------------------------------------------------------------------------
-       FORMULARIOS & BOTONES
-    ------------------------------------------------------------------------------------ */
-    textarea, input, select {
+    /* Botones */
+    .stButton>button {
         border-radius: 10px !important;
-        background: rgba(255,255,255,0.04) !important;
-        color: #F1F5F9 !important;
+        padding: 0.6rem 1.2rem !important;
+        font-weight: 600 !important;
+        border: 1px solid #d0d0d0 !important;
+        background: #f9f9fb !important;
+        transition: all 0.2s ease-in-out;
     }
 
-    button[kind="primary"] {
-        border-radius: 999px !important;
-        background: #1E40AF !important;
-        border: 1px solid rgba(255,255,255,0.15) !important;
+    .stButton>button:hover {
+        background: #e9e9ee !important;
+        border-color: #c2c2c2 !important;
     }
 
-    button {
-        color: white !important;
+    .stButton>button:active {
+        background: #dcdce2 !important;
+        border-color: #b2b2b2 !important;
     }
 
-    /* ------------------------------------------------------------------------------------
-       TABLAS
-    ------------------------------------------------------------------------------------ */
-    .data-editor-container {
-        background-color: rgba(255,255,255,0.04) !important;
+    /* Inputs */
+    .stTextInput>div>div>input,
+    .stTextArea textarea,
+    .stSelectbox>div>div>button {
+        border-radius: 10px !important;
+    }
+
+    /* Tablas */
+    .stDataFrame {
         border-radius: 12px !important;
+        overflow: hidden !important;
+        border: 1px solid #e0e0e0 !important;
     }
 
-    /* ------------------------------------------------------------------------------------
-       MODALES SIMULADOS
-    ------------------------------------------------------------------------------------ */
-    .modal-card {
-        background: rgba(30,41,59,0.75);
-        border: 1px solid rgba(148,163,184,0.25);
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-        margin-top: 20px;
-        animation: fadeIn 0.18s ease-in-out;
+    /* Data editor */
+    .stDataEditor {
+        border-radius: 12px !important;
+        border: 1px solid #e0e0e0 !important;
+        overflow: hidden !important;
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(14px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* Panel Sidebar estilo Apple */
+    section[data-testid="stSidebar"] {
+        background-color: #f7f7f9 !important;
+        border-right: 1px solid #e3e3e8 !important;
+    }
+
+    /* Metric Cards */
+    [data-testid="metric-container"] {
+        border-radius: 12px !important;
+        padding: 1rem !important;
+        background-color: #fafafa !important;
+        border: 1px solid #e9e9e9 !important;
+        box-shadow: 0px 1px 2px rgba(0,0,0,0.04) !important;
     }
 
     </style>
-    """, unsafe_allow_html=True)
+    """
+
+    st.markdown(style, unsafe_allow_html=True)
+
+    st.session_state["apple_style_injected"] = True
