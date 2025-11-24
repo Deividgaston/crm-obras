@@ -427,6 +427,23 @@ def render_panel_control():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+# ======================================================
+# BOTÓN PARA BORRAR TODOS LOS PROYECTOS (seguro)
+# ======================================================
+from crm_utils import delete_all_proyectos
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("⚠️ Opciones avanzadas")
+
+with st.sidebar.expander("🧨 Borrar TODOS los proyectos"):
+    st.warning("Esta acción eliminará *todos* los proyectos de la base de datos.")
+    confirmar = st.checkbox("Entiendo las consecuencias")
+
+    if confirmar:
+        if st.button("❌ Borrar todos los proyectos"):
+            total = delete_all_proyectos()
+            st.success(f"Se han eliminado {total} proyectos.")
+            st.experimental_rerun()
 
 # ==========================
 # MAIN
