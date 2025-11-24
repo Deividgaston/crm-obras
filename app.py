@@ -4,6 +4,7 @@ from panel_page import render_panel
 from proyectos_page import render_proyectos
 from clientes_page import render_clientes
 from buscar_page import render_buscar
+from dashboard_page import render_dashboard  # NUEVO
 
 try:
     from style_injector import inject_apple_style
@@ -29,18 +30,18 @@ inject_apple_style()
 # ==========================
 with st.sidebar:
     st.markdown("### 🏗️ CRM Prescripción")
-    st.caption("Tu cockpit de proyectos, clientes y scouting.")
+    st.caption("Tu cockpit de proyectos, pipeline y analítica.")
     st.markdown("---")
 
 menu = st.sidebar.radio(
     "Ir a:",
-    ["Panel de Control", "Proyectos", "Clientes", "Buscar"],
+    ["Panel de Control", "Proyectos", "Clientes", "Buscar", "Dashboard"],
     index=0,
 )
 
 
 # ==========================
-# ROUTING
+# ROUTING PRINCIPAL
 # ==========================
 if menu == "Panel de Control":
     render_panel()
@@ -50,3 +51,5 @@ elif menu == "Clientes":
     render_clientes()
 elif menu == "Buscar":
     render_buscar()
+elif menu == "Dashboard":
+    render_dashboard()
