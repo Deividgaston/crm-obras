@@ -194,8 +194,8 @@ def importar_proyectos_desde_excel(uploaded_file) -> int:
     """
     Importa proyectos desde un Excel subido.
 
-    Columnas recomendadas (pero el código es tolerante con los nombres):
-    - Nombre_obra
+    Columnas recomendadas:
+    - Nombre_obra / Proyecto
     - Ciudad
     - Provincia
     - Tipo_proyecto
@@ -216,7 +216,6 @@ def importar_proyectos_desde_excel(uploaded_file) -> int:
     creados = 0
 
     for _, row in df.iterrows():
-        # helpers para sacar campos tolerando diferentes nombres
         def get_col(*nombres, default=""):
             for n in nombres:
                 if n in df.columns and not pd.isna(row.get(n)):
