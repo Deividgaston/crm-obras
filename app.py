@@ -1,13 +1,18 @@
 import streamlit as st
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
-# Funciones backend mínimas que usa el panel
-from crm_utils import get_clientes, get_proyectos, actualizar_proyecto
+# Funciones de acceso a datos (Firestore) y utilidades
+from crm_utils import (
+    get_clientes,
+    get_proyectos,
+    add_cliente,
+    actualizar_proyecto,
+)
 
 # Páginas específicas
 from proyectos_page import render_proyectos
-from clientes_page import render_clientes_page
 from buscar_page import render_buscar
+from clientes_page import render_clientes_page  # tu página de clientes
 
 
 # ==========================
@@ -22,28 +27,29 @@ st.set_page_config(
 # ==========================
 # ESTILO APPLE-LIKE
 # ==========================
-st.markdown("""
+st.markdown(
+    """
 <style>
 /* Fuente tipo SF / Inter */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-    background: #0F172A !important; /* fondo oscuro azul marino */
+    background: #020617 !important;  /* fondo dark azul marino */
 }
 
 /* Contenedor principal */
 .block-container {
-    padding-top: 1.0rem;
-    padding-bottom: 3rem;
+    padding-top: 1.2rem;
+    padding-bottom: 2.4rem;
     max-width: 1200px;
 }
 
 /* Sidebar Apple style */
 [data-testid="stSidebar"] {
-    background: rgba(15,23,42,0.98) !important;
+    background: rgba(15,23,42,0.96) !important; /* slate-900 */
     backdrop-filter: blur(16px);
-    border-right: 1px solid rgba(148,163,184,0.35);
+    border-right: 1px solid rgba(15,23,42,0.85);
 }
 
 [data-testid="stSidebar"] h1, 
@@ -53,78 +59,74 @@ html, body, [class*="css"] {
     color: #E5E7EB !important;
 }
 
-[data-testid="stSidebar"] p, 
-[data-testid="stSidebar"] span {
-    color: #9CA3AF !important;
-}
-
-/* Títulos */
+/* Títulos globales */
 h1 {
-    font-weight: 650 !important;
+    font-weight: 640 !important;
     letter-spacing: -0.03em;
-    font-size: 1.6rem !important;
+    font-size: 1.7rem !important;
     color: #E5E7EB !important;
 }
 
 h2 {
     font-weight: 600 !important;
     letter-spacing: -0.02em;
+    font-size: 1.25rem !important;
     color: #E5E7EB !important;
 }
 
-/* Tarjetas genéricas */
+/* Tarjetas principales */
 .apple-card {
-    padding: 14px 18px;
-    background: radial-gradient(circle at top left, #1F2937 0%, #020617 70%);
+    padding: 16px 20px;
+    background: radial-gradient(circle at top left, #0F172A 0%, #020617 70%);
     border-radius: 18px;
-    border: 1px solid rgba(148,163,184,0.35);
-    box-shadow: 0 20px 60px rgba(15,23,42,0.8);
-    margin-bottom: 16px;
+    border: 1px solid rgba(148,163,184,0.28);
+    box-shadow: 0 24px 60px rgba(15,23,42,0.85);
+    margin-bottom: 18px;
 }
 
-/* Tarjeta ligera (para listas, tablas, etc.) */
+/* Tarjeta ligera (listas, tablas) */
 .apple-card-light {
     padding: 14px 18px;
     background: #020617;
     border-radius: 16px;
-    border: 1px solid rgba(31,41,55,0.9);
-    box-shadow: 0 14px 35px rgba(15,23,42,0.9);
-    margin-bottom: 18px;
+    border: 1px solid rgba(51,65,85,0.9);
+    box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+    margin-bottom: 16px;
 }
 
 /* Métricas de cabecera tipo Apple dashboard */
 .metric-row {
     display: flex;
-    gap: 12px;
-    margin-top: 4px;
-    margin-bottom: 4px;
+    gap: 14px;
+    margin-top: 6px;
+    margin-bottom: 8px;
 }
 
 .metric-box {
     flex: 1;
     padding: 12px 14px;
-    background: linear-gradient(145deg, #020617 0%, #111827 100%);
-    border-radius: 16px;
-    border: 1px solid rgba(55,65,81,0.9);
-    box-shadow: 0 18px 45px rgba(15,23,42,1);
+    background: radial-gradient(circle at top left, #0B1120 0%, #020617 70%);
+    border-radius: 14px;
+    border: 1px solid rgba(51,65,85,0.9);
+    box-shadow: 0 18px 40px rgba(15,23,42,0.9);
 }
 
 .metric-title {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: #9CA3AF;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
 }
 
 .metric-value {
-    font-size: 1.4rem;
-    font-weight: 650;
-    margin-top: 4px;
-    color: #F9FAFB;
+    font-size: 1.5rem;
+    font-weight: 640;
+    margin-top: 2px;
+    color: #E5E7EB;
 }
 
 .metric-sub {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     color: #6B7280;
     margin-top: 2px;
 }
@@ -134,53 +136,117 @@ button[kind="primary"] {
     border-radius: 999px !important;
 }
 
+/* Campos de formulario redondeados y oscuros */
+textarea, input, select {
+    border-radius: 10px !important;
+}
+
 /* Pequeño badge para secciones */
 .section-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(59,130,246,0.15);
-    color: #93C5FD;
-    font-size: 0.7rem;
+    background: rgba(59,130,246,0.16);
+    color: #60A5FA;
+    font-size: 0.75rem;
     font-weight: 500;
 }
 
-/* Texto general en tarjetas */
-.apple-card p,
-.apple-card-light p,
-.apple-card-light h3,
-.apple-card-light h4 {
-    color: #E5E7EB !important;
+/* Etiqueta de estado */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 500;
 }
 
-/* Dataframes: bordes más sutiles en oscuro */
-[data-testid="stDataFrame"] div {
-    color: #E5E7EB !important;
+.status-ganado {
+    background: rgba(34,197,94,0.18);
+    color: #6EE7B7;
+}
+.status-perdido {
+    background: rgba(248,113,113,0.18);
+    color: #FCA5A5;
+}
+.status-seguimiento {
+    background: rgba(59,130,246,0.20);
+    color: #93C5FD;
 }
 
-/* Ajuste de radio buttons / selects en oscuro */
-label, .stSelectbox label {
-    color: #E5E7EB !important;
+/* Listas compactas en panel */
+.next-item {
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(51,65,85,0.85);
+    margin-bottom: 6px;
+    background: #020617;
+    font-size: 0.82rem;
+    color: #E5E7EB;
+}
+
+.next-item small {
+    display: block;
+    color: #9CA3AF;
+    font-size: 0.72rem;
+}
+
+/* Etiqueta pequeña dentro del texto */
+.badge-inline {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid rgba(55,65,81,0.9);
+    font-size: 0.7rem;
+    margin-left: 4px;
+    color: #9CA3AF;
+}
+
+/* Tabs más compactas */
+[data-baseweb="tab-list"] {
+    gap: 0.5rem;
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # ==========================
 # PÁGINA: PANEL DE CONTROL
 # ==========================
+
+def _parse_fecha_iso(valor):
+    """Convierte string ISO o datetime en date (o None)."""
+    if not valor:
+        return None
+    if isinstance(valor, date) and not isinstance(valor, datetime):
+        return valor
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, str):
+        try:
+            return datetime.fromisoformat(valor).date()
+        except Exception:
+            return None
+    return None
+
+
 def render_panel_control():
     # Cabecera tipo Apple
     st.markdown(
         """
         <div class="apple-card">
-            <div class="section-badge">Panel general</div>
-            <h1 style="margin-top: 4px; margin-bottom: 4px;">CRM Prescripción</h1>
+            <div class="section-badge">Agenda de acciones</div>
+            <h1 style="margin-top: 4px; margin-bottom:4px;">Qué tengo que hacer ahora</h1>
             <p style="color:#9CA3AF; margin-bottom: 0; font-size:0.9rem;">
-                Visión global de clientes y proyectos. Revisa seguimientos pendientes y
-                qué tareas vienen a corto plazo, tanto por cliente como por obra.
+                Vista unificada de seguimientos y tareas sobre proyectos y clientes.
+                Ideal para empezar el día sabiendo a quién llamar, qué ofertas mover
+                y qué proyectos no se pueden enfriar.
             </p>
         </div>
         """,
@@ -190,24 +256,88 @@ def render_panel_control():
     df_clientes = get_clientes()
     df_proyectos = get_proyectos()
 
-    total_clientes = 0 if df_clientes is None or df_clientes.empty else len(df_clientes)
-    total_proyectos = 0 if df_proyectos is None or df_proyectos.empty else len(df_proyectos)
+    acciones = []  # cada elemento: dict con tipo, subtipo, fecha, texto, origen, prioridad, estado
 
-    proyectos_activos = 0
-    if df_proyectos is not None and not df_proyectos.empty and "estado" in df_proyectos.columns:
-        proyectos_activos = len(
-            df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])]
+    hoy = date.today()
+    en_7 = hoy + timedelta(days=7)
+
+    # ---- Seguimientos en proyectos (fecha_seguimiento) ----
+    if df_proyectos is not None and not df_proyectos.empty:
+        for _, row in df_proyectos.iterrows():
+            fecha_seg = _parse_fecha_iso(row.get("fecha_seguimiento"))
+            estado = row.get("estado", "Detectado")
+            if fecha_seg:
+                acciones.append(
+                    {
+                        "tipo": "Seguimiento",
+                        "subtipo": "Proyecto",
+                        "fecha": fecha_seg,
+                        "texto": row.get("nombre_obra", "Sin nombre"),
+                        "detalle": row.get("cliente_principal", "") or "",
+                        "estado": estado,
+                        "prioridad": row.get("prioridad", "Media"),
+                    }
+                )
+
+            # Tareas asociadas al proyecto
+            tareas = row.get("tareas") or []
+            for t in tareas:
+                fecha_lim = _parse_fecha_iso(t.get("fecha_limite"))
+                if not fecha_lim:
+                    continue
+                acciones.append(
+                    {
+                        "tipo": "Tarea",
+                        "subtipo": "Proyecto",
+                        "fecha": fecha_lim,
+                        "texto": t.get("titulo", "(sin título)"),
+                        "detalle": row.get("nombre_obra", "Sin obra"),
+                        "estado": "Completada" if t.get("completado") else "Pendiente",
+                        "prioridad": row.get("prioridad", "Media"),
+                    }
+                )
+
+    # (Opcional) futuro: tareas/seguimientos en clientes si los añades allí.
+
+    if not acciones:
+        st.markdown(
+            """
+            <div class="apple-card-light">
+                <div class="section-badge">Sin acciones pendientes</div>
+                <h3 style="margin-top:8px; margin-bottom:4px;">Todo al día ✅</h3>
+                <p style="color:#9CA3AF; font-size:0.9rem; margin-bottom:0;">
+                    Todavía no hay seguimientos ni tareas con fecha asignada. 
+                    Usa la página de <strong>Proyectos</strong> para añadir tareas 
+                    y fechas de seguimiento.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+        return
 
-    # Métricas Apple-style
+    # Clasificación por rango temporal
+    acciones_hoy = [a for a in acciones if a["fecha"] == hoy and a.get("estado") != "Completada"]
+    acciones_semana = [
+        a
+        for a in acciones
+        if hoy < a["fecha"] <= en_7 and a.get("estado") != "Completada"
+    ]
+    acciones_atrasadas = [
+        a for a in acciones if a["fecha"] < hoy and a.get("estado") != "Completada"
+    ]
+
+    total_pend = len(acciones_hoy) + len(acciones_semana) + len(acciones_atrasadas)
+
+    # ---- Métricas cabecera ----
     st.markdown("<div class='metric-row'>", unsafe_allow_html=True)
 
     st.markdown(
         f"""
         <div class="metric-box">
-            <div class="metric-title">CLIENTES EN CRM</div>
-            <div class="metric-value">{total_clientes}</div>
-            <div class="metric-sub">Arquitecturas, ingenierías, promotoras, integrators</div>
+            <div class="metric-title">Acciones pendientes totales</div>
+            <div class="metric-value">{total_pend}</div>
+            <div class="metric-sub">Entre tareas y seguimientos programados</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -216,9 +346,9 @@ def render_panel_control():
     st.markdown(
         f"""
         <div class="metric-box">
-            <div class="metric-title">PROYECTOS TOTALES</div>
-            <div class="metric-value">{total_proyectos}</div>
-            <div class="metric-sub">Histórico de oportunidades trabajadas</div>
+            <div class="metric-title">Para hoy</div>
+            <div class="metric-value">{len(acciones_hoy)}</div>
+            <div class="metric-sub">Llamadas, emails o visitas que no pueden esperar</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -227,9 +357,9 @@ def render_panel_control():
     st.markdown(
         f"""
         <div class="metric-box">
-            <div class="metric-title">PROYECTOS ACTIVOS</div>
-            <div class="metric-value">{proyectos_activos}</div>
-            <div class="metric-sub">En seguimiento, prescripción, oferta o negociación</div>
+            <div class="metric-title">Retrasadas</div>
+            <div class="metric-value">{len(acciones_atrasadas)}</div>
+            <div class="metric-sub">Acciones que ya deberían haberse hecho</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -237,95 +367,63 @@ def render_panel_control():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Bloque de seguimientos próximos / atrasados
+    # ---- Listas detalladas ----
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown(
         """
-        <div class="apple-card-light">
-            <div class="section-badge">Seguimiento</div>
-            <h3 style="margin-top:8px; margin-bottom:4px; font-size:1.0rem;">🚨 Agenda de seguimientos</h3>
-            <p style="color:#9CA3AF; margin-top:0; font-size:0.9rem;">
-                Proyectos con fecha de seguimiento hoy, atrasada o en los próximos días.
-            </p>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div>
+                <div class="section-badge">Próximos pasos</div>
+                <h3 style="margin-top:8px; margin-bottom:4px;">Agenda por prioridad temporal</h3>
+            </div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
-    if df_proyectos is None or df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
-        st.info("Todavía no hay proyectos en el sistema o no hay fecha de seguimiento registrada.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
+    col1, col2, col3 = st.columns(3)
 
-    hoy = date.today()
+    # Helper para dibujar lista
+    def _render_lista(col, titulo, acciones_lista, emoji):
+        with col:
+            st.markdown(
+                f"<p style='font-size:0.9rem; color:#E5E7EB; margin-bottom:6px;'><strong>{emoji} {titulo}</strong></p>",
+                unsafe_allow_html=True,
+            )
+            if not acciones_lista:
+                st.markdown(
+                    "<p style='color:#6B7280; font-size:0.78rem;'>Nada pendiente en este bloque.</p>",
+                    unsafe_allow_html=True,
+                )
+                return
+            acciones_ordenadas = sorted(acciones_lista, key=lambda x: x["fecha"])
+            for a in acciones_ordenadas[:20]:  # límite visual
+                fecha_txt = a["fecha"].strftime("%d/%m/%y")
+                tipo = a["tipo"]
+                subtipo = a["subtipo"]
+                texto = a["texto"]
+                detalle = a.get("detalle", "")
+                prioridad = a.get("prioridad", "Media")
+                estado = a.get("estado", "")
 
-    # Aseguramos que fecha_seguimiento sea comparable como string ISO o date
-    df = df_proyectos.copy()
-    fechas = []
-    for v in df["fecha_seguimiento"]:
-        if v is None:
-            fechas.append(None)
-        elif isinstance(v, date):
-            fechas.append(v)
-        elif isinstance(v, str):
-            try:
-                fechas.append(date.fromisoformat(v))
-            except Exception:
-                fechas.append(None)
-        else:
-            fechas.append(None)
+                pill_estado = ""
+                if tipo == "Seguimiento":
+                    pill_estado = "<span class='badge-inline'>Seguimiento</span>"
+                else:
+                    pill_estado = "<span class='badge-inline'>Tarea</span>"
 
-    df["fecha_seg_parsed"] = fechas
-    pendientes = df[
-        df["fecha_seg_parsed"].notna()
-        & (df["fecha_seg_parsed"] <= hoy)
-        & (~df["estado"].isin(["Ganado", "Perdido"]))
-    ]
+                html = f"""
+                <div class="next-item">
+                    <div><strong>{fecha_txt}</strong> · {texto} {pill_estado}</div>
+                    <small>{subtipo} · {detalle if detalle else ""}</small><br/>
+                    <small>Prioridad: {prioridad} · Estado: {estado}</small>
+                </div>
+                """
+                st.markdown(html, unsafe_allow_html=True)
 
-    proximos = df[
-        df["fecha_seg_parsed"].notna()
-        & (df["fecha_seg_parsed"] > hoy)
-        & (df["fecha_seg_parsed"] <= hoy + timedelta(days=7))
-        & (~df["estado"].isin(["Ganado", "Perdido"]))
-    ]
-
-    if pendientes.empty and proximos.empty:
-        st.success("No tienes seguimientos atrasados ni en los próximos 7 días. ✅")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    if not pendientes.empty:
-        st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente o atrasado.")
-        pendientes = pendientes.sort_values("fecha_seg_parsed")
-        for _, row in pendientes.iterrows():
-            nombre = row.get("nombre_obra", "Sin nombre")
-            fecha_seg = row.get("fecha_seg_parsed", "")
-            cliente = row.get("cliente_principal", "—")
-            estado = row.get("estado", "—")
-            notas = row.get("notas_seguimiento", "")
-
-            with st.expander(f"⏰ {nombre} – {fecha_seg} ({cliente})"):
-                st.write(f"**Estado actual:** {estado}")
-                st.write(f"**Notas:** {notas or '—'}")
-
-                if st.button("Posponer 1 semana", key=f"posponer_{row['id']}"):
-                    nueva_fecha = (hoy + timedelta(days=7)).isoformat()
-                    try:
-                        actualizar_proyecto(row["id"], {"fecha_seguimiento": nueva_fecha})
-                        st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"No se pudo actualizar la fecha de seguimiento: {e}")
-
-    if not proximos.empty:
-        st.markdown("---")
-        st.markdown("#### 📆 Próximos 7 días")
-        proximos = proximos.sort_values("fecha_seg_parsed")
-        for _, row in proximos.iterrows():
-            nombre = row.get("nombre_obra", "Sin nombre")
-            fecha_seg = row.get("fecha_seg_parsed", "")
-            cliente = row.get("cliente_principal", "—")
-            estado = row.get("estado", "—")
-
-            st.write(f"• **{nombre}** – {fecha_seg} ({cliente}) · _{estado}_")
+    _render_lista(col1, "Retrasadas", acciones_atrasadas, "⏰")
+    _render_lista(col2, "Para hoy", acciones_hoy, "📍")
+    _render_lista(col3, "Próximos 7 días", acciones_semana, "📅")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -333,6 +431,7 @@ def render_panel_control():
 # ==========================
 # MAIN
 # ==========================
+
 def main():
     with st.sidebar:
         st.markdown("### 🏗️ CRM Prescripción")
