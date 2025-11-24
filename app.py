@@ -1,16 +1,34 @@
 import streamlit as st
 from datetime import date, timedelta
 
-from crm_utils import (
-    inicializar_firebase_si_necesario,
-    get_clientes,
-    get_proyectos,
-    actualizar_proyecto,
-)
+# ⬇️ ENVOLVEMOS EL IMPORT DE crm_utils EN UN try/except
+try:
+    from crm_utils import (
+        get_clientes,
+        get_proyectos,
+        add_cliente,
+        add_proyecto,
+        actualizar_proyecto,
+        delete_proyecto,
+        default_pasos_seguimiento,
+        filtrar_obras_importantes,
+        importar_proyectos_desde_excel,
+        generar_excel_obras_importantes,
+    )
+except Exception as e:
+    st.error(
+        "❌ Error al importar `crm_utils.py`.\n\n"
+        "Comprueba que el fichero `crm_utils.py` está en el mismo directorio que `app.py` "
+        "y que las credenciales de Firebase (`firebase_key`) en `st.secrets` son correctas.\n\n"
+        f"Detalle técnico: {type(e).__name__}: {e}"
+    )
+    st.stop()
 
+# A partir de aquí, el resto de tu app.py como lo tenías
 from proyectos_page import render_proyectos
-from clientes_page import render_clientes_page
 from buscar_page import render_buscar
+from clientes_page import render_clientes_page
+
 
 
 # ======================================================
