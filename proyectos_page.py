@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+import pandas as pd  # Por si en el futuro lo necesitas
 from datetime import datetime
 from crm_utils import (
     get_proyectos,
@@ -7,7 +7,19 @@ from crm_utils import (
     actualizar_proyecto,
     delete_proyecto,
 )
-from style_injector import inject_apple_style
+
+# Intentamos importar la función de estilos.
+# Si no existe, usamos alternativas o un "no-op" para evitar errores.
+try:
+    from style_injector import inject_apple_style
+except ImportError:
+    try:
+        # Por si en tu archivo se llama distinto
+        from style_injector import inject_global_styles as inject_apple_style
+    except ImportError:
+        def inject_apple_style():
+            """Fallback: no hace nada si no existe en style_injector."""
+            pass
 
 
 # ===============================================================
@@ -63,7 +75,9 @@ def _vista_filtros(df):
         df_filtrado = df_filtrado[df_filtrado["estado"].isin(estado_filtrado)]
 
     if texto.strip():
-        df_filtrado = df_filtrado[df_filtrado["nombre_obra"].str.contains(texto, case=False)]
+        df_filtrado = df_filtrado[
+            df_filtrado["nombre_obra"].str.contains(texto, case=False)
+        ]
 
     _vista_tabla(df_filtrado)
 
@@ -73,14 +87,18 @@ def _vista_filtros(df):
 # ===============================================================
 def _vista_tabla(df_filtrado):
 
- 
-
     # ---------------- Pipeline ----------------
     st.markdown("#### 🧪 Pipeline (conteo por estado)")
-    if not df_filtrado.empty:
+    if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
-            "Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
-            "Negociación", "Ganado", "Perdido", "Paralizado",
+            "Detectado",
+            "Seguimiento",
+            "En Prescripción",
+            "Oferta Enviada",
+            "Negociación",
+            "Ganado",
+            "Perdido",
+            "Paralizado",
         ]
         counts = df_filtrado["estado"].value_counts()
         cols_pipe = st.columns(len(estados))
@@ -110,7 +128,7 @@ def _vista_tabla(df_filtrado):
     df_ui = df_raw.drop(columns=["id"])
     df_ui["seleccionar"] = [sel_state.get(pid, False) for pid in ids]
 
-    # Reordenar
+    # Reordenar columnas
     cols = list(df_ui.columns)
     if "nombre_obra" in cols:
         cols.remove("nombre_obra")
@@ -141,7 +159,7 @@ def _vista_tabla(df_filtrado):
         key="tabla_proyectos_editor",
     )
 
-    # Actualizar selección
+    # Actualizar selección en sesión
     edited_df = edited_df.reset_index(drop=True)
     if "seleccionar" in edited_df.columns:
         for idx, pid in enumerate(ids):
@@ -189,7 +207,7 @@ def _vista_tabla(df_filtrado):
                         try:
                             delete_proyecto(ids[i])
                             eliminados += 1
-                        except:
+                        except Exception:
                             pass
 
                     st.success(f"Eliminados {eliminados}")
@@ -209,9 +227,14 @@ def _open_nuevo_dialog():
         estado = st.selectbox(
             "Estado",
             [
-                "Detectado", "Seguimiento", "En Prescripción",
-                "Oferta Enviada", "Negociación", "Ganado",
-                "Perdido", "Paralizado"
+                "Detectado",
+                "Seguimiento",
+                "En Prescripción",
+                "Oferta Enviada",
+                "Negociación",
+                "Ganado",
+                "Perdido",
+                "Paralizado",
             ],
         )
         notas = st.text_area("Notas")
@@ -223,13 +246,15 @@ def _open_nuevo_dialog():
                 st.warning("El nombre es obligatorio.")
                 return
 
-            add_proyecto({
-                "nombre_obra": nombre,
-                "cliente": cliente,
-                "estado": estado,
-                "notas": notas,
-                "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            })
+            add_proyecto(
+                {
+                    "nombre_obra": nombre,
+                    "cliente": cliente,
+                    "estado": estado,
+                    "notas": notas,
+                    "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                }
+            )
 
             st.success("Proyecto creado correctamente.")
             st.rerun()
@@ -248,9 +273,14 @@ def _open_edit_dialog(row_data, proyecto_id):
         estado = st.selectbox(
             "Estado",
             [
-                "Detectado", "Seguimiento", "En Prescripción",
-                "Oferta Enviada", "Negociación", "Ganado",
-                "Perdido", "Paralizado"
+                "Detectado",
+                "Seguimiento",
+                "En Prescripción",
+                "Oferta Enviada",
+                "Negociación",
+                "Ganado",
+                "Perdido",
+                "Paralizado",
             ],
             index=_index_estado(row_data.get("estado")),
         )
@@ -259,12 +289,15 @@ def _open_edit_dialog(row_data, proyecto_id):
         enviado = st.form_submit_button("Guardar cambios")
 
         if enviado:
-            actualizar_proyecto(proyecto_id, {
-                "nombre_obra": nombre,
-                "cliente": cliente,
-                "estado": estado,
-                "notas": notas,
-            })
+            actualizar_proyecto(
+                proyecto_id,
+                {
+                    "nombre_obra": nombre,
+                    "cliente": cliente,
+                    "estado": estado,
+                    "notas": notas,
+                },
+            )
 
             st.success("Proyecto actualizado.")
             st.rerun()
@@ -272,11 +305,16 @@ def _open_edit_dialog(row_data, proyecto_id):
 
 def _index_estado(valor):
     estados = [
-        "Detectado", "Seguimiento", "En Prescripción",
-        "Oferta Enviada", "Negociación", "Ganado",
-        "Perdido", "Paralizado",
+        "Detectado",
+        "Seguimiento",
+        "En Prescripción",
+        "Oferta Enviada",
+        "Negociación",
+        "Ganado",
+        "Perdido",
+        "Paralizado",
     ]
     try:
         return estados.index(valor)
-    except:
+    except ValueError:
         return 0
