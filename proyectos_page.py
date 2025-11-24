@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd  # Por si en el futuro lo necesitas
+import pandas as pd
 from datetime import datetime
 from crm_utils import (
     get_proyectos,
@@ -7,24 +7,11 @@ from crm_utils import (
     actualizar_proyecto,
     delete_proyecto,
 )
+from style_injector import inject_apple_style
 
-# Intentamos importar la función de estilos.
-# Si no existe, usamos alternativas o un "no-op" para evitar errores.
-try:
-    from style_injector import inject_apple_style
-except ImportError:
-    try:
-        # Por si en tu archivo se llama distinto
-        from style_injector import inject_global_styles as inject_apple_style
-    except ImportError:
-        def inject_apple_style():
-            """Fallback: no hace nada si no existe en style_injector."""
-            pass
-
-
-# ===============================================================
+# -----------------------------------------------------------
 # RENDER PRINCIPAL
-# ===============================================================
+# -----------------------------------------------------------
 def render_proyectos():
     inject_apple_style()
 
@@ -45,21 +32,20 @@ def render_proyectos():
     _boton_crear()
 
 
-# ===============================================================
-# BOTÓN CREAR PROYECTO
-# ===============================================================
+# -----------------------------------------------------------
+# BOTÓN PARA CREAR NUEVO PROYECTO
+# -----------------------------------------------------------
 def _boton_crear():
     st.markdown("---")
     if st.button("➕ Crear nuevo proyecto", use_container_width=True):
         _open_nuevo_dialog()
 
 
-# ===============================================================
-# FILTROS
-# ===============================================================
+# -----------------------------------------------------------
+# FILTROS DE LA PÁGINA
+# -----------------------------------------------------------
 def _vista_filtros(df):
     st.markdown("### 🔍 Filtros")
-
     estados = df["estado"].dropna().unique().tolist()
     estados.sort()
 
@@ -75,38 +61,30 @@ def _vista_filtros(df):
         df_filtrado = df_filtrado[df_filtrado["estado"].isin(estado_filtrado)]
 
     if texto.strip():
-        df_filtrado = df_filtrado[
-            df_filtrado["nombre_obra"].str.contains(texto, case=False)
-        ]
+        df_filtrado = df_filtrado[df_filtrado["nombre_obra"].str.contains(texto, case=False)]
 
     _vista_tabla(df_filtrado)
 
 
-# ===============================================================
-# TABLA PRINCIPAL + ACCIONES
-# ===============================================================
-def _vista_tabla(df_filtrado):
+# -----------------------------------------------------------
+# TABLA PRINCIPAL CON CHECKLIST + ICONOS ARRIBA
+# -----------------------------------------------------------
+def _vista_tabla(df_filtrado: pd.DataFrame):
 
-    # ---------------- Pipeline ----------------
     st.markdown("#### 🧪 Pipeline (conteo por estado)")
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
-            "Detectado",
-            "Seguimiento",
-            "En Prescripción",
-            "Oferta Enviada",
-            "Negociación",
-            "Ganado",
-            "Perdido",
-            "Paralizado",
+            "Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
+            "Negociación", "Ganado", "Perdido", "Paralizado",
         ]
         counts = df_filtrado["estado"].value_counts()
         cols_pipe = st.columns(len(estados))
         for col, est in zip(cols_pipe, estados):
             col.metric(est, int(counts.get(est, 0)))
+    else:
+        st.info("No hay información para mostrar en el pipeline.")
 
-    # ---------------- Tabla ----------------
-    st.markdown("#### 📂 Lista de proyectos filtrados")
+    st.markdown("#### 📂 Lista de proyectos")
 
     if df_filtrado.empty:
         st.warning("No hay proyectos con esos filtros.")
@@ -115,63 +93,37 @@ def _vista_tabla(df_filtrado):
     df_raw = df_filtrado.reset_index(drop=True).copy()
     ids = df_raw["id"].tolist()
 
-    # Estado de selección persistente
     sel_key = "seleccion_proyectos"
     if sel_key not in st.session_state:
         st.session_state[sel_key] = {}
 
     sel_state = st.session_state[sel_key]
+
     for pid in ids:
         sel_state.setdefault(pid, False)
 
-    # UI sin ID
     df_ui = df_raw.drop(columns=["id"])
     df_ui["seleccionar"] = [sel_state.get(pid, False) for pid in ids]
 
-    # Reordenar columnas
     cols = list(df_ui.columns)
     if "nombre_obra" in cols:
         cols.remove("nombre_obra")
         cols.insert(0, "nombre_obra")
+
     if "seleccionar" in cols:
         cols.remove("seleccionar")
         cols.insert(1, "seleccionar")
 
-    # INFO superior
-    st.markdown(
-        "<p style='font-size:0.82rem; color:#9CA3AF;'>"
-        "Selecciona una o varias obras y usa los iconos superiores para editar o borrar."
-        "</p>",
-        unsafe_allow_html=True,
-    )
-
-    # Placeholder para colocar los iconos encima de la tabla
-    actions_placeholder = st.empty()
-
-    # -------- Renderizar tabla ----------
-    edited_df = st.data_editor(
-        df_ui[cols],
-        column_config={
-            "seleccionar": st.column_config.CheckboxColumn("Seleccionar")
-        },
-        hide_index=True,
-        use_container_width=True,
-        key="tabla_proyectos_editor",
-    )
-
-    # Actualizar selección en sesión
-    edited_df = edited_df.reset_index(drop=True)
-    if "seleccionar" in edited_df.columns:
-        for idx, pid in enumerate(ids):
-            sel_state[pid] = bool(edited_df.loc[idx, "seleccionar"])
-
-    # --------- Iconos arriba ----------
-    with actions_placeholder.container():
+    # ------------------- ACCIONES ARRIBA -------------------
+    actions = st.container()
+    with actions:
         col_txt, col_sel_all, col_edit, col_delete = st.columns([3, 1, 0.7, 0.7])
 
         with col_txt:
             st.markdown(
-                "<span style='font-size:0.8rem; color:#6B7280;'>Acciones rápidas:</span>",
+                "<span style='font-size:0.8rem; color:#6B7280;'>"
+                "Acciones rápidas:"
+                "</span>",
                 unsafe_allow_html=True,
             )
 
@@ -182,41 +134,60 @@ def _vista_tabla(df_filtrado):
                     sel_state[pid] = True
                 st.rerun()
 
-        # Editar seleccionado
+        # Editar
         with col_edit:
-            if st.button("✏️", help="Editar el primer proyecto seleccionado"):
-                marcados = [i for i, v in edited_df["seleccionar"].items() if v]
-                if not marcados:
-                    st.warning("Selecciona un proyecto.")
+            if st.button("✏️", help="Editar proyecto seleccionado"):
+                seleccionados = [pid for pid in ids if sel_state.get(pid)]
+                if not seleccionados:
+                    st.warning("Selecciona un proyecto para editar.")
                 else:
-                    idx = marcados[0]
-                    proyecto_id = ids[idx]
+                    first = seleccionados[0]
+                    idx = ids.index(first)
                     datos = df_raw.iloc[idx].to_dict()
-                    _open_edit_dialog(datos, proyecto_id)
+                    _open_edit_dialog(datos, first)
 
-        # Borrar seleccionados
+        # Borrar
         with col_delete:
             if st.button("🗑️", help="Borrar proyectos seleccionados"):
-                marcados = [i for i, v in edited_df["seleccionar"].items() if v]
-
-                if not marcados:
-                    st.warning("No hay proyectos seleccionados.")
+                seleccionados = [pid for pid in ids if sel_state.get(pid)]
+                if not seleccionados:
+                    st.warning("Selecciona uno o más proyectos.")
                 else:
-                    eliminados = 0
-                    for i in marcados:
+                    total = 0
+                    for pid in seleccionados:
                         try:
-                            delete_proyecto(ids[i])
-                            eliminados += 1
-                        except Exception:
+                            delete_proyecto(pid)
+                            sel_state.pop(pid, None)
+                            total += 1
+                        except:
                             pass
-
-                    st.success(f"Eliminados {eliminados}")
+                    st.success(f"Eliminados {total} proyectos.")
                     st.rerun()
 
+    # ------------------- TABLA -------------------
+    edited_df = st.data_editor(
+        df_ui[cols],
+        column_config={
+            "seleccionar": st.column_config.CheckboxColumn(
+                "Seleccionar",
+                help="Selecciona este proyecto",
+                default=False,
+            )
+        },
+        hide_index=True,
+        use_container_width=True,
+        key="tabla_proyectos",
+    )
 
-# ===============================================================
+    if "seleccionar" in edited_df.columns:
+        edited_df = edited_df.reset_index(drop=True)
+        for idx, pid in enumerate(ids):
+            sel_state[pid] = bool(edited_df.loc[idx, "seleccionar"])
+
+
+# -----------------------------------------------------------
 # CREAR NUEVO PROYECTO
-# ===============================================================
+# -----------------------------------------------------------
 def _open_nuevo_dialog():
 
     with st.form("nuevo_proyecto_form"):
@@ -226,19 +197,10 @@ def _open_nuevo_dialog():
         cliente = st.text_input("Cliente")
         estado = st.selectbox(
             "Estado",
-            [
-                "Detectado",
-                "Seguimiento",
-                "En Prescripción",
-                "Oferta Enviada",
-                "Negociación",
-                "Ganado",
-                "Perdido",
-                "Paralizado",
-            ],
+            ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
+             "Negociación", "Ganado", "Perdido", "Paralizado"],
         )
         notas = st.text_area("Notas")
-
         enviado = st.form_submit_button("Guardar")
 
         if enviado:
@@ -246,75 +208,55 @@ def _open_nuevo_dialog():
                 st.warning("El nombre es obligatorio.")
                 return
 
-            add_proyecto(
-                {
-                    "nombre_obra": nombre,
-                    "cliente": cliente,
-                    "estado": estado,
-                    "notas": notas,
-                    "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                }
-            )
+            add_proyecto({
+                "nombre_obra": nombre,
+                "cliente": cliente,
+                "estado": estado,
+                "notas": notas,
+                "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            })
 
             st.success("Proyecto creado correctamente.")
             st.rerun()
 
 
-# ===============================================================
+# -----------------------------------------------------------
 # EDITAR PROYECTO
-# ===============================================================
+# -----------------------------------------------------------
 def _open_edit_dialog(row_data, proyecto_id):
 
-    with st.form(f"editar_{proyecto_id}"):
+    with st.form(f"editar_proyecto_{proyecto_id}"):
         st.markdown("### ✏️ Editar proyecto")
 
-        nombre = st.text_input("Nombre de la obra", row_data.get("nombre_obra"))
-        cliente = st.text_input("Cliente", row_data.get("cliente"))
+        nombre = st.text_input("Nombre de la obra", row_data.get("nombre_obra", ""))
+        cliente = st.text_input("Cliente", row_data.get("cliente", ""))
         estado = st.selectbox(
             "Estado",
-            [
-                "Detectado",
-                "Seguimiento",
-                "En Prescripción",
-                "Oferta Enviada",
-                "Negociación",
-                "Ganado",
-                "Perdido",
-                "Paralizado",
-            ],
+            ["Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
+             "Negociación", "Ganado", "Perdido", "Paralizado"],
             index=_index_estado(row_data.get("estado")),
         )
-        notas = st.text_area("Notas", row_data.get("notas"))
+        notas = st.text_area("Notas", row_data.get("notas", ""))
 
         enviado = st.form_submit_button("Guardar cambios")
 
         if enviado:
-            actualizar_proyecto(
-                proyecto_id,
-                {
-                    "nombre_obra": nombre,
-                    "cliente": cliente,
-                    "estado": estado,
-                    "notas": notas,
-                },
-            )
-
+            actualizar_proyecto(proyecto_id, {
+                "nombre_obra": nombre,
+                "cliente": cliente,
+                "estado": estado,
+                "notas": notas,
+            })
             st.success("Proyecto actualizado.")
             st.rerun()
 
 
 def _index_estado(valor):
     estados = [
-        "Detectado",
-        "Seguimiento",
-        "En Prescripción",
-        "Oferta Enviada",
-        "Negociación",
-        "Ganado",
-        "Perdido",
-        "Paralizado",
+        "Detectado", "Seguimiento", "En Prescripción", "Oferta Enviada",
+        "Negociación", "Ganado", "Perdido", "Paralizado",
     ]
     try:
         return estados.index(valor)
-    except ValueError:
+    except:
         return 0
