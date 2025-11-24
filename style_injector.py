@@ -4,15 +4,13 @@ import streamlit as st
 def inject_apple_style():
     """
     Inyecta estilos modernos tipo Apple en toda la app.
-    Si ya se inyectó antes, evita duplicaciones.
+    Evita duplicar la inyección usando una marca en session_state.
     """
     if "apple_style_injected" in st.session_state:
         return
 
     style = """
     <style>
-
-    /* Tipografía tipo SF / Apple */
     html, body, [class*="css"] {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
         Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
@@ -21,7 +19,6 @@ def inject_apple_style():
         background-color: #020617;
     }
 
-    /* Títulos principales */
     h1 {
         font-weight: 700 !important;
         letter-spacing: -1px;
@@ -33,7 +30,6 @@ def inject_apple_style():
         margin-top: 1.5rem;
     }
 
-    /* Botones */
     .stButton>button {
         border-radius: 10px !important;
         padding: 0.6rem 1.2rem !important;
@@ -54,7 +50,6 @@ def inject_apple_style():
         border-color: #6b7280 !important;
     }
 
-    /* Inputs */
     .stTextInput>div>div>input,
     .stTextArea textarea,
     .stSelectbox>div>div>button {
@@ -64,26 +59,17 @@ def inject_apple_style():
         color: #e5e7eb !important;
     }
 
-    /* Tablas */
-    .stDataFrame {
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        border: 1px solid #1f2937 !important;
-    }
-
-    .stDataEditor {
+    .stDataFrame, .stDataEditor {
         border-radius: 12px !important;
         border: 1px solid #1f2937 !important;
         overflow: hidden !important;
     }
 
-    /* Sidebar estilo Apple */
     section[data-testid="stSidebar"] {
         background: radial-gradient(circle at top left, #0f172a, #020617) !important;
         border-right: 1px solid #1f2937 !important;
     }
 
-    /* Metric Cards */
     [data-testid="metric-container"] {
         border-radius: 12px !important;
         padding: 1rem !important;
@@ -92,7 +78,6 @@ def inject_apple_style():
         box-shadow: 0px 10px 25px rgba(15,23,42,0.5) !important;
     }
 
-    /* Tarjetas Apple */
     .apple-card {
         background: radial-gradient(circle at top left, #0f172a, #020617);
         border-radius: 18px;
@@ -102,17 +87,16 @@ def inject_apple_style():
         margin-bottom: 1.2rem;
     }
 
-    .apple-card-light {
+    .card-light, .apple-card-light {
         background: #020617;
         border-radius: 18px;
         border: 1px solid #1f2937;
         padding: 1.25rem 1.5rem;
         box-shadow: 0 12px 25px rgba(15,23,42,0.6);
-        margin-top: 1.2rem;
         margin-bottom: 1.2rem;
     }
 
-    .section-badge {
+    .badge {
         display: inline-flex;
         align-items: center;
         padding: 0.15rem 0.6rem;
@@ -124,17 +108,22 @@ def inject_apple_style():
         color: #9ca3af;
     }
 
+    .section-title {
+        font-size: 1.1rem;
+        margin: 6px 0 10px 0;
+    }
+
+    .small-caption {
+        font-size: 0.78rem;
+        color: #9ca3af;
+    }
+
     .next-item {
         padding: 0.6rem 0.8rem;
         border-radius: 0.75rem;
         border: 1px solid #1f2937;
         background: rgba(15,23,42,0.85);
         margin-bottom: 0.55rem;
-    }
-
-    .next-item small {
-        color: #9ca3af;
-        font-size: 0.78rem;
     }
 
     .badge-inline {
@@ -146,13 +135,6 @@ def inject_apple_style():
         color: #ecfdf5;
         margin-left: 0.35rem;
     }
-
-    /* Texto general */
-    .apple-card p,
-    .apple-card-light p {
-        color: #9ca3af;
-    }
-
     </style>
     """
 
