@@ -42,7 +42,7 @@ def render_proyectos():
             <div class="section-badge">Proyectos</div>
             <h1 style="margin-top:4px; margin-bottom:4px;">Pipeline de prescripción</h1>
             <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
-                Gestiona obras, estados de seguimiento y tareas vinculadas.
+                Gestiona obras, estados de seguimiento y tareas vinculadas. 
                 Usa la vista analítica para ver dónde está el valor y la vista de tareas
                 para no dejar ningún proyecto enfriarse.
             </p>
@@ -254,7 +254,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                 else:
                     idx = idxs[0]
                     st.session_state["detalle_proyecto_id"] = ids[idx]
-                    st.success("Proyecto seleccionado. Ve a la pestaña '➕ Alta proyecto' si lo quieres editar.")
+                    st.success("Proyecto seleccionado. Ve a la pestaña 'Alta proyecto / Detalle' si lo quieres editar.")
     with col_acc2:
         if st.button("🗑️ Borrar proyectos seleccionados"):
             if "seleccionar" not in edited_df.columns:
@@ -588,7 +588,7 @@ def _render_import_export(df_proy_empty: bool, df_proy=None):
 
 
 # =====================================================
-# ALTA MANUAL
+# ALTA MANUAL (y detalle si usas el id seleccionado)
 # =====================================================
 
 def _render_alta_manual():
