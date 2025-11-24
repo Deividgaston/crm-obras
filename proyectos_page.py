@@ -344,8 +344,15 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
     registros = []
 
     for _, row in df_filtrado.iterrows():
-        tareas = row.get("tareas") or []
-        for t in tareas:
+        raw_tareas = row.get("tareas", [])
+        # Blindaje extra: si no es una lista, lo tratamos como sin tareas
+        if not isinstance(raw_tareas, list):
+            raw_tareas = []
+
+        for t in raw_tareas:
+            if not isinstance(t, dict):
+                continue  # por si viene algo raro en la lista
+
             fecha_lim = _parse_fecha_iso(t.get("fecha_limite"))
             registros.append(
                 {
@@ -364,7 +371,9 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
         return
 
     df_t = pd.DataFrame(registros)
-    df_t = df_t.sort_values(["Completada", "Fecha_límite"], ascending=[True, True])
+    df_t = df_t.sort_values(
+        ["Completada", "Fecha_límite"], ascending=[True, True]
+    )
 
     st.dataframe(
         df_t,
