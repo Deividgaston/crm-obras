@@ -31,25 +31,20 @@ def _parse_fecha_iso(valor):
     return None
 
 
-def _modo_compacto() -> bool:
-    return bool(st.session_state.get("modo_compacto", False))
-
-
 # =====================================================
 # PÁGINA PRINCIPAL DE PROYECTOS
 # =====================================================
 
 def render_proyectos():
-    compacto = _modo_compacto()
-
     st.markdown(
         """
-        <div class="crm-card">
-            <div class="section-badge">Obras y pipeline</div>
+        <div class="apple-card">
+            <div class="section-badge">Proyectos</div>
             <h1 style="margin-top:4px; margin-bottom:4px;">Pipeline de prescripción</h1>
-            <p class="text-muted" style="margin-bottom:0;">
+            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
                 Gestiona obras, estados de seguimiento y tareas vinculadas.
-                Usa la vista general para el día a día y el dashboard para analizar dónde está el valor.
+                Usa la vista analítica para ver dónde está el valor y la vista de tareas
+                para no dejar ningún proyecto enfriarse.
             </p>
         </div>
         """,
@@ -61,7 +56,6 @@ def render_proyectos():
     if df_proy is None or df_proy.empty:
         st.info("Todavía no hay proyectos guardados en Firestore.")
         _render_import_export(df_proy_empty=True)
-        _render_alta_manual()
         return
 
     tab_vista, tab_dash, tab_duplicados, tab_import, tab_alta = st.tabs(
@@ -75,7 +69,7 @@ def render_proyectos():
     )
 
     with tab_vista:
-        _render_vista_general(df_proy, compacto)
+        _render_vista_general(df_proy)
 
     with tab_dash:
         _render_dashboard(df_proy)
@@ -91,7 +85,7 @@ def render_proyectos():
 
 
 # =====================================================
-# VISTA GENERAL
+# VISTA GENERAL (tabla + vistas rápidas)
 # =====================================================
 
 def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
@@ -165,12 +159,12 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
     return df_filtrado
 
 
-def _render_vista_general(df_proy: pd.DataFrame, compacto: bool):
-    st.markdown("### Vista operativa de proyectos")
+def _render_vista_general(df_proy: pd.DataFrame):
+    st.markdown("### Pipeline y vista rápida")
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista")
 
-    # selector de modo
+    # “Pastillas” de vista rápida
     try:
         vista = st.segmented_control(
             "Modo de vista",
@@ -185,14 +179,35 @@ def _render_vista_general(df_proy: pd.DataFrame, compacto: bool):
         )
 
     if vista == "Tabla":
-        _vista_tabla(df_filtrado, compacto)
+        _vista_tabla(df_filtrado)
     elif vista == "Seguimientos":
         _vista_seguimientos(df_filtrado)
     else:
         _vista_tareas(df_filtrado)
 
 
-def _vista_tabla(df_filtrado: pd.DataFrame, compacto: bool):
+def _vista_tabla(df_filtrado: pd.DataFrame):
+    # --------- PIPELINE POR ESTADO ----------
+    st.markdown("#### 🧪 Pipeline (conteo por estado)")
+    if not df_filtrado.empty and "estado" in df_filtrado.columns:
+        estados = [
+            "Detectado",
+            "Seguimiento",
+            "En Prescripción",
+            "Oferta Enviada",
+            "Negociación",
+            "Ganado",
+            "Perdido",
+            "Paralizado",
+        ]
+        counts = df_filtrado["estado"].value_counts()
+        cols_pipe = st.columns(len(estados))
+        for col, est in zip(cols_pipe, estados):
+            col.metric(est, int(counts.get(est, 0)))
+    else:
+        st.info("No hay información de estados con los filtros aplicados.")
+
+    # --------- TABLA PRINCIPAL ---------
     st.markdown("#### 📂 Lista de proyectos filtrados")
 
     if df_filtrado.empty:
@@ -201,33 +216,13 @@ def _vista_tabla(df_filtrado: pd.DataFrame, compacto: bool):
 
     df_ui = df_filtrado.reset_index(drop=True).copy()
     ids = df_ui["id"].tolist()
+    df_ui = df_ui.drop(columns=["id"])
 
-    # columnas relevantes según modo
-    columnas_escritorio = [
-        "nombre_obra",
-        "cliente_principal",
-        "ciudad",
-        "tipo_proyecto",
-        "prioridad",
-        "estado",
-        "potencial_eur",
-        "fecha_seguimiento",
-    ]
-    columnas_movil = [
-        "nombre_obra",
-        "ciudad",
-        "estado",
-        "fecha_seguimiento",
-    ]
-
-    cols = columnas_movil if compacto else columnas_escritorio
-    cols = [c for c in cols if c in df_ui.columns]
-
-    df_ui = df_ui[cols]
+    # columna seleccionar
     df_ui.insert(0, "seleccionar", False)
 
     st.markdown(
-        "<p class='text-muted'>Selecciona una obra y usa los botones inferiores para verla en detalle o borrarla.</p>",
+        "<p style='font-size:0.82rem; color:#9CA3AF;'>Selecciona una obra y usa los botones inferiores para verla en detalle o borrarla.</p>",
         unsafe_allow_html=True,
     )
 
@@ -235,7 +230,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame, compacto: bool):
         df_ui,
         column_config={
             "seleccionar": st.column_config.CheckboxColumn(
-                "",
+                "Seleccionar",
                 help="Selecciona una obra para acciones rápidas",
                 default=False,
             ),
@@ -248,7 +243,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame, compacto: bool):
     col_acc1, col_acc2 = st.columns(2)
 
     with col_acc1:
-        if st.button("✏️ Ver / editar proyecto"):
+        if st.button("➡️ Ver proyecto seleccionado en detalle"):
             if "seleccionar" not in edited_df.columns:
                 st.error("No se ha encontrado la columna 'seleccionar'.")
             else:
@@ -259,12 +254,9 @@ def _vista_tabla(df_filtrado: pd.DataFrame, compacto: bool):
                 else:
                     idx = idxs[0]
                     st.session_state["detalle_proyecto_id"] = ids[idx]
-                    st.success(
-                        "Proyecto seleccionado. Ve a la pestaña 'Alta proyecto' para editarlo."
-                    )
-
+                    st.success("Proyecto seleccionado. Ve a la pestaña '➕ Alta proyecto' si lo quieres editar.")
     with col_acc2:
-        if st.button("🗑️ Borrar seleccionados"):
+        if st.button("🗑️ Borrar proyectos seleccionados"):
             if "seleccionar" not in edited_df.columns:
                 st.error("No se ha encontrado la columna 'seleccionar'.")
             else:
@@ -320,16 +312,7 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
     col1, col2 = st.columns([2, 1])
     with col1:
         st.dataframe(
-            df_seg[
-                [
-                    "Proyecto",
-                    "Cliente",
-                    "Ciudad",
-                    "Estado",
-                    "Fecha_seguimiento",
-                    "Prioridad",
-                ]
-            ],
+            df_seg[["Proyecto", "Cliente", "Ciudad", "Estado", "Fecha_seguimiento", "Prioridad"]],
             hide_index=True,
             use_container_width=True,
         )
@@ -391,7 +374,7 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
 
 
 # =====================================================
-# DASHBOARD ANALÍTICO (igual que antes)
+# DASHBOARD ANALÍTICO
 # =====================================================
 
 def _render_dashboard(df_proy: pd.DataFrame):
@@ -488,7 +471,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
 
 # =====================================================
-# DUPLICADOS / IMPORT / ALTA (igual que teníamos)
+# DUPLICADOS
 # =====================================================
 
 def _render_duplicados(df_proy: pd.DataFrame):
@@ -551,6 +534,10 @@ def _render_duplicados(df_proy: pd.DataFrame):
                         st.rerun()
 
 
+# =====================================================
+# IMPORTAR / EXPORTAR
+# =====================================================
+
 def _render_import_export(df_proy_empty: bool, df_proy=None):
     st.subheader("📤 Exportar / 📥 Importar")
 
@@ -599,6 +586,10 @@ def _render_import_export(df_proy_empty: bool, df_proy=None):
     else:
         st.info("Sube un Excel para poder importarlo.")
 
+
+# =====================================================
+# ALTA MANUAL
+# =====================================================
 
 def _render_alta_manual():
     st.subheader("➕ Alta manual de proyecto")
