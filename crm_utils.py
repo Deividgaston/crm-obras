@@ -104,3 +104,31 @@ def default_pasos_seguimiento():
 # - importar_proyectos_desde_excel(file)
 # - generar_excel_obras_importantes(df)
 # etc.
+# ============================================================
+#  CLIENTES — CRUD básico
+# ============================================================
+
+def add_cliente(data: dict):
+    """
+    Crea un nuevo cliente en Firestore.
+    Se usa para arquitecturas, ingenierías, promotoras o integradores.
+    """
+    db = _get_db()
+    data["fecha_alta"] = datetime.utcnow().isoformat()
+    db.collection("clientes").add(data)
+
+
+def actualizar_cliente(cliente_id: str, data: dict):
+    """
+    Actualiza los datos de un cliente existente.
+    """
+    db = _get_db()
+    db.collection("clientes").document(cliente_id).update(data)
+
+
+def delete_cliente(cliente_id: str):
+    """
+    Elimina un cliente de Firestore.
+    """
+    db = _get_db()
+    db.collection("clientes").document(cliente_id).delete()
