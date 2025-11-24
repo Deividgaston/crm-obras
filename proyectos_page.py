@@ -71,7 +71,8 @@ def _vista_filtros(df):
 # ===============================================================
 # TABLA PRINCIPAL + ACCIONES
 # ===============================================================
-def _vista_tabla(df_filtrado: pd.DataFrame):
+def _vista_tabla(df_filtrado):
+
  
 
     # ---------------- Pipeline ----------------
