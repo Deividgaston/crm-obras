@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-
+from datetime import datetime
 from crm_utils import (
     get_clientes,
     add_cliente,
@@ -8,114 +8,208 @@ from crm_utils import (
     delete_cliente,
 )
 
+# Intentamos cargar estilo si existe
+try:
+    from style_injector import inject_apple_style
+except:
+    def inject_apple_style():
+        pass
 
-def render_clientes_page():
-    st.markdown(
-        """
-        <div class="apple-card">
-            <div class="section-badge">Relaciones</div>
-            <h1 style="margin-top:4px; margin-bottom:4px;">Clientes</h1>
-            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
-                Gestiona ingenierías, arquitecturas, promotoras e integrators clave
-                para la prescripción.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    # Alta de cliente
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### ➕ Añadir nuevo cliente", unsafe_allow_html=True)
+# ===============================================================
+# RENDER PRINCIPAL
+# ===============================================================
+def render_clientes():
+    inject_apple_style()
 
-    with st.form("form_cliente"):
-        col1, col2 = st.columns(2)
-        with col1:
-            nombre = st.text_input("Nombre / persona de contacto")
-            empresa = st.text_input("Empresa")
-            tipo_cliente = st.selectbox(
-                "Tipo de cliente",
-                ["Ingeniería", "Promotora", "Arquitectura", "Integrator Partner", "Otro"],
-            )
-        with col2:
-            email = st.text_input("Email")
-            telefono = st.text_input("Teléfono")
-            ciudad = st.text_input("Ciudad")
-            provincia = st.text_input("Provincia")
+    st.title("👥 Clientes")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        notas = st.text_area("Notas (proyectos, relación, info importante)")
+    # Lectura protegida de Firestore
+    with st.spinner("Cargando clientes…"):
+        try:
+            clientes = get_clientes()  # cacheado
+        except Exception as e:
+            st.error("❌ Error cargando clientes (posible cuota Firebase agotada).")
+            st.code(str(e))
+            return
 
-        enviar = st.form_submit_button("Guardar cliente")
+    df = pd.DataFrame(clientes)
 
-    if enviar:
-        if not nombre and not empresa:
-            st.warning("Pon al menos un nombre o una empresa.")
-        else:
-            try:
-                add_cliente(
-                    {
-                        "nombre": nombre,
-                        "empresa": empresa,
-                        "tipo_cliente": tipo_cliente,
-                        "email": email,
-                        "telefono": telefono,
-                        "ciudad": ciudad,
-                        "provincia": provincia,
-                        "notas": notas,
-                    }
-                )
-                st.success("Cliente guardado correctamente.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"No se pudo guardar el cliente: {e}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Listado + posibilidad de borrar
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### 📋 Listado de clientes", unsafe_allow_html=True)
-
-    df_clientes = get_clientes()
-    if df_clientes is None or df_clientes.empty:
-        st.info("Aún no hay clientes en el CRM.")
-        st.markdown("</div>", unsafe_allow_html=True)
+    if df.empty:
+        st.info("No hay clientes creados todavía.")
+        _boton_crear_cliente()
         return
 
-    df_ui = df_clientes.copy()
-    ids = df_ui["id"].tolist()
-    df_ui = df_ui.drop(columns=["id"])
+    df = df.sort_values(by="fecha_creacion", ascending=False).reset_index(drop=True)
 
-    df_ui.insert(0, "borrar", False)
+    _vista_tabla(df)
+    _boton_crear_cliente()
 
-    edited = st.data_editor(
-        df_ui,
-        column_config={
-            "borrar": st.column_config.CheckboxColumn(
-                "🗑️", help="Marca para borrar el cliente seleccionado", default=False
-            ),
-        },
+
+# ===============================================================
+# BOTÓN CREAR NUEVO CLIENTE
+# ===============================================================
+def _boton_crear_cliente():
+    st.markdown("---")
+    if st.button("➕ Crear nuevo cliente", use_container_width=True):
+        _open_nuevo_cliente()
+
+
+# ===============================================================
+# TABLA PRINCIPAL
+# ===============================================================
+def _vista_tabla(df):
+
+    st.markdown("### 📋 Lista de clientes")
+
+    if df.empty:
+        st.warning("No hay clientes registrados.")
+        return
+
+    # Añadir checkbox de selección
+    ids = df["id"].tolist()
+
+    sel_key = "seleccion_clientes"
+    if sel_key not in st.session_state:
+        st.session_state[sel_key] = {}
+
+    sel_state = st.session_state[sel_key]
+    for pid in ids:
+        sel_state.setdefault(pid, False)
+
+    df_ui = df.drop(columns=["id"]).copy()
+    df_ui["seleccionar"] = [sel_state.get(pid, False) for pid in ids]
+
+    cols = list(df_ui.columns)
+    cols.remove("seleccionar")
+    cols.insert(0, "seleccionar")
+
+    # Placeholder de botones
+    actions_placeholder = st.empty()
+
+    # Render de tabla
+    edited_df = st.data_editor(
+        df_ui[cols],
+        column_config={"seleccionar": st.column_config.CheckboxColumn("Sel")},
         hide_index=True,
         use_container_width=True,
-        key="clientes_editor",
+        key="tabla_clientes_editor",
     )
 
-    if st.button("Eliminar clientes marcados"):
-        if "borrar" not in edited.columns:
-            st.error("No se ha encontrado la columna 'borrar'.")
-        else:
-            sel = edited["borrar"]
-            if not sel.any():
-                st.warning("No hay clientes marcados para borrar.")
-            else:
-                total = 0
-                for row_idx, marcado in sel.items():
-                    if marcado:
-                        try:
-                            delete_cliente(ids[row_idx])
-                            total += 1
-                        except Exception as e:
-                            st.error(f"No se pudo borrar un cliente: {e}")
-                st.success(f"Clientes eliminados: {total}")
-                st.rerun()
+    edited_df = edited_df.reset_index(drop=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Actualizar selección
+    for idx, pid in enumerate(ids):
+        sel_state[pid] = bool(edited_df.loc[idx, "seleccionar"])
+
+    # Botones arriba
+    with actions_placeholder.container():
+        col_txt, col_sel_all, col_edit, col_delete = st.columns([3, 1, 0.7, 0.7])
+
+        with col_txt:
+            st.markdown(
+                "<span style='font-size:0.8rem; color:#6B7280;'>Acciones:</span>",
+                unsafe_allow_html=True,
+            )
+
+        # Marcar todos
+        with col_sel_all:
+            if st.button("☑️", help="Seleccionar todos"):
+                for pid in ids:
+                    sel_state[pid] = True
+
+        # Editar
+        with col_edit:
+            if st.button("✏️", help="Editar el primer cliente seleccionado"):
+                marcados = [i for i, v in edited_df["seleccionar"].items() if v]
+                if not marcados:
+                    st.warning("Selecciona un cliente.")
+                else:
+                    idx = marcados[0]
+                    cliente_id = ids[idx]
+                    datos = df.iloc[idx].to_dict()
+                    _open_editar_cliente(datos, cliente_id)
+
+        # Borrar
+        with col_delete:
+            if st.button("🗑️", help="Borrar clientes seleccionados"):
+                marcados = [i for i, v in edited_df["seleccionar"].items() if v]
+
+                if not marcados:
+                    st.warning("Selecciona uno o más clientes.")
+                else:
+                    eliminados = 0
+                    for i in marcados:
+                        try:
+                            delete_cliente(ids[i])
+                            eliminados += 1
+                        except:
+                            pass
+
+                    st.success(f"Eliminados {eliminados} clientes.")
+                    st.cache_data.clear()
+                    st.experimental_rerun()
+
+
+# ===============================================================
+# CREAR CLIENTE
+# ===============================================================
+def _open_nuevo_cliente():
+
+    with st.form("nuevo_cliente_form"):
+        st.markdown("### ➕ Nuevo cliente")
+
+        nombre = st.text_input("Nombre del cliente")
+        empresa = st.text_input("Empresa / Promotora")
+        telefono = st.text_input("Teléfono")
+        email = st.text_input("Email")
+        notas = st.text_area("Notas")
+
+        enviado = st.form_submit_button("Guardar")
+
+        if enviado:
+            if not nombre:
+                st.warning("El nombre es obligatorio.")
+                return
+
+            add_cliente({
+                "nombre": nombre,
+                "empresa": empresa,
+                "telefono": telefono,
+                "email": email,
+                "notas": notas,
+                "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            })
+
+            st.success("Cliente creado correctamente.")
+            st.experimental_rerun()
+
+
+# ===============================================================
+# EDITAR CLIENTE
+# ===============================================================
+def _open_editar_cliente(row_data, cliente_id):
+
+    with st.form(f"editar_cliente_{cliente_id}"):
+        st.markdown("### ✏️ Editar cliente")
+
+        nombre = st.text_input("Nombre", row_data.get("nombre"))
+        empresa = st.text_input("Empresa", row_data.get("empresa"))
+        telefono = st.text_input("Teléfono", row_data.get("telefono"))
+        email = st.text_input("Email", row_data.get("email"))
+        notas = st.text_area("Notas", row_data.get("notas"))
+
+        enviado = st.form_submit_button("Guardar cambios")
+
+        if enviado:
+            actualizar_cliente(cliente_id, {
+                "nombre": nombre,
+                "empresa": empresa,
+                "telefono": telefono,
+                "email": email,
+                "notas": notas,
+            })
+
+            st.success("Cliente actualizado.")
+            st.experimental_rerun()
