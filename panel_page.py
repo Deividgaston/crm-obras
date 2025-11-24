@@ -1,58 +1,121 @@
 import streamlit as st
-from datetime import date
+import pandas as pd
+from crm_utils import get_proyectos, get_clientes
 
-from crm_utils import get_clientes, get_proyectos
 
-
+# ============================================================
+#  PANEL PRINCIPAL – RESUMEN CRM
+# ============================================================
 def render_panel():
-    st.title("⚡ Panel de Control")
+    st.title("🏗️ Panel General del CRM de Prescripción")
+    st.markdown("<br>", unsafe_allow_html=True)
 
+    # -------------------------------
+    # LECTURA SEGURA DE FIRESTORE
+    # -------------------------------
+    with st.spinner("Cargando datos desde la base de datos…"):
+        try:
+            proyectos = get_proyectos()   # cacheado 60s
+            clientes = get_clientes()     # cacheado 60s
+        except Exception as e:
+            st.error(
+                """
+                ❌ No se pudieron cargar los datos desde Firestore.
 
-    df_clientes = get_clientes()
-    df_proyectos = get_proyectos()
+                **Es posible que la cuota gratuita de Firebase se haya agotado hoy**  
+                (error típico: 429 QUOTA EXCEEDED).
 
-    total_clientes = len(df_clientes) if not df_clientes.empty else 0
-    total_proyectos = len(df_proyectos) if not df_proyectos.empty else 0
+                Inténtalo más tarde (Firebase resetea las cuotas cada 24h).
+                """
+            )
+            st.code(str(e))
+            return
 
-    proyectos_activos = 0
-    if not df_proyectos.empty and "estado" in df_proyectos.columns:
-        proyectos_activos = len(df_proyectos[~df_proyectos["estado"].isin(["Ganado", "Perdido"])])
+    df_proy = pd.DataFrame(proyectos) if proyectos else pd.DataFrame()
+    df_cli = pd.DataFrame(clientes) if clientes else pd.DataFrame()
 
+    # -----------------------------------------
+    # MÉTRICAS PRINCIPALES
+    # -----------------------------------------
+    st.markdown("## 📊 Resumen general")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Clientes en CRM", total_clientes)
-    c2.metric("Proyectos totales", total_proyectos)
-    c3.metric("Proyectos activos", proyectos_activos)
+    col1, col2, col3 = st.columns(3)
 
+    with col1:
+        st.metric("Total de proyectos", len(df_proy))
+
+    with col2:
+        st.metric("Total de clientes", len(df_cli))
+
+    with col3:
+        if not df_proy.empty and "estado" in df_proy.columns:
+            ganados = (df_proy["estado"] == "Ganado").sum()
+        else:
+            ganados = 0
+        st.metric("Proyectos ganados", ganados)
 
     st.markdown("---")
-    st.subheader("🚨 Seguimientos pendientes (hoy o pasados)")
 
+    # -----------------------------------------
+    # PIPELINE POR ESTADO
+    # -----------------------------------------
+    st.markdown("### 🔁 Pipeline por estado")
 
-    if df_proyectos.empty or "fecha_seguimiento" not in df_proyectos.columns:
-        st.info("Todavía no hay proyectos con fecha de seguimiento.")
+    if df_proy.empty or "estado" not in df_proy.columns:
+        st.info("No hay proyectos aún o falta el campo 'estado'.")
         return
 
-    hoy = date.today()
-    pendientes = df_proyectos[
-        df_proyectos["fecha_seguimiento"].notna()
-        & (df_proyectos["fecha_seguimiento"] <= hoy)
-        & (~df_proyectos["estado"].isin(["Ganado", "Perdido"]))  # type: ignore
+    estados_orden = [
+        "Detectado",
+        "Seguimiento",
+        "En Prescripción",
+        "Oferta Enviada",
+        "Negociación",
+        "Ganado",
+        "Perdido",
+        "Paralizado",
     ]
 
-    if pendientes.empty:
-        st.success("No tienes seguimientos atrasados. ✅")
+    counts = df_proy["estado"].value_counts()
+
+    cols = st.columns(len(estados_orden))
+
+    for col, est in zip(cols, estados_orden):
+        col.metric(est, int(counts.get(est, 0)))
+
+    st.markdown("---")
+
+    # -----------------------------------------
+    # ÚLTIMOS PROYECTOS
+    # -----------------------------------------
+    st.markdown("### 📂 Últimos proyectos creados")
+
+    if "fecha_creacion" in df_proy.columns:
+        df_proy["fecha_creacion"] = pd.to_datetime(
+            df_proy["fecha_creacion"], errors="coerce"
+        )
+        df_proy = df_proy.sort_values(
+            by="fecha_creacion", ascending=False
+        )
+
+    columnas_tabla = [
+        col for col in [
+            "nombre_obra",
+            "cliente",
+            "estado",
+            "ciudad",
+            "provincia",
+            "fecha_creacion"
+        ]
+        if col in df_proy.columns
+    ]
+
+    if not columnas_tabla:
+        st.info("No hay columnas suficientes para mostrar una tabla.")
         return
 
-    st.error(f"Tienes {len(pendientes)} proyectos con seguimiento pendiente.")
-
-
-    for _, row in pendientes.sort_values("fecha_seguimiento").iterrows():
-        nombre = row.get("nombre_obra", "Sin nombre")
-        cliente = row.get("cliente_principal", "—")
-        fecha = row.get("fecha_seguimiento")
-        notas = row.get("notas_seguimiento", "")
-
-
-        with st.expander(f"⏰ {nombre} – {cliente} ({fecha})"):
-            st.write(notas or "Sin notas adicionales.")
+    st.dataframe(
+        df_proy[columnas_tabla].head(20),
+        hide_index=True,
+        use_container_width=True,
+    )
