@@ -1,162 +1,187 @@
 import streamlit as st
 
 
-def _modo_compacto() -> bool:
-    return bool(st.session_state.get("modo_compacto", False))
-
-
 def render_buscar():
-    compacto = _modo_compacto()
-
     st.markdown(
         """
-        <div class="crm-card">
-            <div class="section-badge">Motor de scouting</div>
-            <h1 style="margin-top:4px; margin-bottom:4px;">Buscador asistido</h1>
-            <p class="text-muted" style="margin-bottom:0;">
-                Genera prompts para que yo (ChatGPT) te ayude a localizar
-                nuevos proyectos o clientes en función de tu estrategia.
+        <div class="apple-card">
+            <div class="section-badge">Scouting</div>
+            <h1 style="margin-top:4px; margin-bottom:4px;">Buscar proyectos y clientes</h1>
+            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
+                Diseña búsquedas inteligentes para que ChatGPT te prepare Excels de proyectos
+                o clientes en función de zona, tipo de activo y segmento.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        """
-        <div class="crm-card-light">
-            <h3>1. Tipo de búsqueda</h3>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("#### 🎯 Configurar búsqueda", unsafe_allow_html=True)
+
+    tipo_busqueda = st.radio(
+        "¿Qué quieres buscar?",
+        ["Proyectos", "Clientes"],
+        horizontal=True,
     )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        tipo_objeto = st.selectbox(
-            "Quiero buscar…",
-            ["Proyectos / obras", "Clientes (promotoras, ingenierías, etc.)"],
-        )
-    with col2:
-        zona = st.multiselect(
-            "Zonas geográficas",
-            ["Madrid", "Málaga", "Valencia", "Alicante", "Barcelona", "Mallorca", "Portugal"],
-        )
-
-    col3, col4 = st.columns(2)
-    with col3:
-        vertical = st.multiselect(
-            "Vertical",
-            ["Residencial lujo", "BTR", "Oficinas", "Hotel", "Educativo", "Sanitario", "Otro"],
-        )
-    with col4:
-        estado = st.multiselect(
-            "Estado del proyecto",
-            ["Planeado", "En comercialización", "En construcción", "Entregado"],
-        )
-
-    st.markdown(
-        """
-        <div class="crm-card-light">
-            <h3>2. Filtro de tamaño e inversión</h3>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    zonas = st.multiselect(
+        "Zonas / provincias a buscar",
+        ["Madrid", "Málaga", "Barcelona", "Valencia", "Alicante", "Mallorca", "Otras"],
+        default=["Madrid", "Málaga"],
     )
 
-    col5, col6 = st.columns(2)
-    with col5:
+    if tipo_busqueda == "Proyectos":
+        verticales = st.multiselect(
+            "Verticales de proyecto",
+            ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otros"],
+            default=["Residencial lujo", "Oficinas", "Hotel"],
+        )
+        estado_objetivo = st.multiselect(
+            "Momento del proyecto",
+            ["Solar", "Proyecto básico", "Proyecto ejecutivo", "Obra en curso"],
+            default=["Proyecto básico", "Proyecto ejecutivo"],
+        )
         min_viviendas = st.number_input(
             "Mínimo nº de viviendas (si aplica)",
             min_value=0,
             step=10,
-            value=50,
+            value=0,
         )
-    with col6:
-        min_inversion = st.number_input(
-            "Inversión mínima estimada (M€)",
-            min_value=0.0,
-            step=1.0,
-            value=5.0,
+        min_potencial = st.number_input(
+            "Potencial mínimo estimado para 2N (€)",
+            min_value=0,
+            step=50000,
+            value=0,
+        )
+    else:
+        tipo_cliente = st.multiselect(
+            "Tipo de cliente",
+            ["Promotora", "Ingeniería", "Arquitectura", "Integrator Partner", "Fondo"],
+            default=["Promotora", "Ingeniería", "Arquitectura"],
+        )
+        foco_negocio = st.multiselect(
+            "Foco principal",
+            ["Residencial lujo", "BTR", "Oficinas", "Hoteles", "Mixto"],
+            default=["Residencial lujo", "BTR"],
         )
 
-    st.markdown(
-        """
-        <div class="crm-card-light">
-            <h3>3. Criterios de prioridad</h3>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    horizonte = st.selectbox(
+        "Horizonte temporal",
+        ["Proyectos en licitación ahora", "Entrega 12-24 meses", "Entrega +24 meses"],
+        index=0,
     )
 
-    col7, col8 = st.columns(2)
-    with col7:
-        prioridad = st.selectbox(
-            "Qué priorizas",
-            [
-                "Volumen de obra (nº viviendas / m²)",
-                "Ticket económico (inversión total)",
-                "Reconocimiento de marca / arquitecto",
-                "Velocidad de salida a obra",
-            ],
-        )
-    with col8:
-        ventana_tiempo = st.selectbox(
-            "Horizonte temporal",
-            ["Corto plazo (0-12 meses)", "Medio plazo (1-3 años)", "Largo plazo (3-5 años)"],
-        )
-
-    notas_extra = st.text_area(
-        "Notas específicas (opcional)",
-        placeholder="Ejemplo: priorizar BTR en zona norte de Madrid con promotoras internacionales...",
+    detalle = st.text_area(
+        "Detalles extra que quieres que tenga en cuenta ChatGPT (opcional)",
+        placeholder="Ejemplo: proyectos donde la domótica no sea el foco principal y el acceso IP sí.",
     )
 
-    # --------- Generación de prompt ----------
-    if st.button("🧠 Generar prompt para ChatGPT"):
-        tipo_txt = "proyectos inmobiliarios" if "Proyectos" in tipo_objeto else "clientes / contactos profesionales"
+    if st.button("🔄 Generar prompt"):
+        pass  # solo para que el usuario vea que 'hace algo'
 
-        zonas_txt = ", ".join(zona) if zona else "España (con foco en zonas de alto valor inmobiliario)"
-        vertical_txt = ", ".join(vertical) if vertical else "cualquier vertical relevante"
-        estado_txt = ", ".join(estado) if estado else "cualquier estado donde todavía tenga sentido entrar con prescripción"
+    st.markdown("#### 🧠 Prompt generado para ChatGPT")
+    prompt = _construir_prompt(
+        tipo_busqueda=tipo_busqueda,
+        zonas=zonas,
+        verticales=verticales if tipo_busqueda == "Proyectos" else None,
+        estado_objetivo=estado_objetivo if tipo_busqueda == "Proyectos" else None,
+        min_viviendas=min_viviendas if tipo_busqueda == "Proyectos" else None,
+        min_potencial=min_potencial if tipo_busqueda == "Proyectos" else None,
+        tipo_cliente=tipo_cliente if tipo_busqueda == "Clientes" else None,
+        foco_negocio=foco_negocio if tipo_busqueda == "Clientes" else None,
+        horizonte=horizonte,
+        detalle=detalle,
+    )
+
+    st.code(prompt, language="markdown")
+    st.caption("Copia este prompt y pégalo en ChatGPT. Pídele siempre que te devuelva un Excel con las columnas que ya usamos en tu CRM.")
+
+
+def _construir_prompt(
+    tipo_busqueda,
+    zonas,
+    verticales=None,
+    estado_objetivo=None,
+    min_viviendas=None,
+    min_potencial=None,
+    tipo_cliente=None,
+    foco_negocio=None,
+    horizonte=None,
+    detalle=None,
+):
+    zonas_txt = ", ".join(zonas) if zonas else "toda España"
+
+    if tipo_busqueda == "Proyectos":
+        verticales_txt = ", ".join(verticales) if verticales else "cualquier tipología"
+        estado_txt = ", ".join(estado_objetivo) if estado_objetivo else "cualquier fase"
+        extra = f"\n\nDetalles adicionales: {detalle}" if detalle else ""
 
         prompt = f"""
-Eres mi asistente de scouting para el mercado inmobiliario de alto valor.
+Eres un analista de mercado inmobiliario especializado en prescripción de soluciones de control de accesos y videoportero IP (2N).
 
-Quiero que busques **{tipo_txt}** alineados con el portfolio de soluciones de 2N (videoportero IP y control de accesos) según estos criterios:
+Quiero que busques **proyectos inmobiliarios** en las zonas: {zonas_txt}.
+Tipos de proyecto objetivo: {verticales_txt}.
+Fase del proyecto: {estado_txt}.
+Horizonte temporal: {horizonte}.
 
-- **Zonas**: {zonas_txt}
-- **Vertical**: {vertical_txt}
-- **Estado del proyecto**: {estado_txt}
-- **Mínimo nº de viviendas** (si aplica): {min_viviendas}
-- **Inversión mínima estimada**: aproximadamente {min_inversion} M€
-- **Prioridad**: {prioridad}
-- **Horizonte temporal**: {ventana_tiempo}
+Si hay dato disponible, prioriza proyectos:
+- con un volumen relevante de viviendas (mínimo {min_viviendas} si aplica),
+- y un potencial de inversión en control de accesos / videoportero IP superior a {min_potencial} €.
 
-Devuélveme la información en una tabla con estas columnas, preparada para importar luego a mi CRM:
+Devuélveme la información en formato tabla pensando en un Excel con estas columnas:
 
-- Nombre del proyecto o cliente
-- Nº de viviendas / m² (si aplica)
-- Ciudad / localidad
-- Provincia / región
-- Promotora / fondo
+- Proyecto
+- Ciudad
+- Provincia
+- Tipo_Proyecto
+- Segmento (lujo, estándar, BTR, etc.)
+- Nº_viviendas_aprox
+- Promotora_Fondo
 - Arquitectura
-- Ingeniería
-- Tipo de activo (residencial lujo, BTR, oficinas, hotel, educativo…)
-- Estado del proyecto
-- Fecha estimada de inicio / hito relevante
-- Web o fuente de donde lo has obtenido
-- Notas relevantes (por qué puede encajar con 2N, complejidad, etc.)
+- Ingenieria
+- Fase_proyecto
+- Fecha_Inicio_Estimada
+- Fecha_Entrega_Estimada
+- Potencial_2N (estimación en € si puedes)
+- Fuente_URL
+- Notas
 
-{f"Notas adicionales a tener en cuenta: {notas_extra}" if notas_extra.strip() else ""}
+Quiero como salida SOLO la tabla, sin explicaciones alrededor, para poder guardar el Excel y subirlo a mi CRM.
 
-Cuando tengas la tabla, dime también de forma breve:
-- cuáles serían las **3 oportunidades más interesantes**,
-- y qué estrategia de entrada propones (a quién contactar primero y con qué mensaje).
+{extra}
         """.strip()
+        return prompt
 
-        st.markdown("#### Prompt generado")
-        st.code(prompt, language="markdown")
-        st.success("Copia el prompt y pégalo en una nueva conversación de ChatGPT para lanzar la búsqueda.")
+    else:
+        tipos_txt = ", ".join(tipo_cliente) if tipo_cliente else "cualquier tipo"
+        foco_txt = ", ".join(foco_negocio) if foco_negocio else "cualquier segmento"
+        extra = f"\n\nDetalles adicionales: {detalle}" if detalle else ""
 
-    if compacto:
-        st.caption("💡 En móvil verás menos controles de golpe, pero el prompt generado incluye todos los filtros.")
+        prompt = f"""
+Eres un analista de negocio especializado en identificar **clientes potenciales para soluciones 2N** (control de accesos y videoportero IP).
+
+Quiero que busques **empresas** (no proyectos) en las zonas: {zonas_txt}.
+Tipo de empresa objetivo: {tipos_txt}.
+Foco principal de negocio: {foco_txt}.
+Horizonte temporal: {horizonte} (es decir, que vayan a tener proyectos relevantes en ese plazo).
+
+Devuélveme la información en formato tabla pensando en un Excel con estas columnas:
+
+- Empresa
+- Tipo_Cliente (Promotora, Ingeniería, Arquitectura, Integrator, Fondo)
+- Persona_contacto_principal
+- Cargo
+- Email
+- Teléfono
+- Ciudad
+- Provincia
+- Web
+- LinkedIn
+- Notas (ej: proyectos recientes, foco de mercado, tamaño)
+
+Quiero como salida SOLO la tabla, sin explicaciones alrededor, para poder guardar el Excel y subirlo a mi CRM.
+
+{extra}
+        """.strip()
+        return prompt
