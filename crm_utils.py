@@ -313,3 +313,16 @@ def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> bytes:
     df_proy.to_excel(buffer, index=False)
     buffer.seek(0)
     return buffer.getvalue()
+def delete_all_proyectos():
+    """
+    Elimina TODOS los documentos de la colección 'proyectos'.
+    """
+    db = _get_db()
+    docs = db.collection("proyectos").stream()
+
+    borrados = 0
+    for doc in docs:
+        db.collection("proyectos").document(doc.id).delete()
+        borrados += 1
+
+    return borrados
