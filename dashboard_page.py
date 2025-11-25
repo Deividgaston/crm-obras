@@ -19,24 +19,15 @@ from dashboard_utils import (
 
 
 def render_dashboard() -> None:
-    """Dashboard principal de analítica de prescripción."""
+    """Dashboard principal de analítica de prescripción (estilo Salesforce / denso)."""
     inject_apple_style()
 
     # ===========================
-    # CABECERA
+    # HEADER COMPACTO
     # ===========================
-    st.markdown(
-        """
-        <div class="apple-card">
-            <div class="badge">Dashboard</div>
-            <h1 style="margin-top:4px; margin-bottom:4px;">📊 Analítica del CRM</h1>
-            <p style="font-size:0.9rem; color:#9ca3af; margin-bottom:0;">
-                Vista global de tu pipeline de prescripción: estados, prioridades,
-                potencial económico y distribución geográfica.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.markdown("### Dashboard de prescripción")
+    st.caption(
+        "Resumen de proyectos, concentración por empresa y distribución geográfica."
     )
 
     # ===========================
@@ -54,110 +45,114 @@ def render_dashboard() -> None:
         return
 
     # ===========================
-    # KPIs SUPERIORES
+    # KPIs SUPERIORES (COMPACTOS)
     # ===========================
     kpis = compute_kpis(df)
 
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    col1, col2, col3, col4 = st.columns(4)
+    kpi_container = st.container()
+    with kpi_container:
+        col1, col2, col3, col4, col5 = st.columns(5)
 
-    with col1:
-        st.metric("Proyectos totales", int(kpis.get("total_proyectos", 0)))
+        with col1:
+            st.metric("Proyectos totales", int(kpis.get("total_proyectos", 0)))
 
-    with col2:
-        st.metric("Proyectos activos", int(kpis.get("proyectos_activos", 0)))
+        with col2:
+            st.metric("Activos", int(kpis.get("proyectos_activos", 0)))
 
-    with col3:
-        total_pot = float(kpis.get("total_potencial", 0.0))
-        st.metric("Potencial total (€)", f"{total_pot:,.0f}")
+        with col3:
+            total_pot = float(kpis.get("total_potencial", 0.0))
+            st.metric("Potencial total (€)", f"{total_pot:,.0f}")
 
-    with col4:
-        ticket_medio = float(kpis.get("ticket_medio", 0.0))
-        st.metric("Ticket medio (€)", f"{ticket_medio:,.0f}")
+        with col4:
+            ticket_medio = float(kpis.get("ticket_medio", 0.0))
+            st.metric("Ticket medio (€)", f"{ticket_medio:,.0f}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        with col5:
+            ratio = float(kpis.get("ratio_ganados", 0.0))
+            st.metric("Ratio ganados (%)", f"{ratio:.1f}%")
+
+    st.markdown("---")
 
     # ===========================
-    # DISTRIBUCIÓN POR ESTADO Y PRIORIDAD (PIE CHARTS)
+    # BLOQUE 1: PIPELINE + PRIORIDAD
     # ===========================
-    st.markdown(
-        '<div class="apple-card-light" style="margin-top:1.25rem;">',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### Pipeline por estado y prioridad", unsafe_allow_html=True)
+    st.markdown("#### Pipeline y prioridad")
 
-    col_e, col_p = st.columns(2)
+    col_pipe, col_prio = st.columns([3, 2])
 
-    # --- Estado ---
-    with col_e:
+    # --- Pipeline por estado (barra horizontal) ---
+    with col_pipe:
         funnel_df = compute_funnel_estado(df)
         if funnel_df is not None and not funnel_df.empty:
             chart_estado = (
                 alt.Chart(funnel_df)
-                .mark_arc(outerRadius=110, innerRadius=40)
+                .mark_bar()
                 .encode(
-                    theta=alt.Theta("proyectos:Q", stack=True),
-                    color=alt.Color(
-                        "estado:N",
-                        legend=alt.Legend(title="Estado"),
-                    ),
-                    tooltip=["estado:N", "proyectos:Q"],
+                    x=alt.X("proyectos:Q", title="Número de proyectos"),
+                    y=alt.Y("estado:N", sort="-x", title="Estado"),
+                    color=alt.Color("estado:N", legend=None),
+                    tooltip=[
+                        alt.Tooltip("estado:N", title="Estado"),
+                        alt.Tooltip("proyectos:Q", title="Proyectos"),
+                    ],
                 )
+                .properties(height=260)
             )
             st.altair_chart(chart_estado, use_container_width=True)
         else:
             st.caption("Sin datos de estado.")
 
-    # --- Prioridad ---
-    with col_p:
+    # --- Proyectos por prioridad (donut compacto) ---
+    with col_prio:
         prio_df = compute_prioridades(df)
         if prio_df is not None and not prio_df.empty:
             chart_prio = (
                 alt.Chart(prio_df)
-                .mark_arc(outerRadius=110, innerRadius=40)
+                .mark_arc(outerRadius=90, innerRadius=40)
                 .encode(
                     theta=alt.Theta("proyectos:Q", stack=True),
-                    color=alt.Color(
-                        "prioridad:N",
-                        legend=alt.Legend(title="Prioridad"),
-                    ),
-                    tooltip=["prioridad:N", "proyectos:Q"],
+                    color=alt.Color("prioridad:N", legend=alt.Legend(title="Prioridad")),
+                    tooltip=[
+                        alt.Tooltip("prioridad:N", title="Prioridad"),
+                        alt.Tooltip("proyectos:Q", title="Proyectos"),
+                    ],
                 )
+                .properties(height=260)
             )
             st.altair_chart(chart_prio, use_container_width=True)
+
+            st.caption("Proyectos por prioridad")
         else:
             st.caption("Sin datos de prioridad.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("---")
 
     # ===========================
-    # GEOGRAFÍA Y RANKING PROMOTORAS
+    # BLOQUE 2: EMPRESAS (OBRAS POR EMPRESA)
     # ===========================
-    st.markdown(
-        '<div class="apple-card-light" style="margin-top:1.25rem;">',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### Geografía y ranking de promotoras", unsafe_allow_html=True)
+    st.markdown("#### Concentración por empresa (promotora / cliente principal)")
 
-    col_g, col_r = st.columns(2)
+    col_emp_chart, col_emp_table = st.columns([3, 2])
 
-    # --- Potencial por provincia (pie) ---
-    with col_g:
-        prov_df = compute_potencial_por_provincia(df)
-        if prov_df is not None and not prov_df.empty:
-            top_prov = prov_df.head(8)
-            chart_prov = (
-                alt.Chart(top_prov)
-                .mark_arc(outerRadius=110, innerRadius=40)
+    rank_df = compute_ranking_promotoras(df, top_n=15)
+
+    # --- Gráfico: nº de obras por empresa ---
+    with col_emp_chart:
+        if rank_df is not None and not rank_df.empty:
+            chart_rank = (
+                alt.Chart(rank_df)
+                .mark_bar()
                 .encode(
-                    theta=alt.Theta("proyectos:Q", stack=True),
-                    color=alt.Color(
-                        "provincia:N",
-                        legend=alt.Legend(title="Provincia"),
+                    x=alt.X("proyectos:Q", title="Número de obras"),
+                    y=alt.Y(
+                        "promotora_display:N",
+                        sort="-x",
+                        title="Empresa / Promotora",
                     ),
+                    color=alt.Color("promotora_display:N", legend=None),
                     tooltip=[
-                        "provincia:N",
-                        "proyectos:Q",
+                        alt.Tooltip("promotora_display:N", title="Empresa"),
+                        alt.Tooltip("proyectos:Q", title="Obras"),
                         alt.Tooltip(
                             "potencial:Q",
                             title="Potencial (€)",
@@ -165,19 +160,19 @@ def render_dashboard() -> None:
                         ),
                     ],
                 )
+                .properties(height=320)
             )
-            st.altair_chart(chart_prov, use_container_width=True)
+            st.altair_chart(chart_rank, use_container_width=True)
         else:
-            st.caption("Sin datos de provincia.")
+            st.caption("Sin datos de empresas / promotoras.")
 
-    # --- Ranking promotoras (tabla) ---
-    with col_r:
-        rank_df = compute_ranking_promotoras(df, top_n=10)
+    # --- Tabla: obras y potencial por empresa ---
+    with col_emp_table:
         if rank_df is not None and not rank_df.empty:
             tabla_rank = rank_df.rename(
                 columns={
-                    "promotora_display": "Promotora / Cliente principal",
-                    "proyectos": "Proyectos",
+                    "promotora_display": "Empresa",
+                    "proyectos": "Obras",
                     "potencial": "Potencial (€)",
                 }
             )
@@ -187,18 +182,74 @@ def render_dashboard() -> None:
                 use_container_width=True,
             )
         else:
-            st.caption("Sin datos de promotoras.")
+            st.caption("Sin datos para tabla de empresas.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("---")
 
     # ===========================
-    # LISTA DE PROYECTOS GANADOS
+    # BLOQUE 3: GEOGRAFÍA (PROVINCIA)
     # ===========================
-    st.markdown(
-        '<div class="apple-card-light" style="margin-top:1.25rem;">',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### 🏆 Proyectos ganados", unsafe_allow_html=True)
+    st.markdown("#### Distribución geográfica (provincia)")
+
+    col_geo_chart, col_geo_table = st.columns([3, 2])
+
+    prov_df = compute_potencial_por_provincia(df)
+
+    # --- Gráfico por provincia ---
+    with col_geo_chart:
+        if prov_df is not None and not prov_df.empty:
+            top_prov = prov_df.head(12)
+            chart_prov = (
+                alt.Chart(top_prov)
+                .mark_bar()
+                .encode(
+                    x=alt.X("potencial:Q", title="Potencial total (€)"),
+                    y=alt.Y(
+                        "provincia:N",
+                        sort="-x",
+                        title="Provincia",
+                    ),
+                    color=alt.Color("provincia:N", legend=None),
+                    tooltip=[
+                        alt.Tooltip("provincia:N", title="Provincia"),
+                        alt.Tooltip("proyectos:Q", title="Obras"),
+                        alt.Tooltip(
+                            "potencial:Q",
+                            title="Potencial (€)",
+                            format=",.0f",
+                        ),
+                    ],
+                )
+                .properties(height=300)
+            )
+            st.altair_chart(chart_prov, use_container_width=True)
+        else:
+            st.caption("Sin datos de provincias.")
+
+    # --- Tabla por provincia ---
+    with col_geo_table:
+        if prov_df is not None and not prov_df.empty:
+            tabla_prov = prov_df.rename(
+                columns={
+                    "provincia": "Provincia",
+                    "proyectos": "Obras",
+                    "potencial": "Potencial (€)",
+                }
+            )
+            st.dataframe(
+                tabla_prov,
+                hide_index=True,
+                use_container_width=True,
+            )
+        else:
+            st.caption("Sin datos para tabla de provincias.")
+
+    st.markdown("---")
+
+    # ===========================
+    # BLOQUE 4: PROYECTOS GANADOS (TABLA ANCHA)
+    # ===========================
+    st.markdown("#### 🏆 Proyectos ganados")
 
     if "estado" in df.columns:
         df_ganados = df[df["estado"] == "Ganado"]
@@ -211,6 +262,7 @@ def render_dashboard() -> None:
                 "promotora_display",
                 "ciudad",
                 "provincia",
+                "estado",
                 "potencial_eur",
                 "fecha_creacion",
             ]
@@ -231,5 +283,3 @@ def render_dashboard() -> None:
                 st.caption("No hay columnas adecuadas para mostrar en el listado.")
     else:
         st.info("Los proyectos no tienen campo 'estado', no se puede listar ganados.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
