@@ -1,8 +1,6 @@
 import streamlit as st
-import pandas as pd
 
-from crm_utils import get_proyectos, get_clientes
-
+# Inyectar estilo Apple para mantener coherencia visual
 try:
     from style_injector import inject_apple_style
 except Exception:
@@ -10,203 +8,224 @@ except Exception:
         pass
 
 
-# ===============================================================
-# RENDER PRINCIPAL BUSCADOR
-# ===============================================================
+# ============================================================
+#  Página principal BUSCAR
+# ============================================================
+
 def render_buscar():
+
     inject_apple_style()
 
-    # Cabecera Apple
     st.markdown(
         """
         <div class="apple-card">
-            <div class="badge">Buscador global</div>
-            <h1 style="margin-top:4px; margin-bottom:4px;">🔎 Buscar en el CRM</h1>
-            <p style="font-size:0.9rem; color:#9ca3af; margin-bottom:0;">
-                Encuentra proyectos y clientes combinando texto libre, estado y ciudad.
-                Ideal para localizar rápido una obra, promotora o contacto clave.
+            <div class="section-badge">Scouting</div>
+            <h1 style="margin-top:4px; margin-bottom:4px;">Buscar proyectos y clientes</h1>
+            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
+                Diseña búsquedas inteligentes para que ChatGPT te prepare Excels de proyectos
+                o clientes en función de zona, tipo de activo y segmento.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ================= CARGA DE DATOS (UNA VEZ) =================
-    with st.spinner("Cargando datos de proyectos y clientes…"):
-        try:
-            proyectos = get_proyectos()
-            clientes = get_clientes()
-        except Exception as e:
-            st.error("❌ Error cargando datos desde Firestore.")
-            st.code(str(e))
-            return
+    # --- Contenedor principal ---
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("#### 🎯 Configurar búsqueda", unsafe_allow_html=True)
 
-    df_p = pd.DataFrame(proyectos) if proyectos else pd.DataFrame()
-    df_c = pd.DataFrame(clientes) if clientes else pd.DataFrame()
-
-    # ================= FILTROS BÁSICOS =================
-    st.markdown(
-        """
-        <div class="apple-card-light">
-            <div class="badge">Filtros</div>
-            <h3 style="margin-top:8px; margin-bottom:4px;">🎛️ Configurar búsqueda</h3>
-            <p class="small-caption">
-                Escribe texto libre y, si quieres, filtra por estado y ciudad para refinar la búsqueda.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    tipo_busqueda = st.radio(
+        "¿Qué quieres buscar?",
+        ["Proyectos", "Clientes"],
+        horizontal=True,
     )
 
-    col1, col2, col3 = st.columns(3)
+    zonas = st.multiselect(
+        "Zonas / provincias a buscar",
+        ["Madrid", "Málaga", "Barcelona", "Valencia", "Alicante", "Mallorca", "Otras"],
+        default=["Madrid", "Málaga"],
+    )
 
-    with col1:
-        query = st.text_input(
-            "Texto (obra, cliente, promotora, ciudad…)",
-            placeholder="Ej: Fuengirola, Prime Invest, Marbella…",
+    # --------- Si la búsqueda es de proyectos ----------
+    if tipo_busqueda == "Proyectos":
+
+        verticales = st.multiselect(
+            "Verticales de proyecto",
+            ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otros"],
+            default=["Residencial lujo", "Oficinas", "Hotel"],
         )
 
-    estados_options = (
-        sorted(df_p["estado"].dropna().unique().tolist())
-        if not df_p.empty and "estado" in df_p.columns
-        else []
-    )
-    ciudades_options = (
-        sorted(df_p["ciudad"].dropna().unique().tolist())
-        if not df_p.empty and "ciudad" in df_p.columns
-        else []
-    )
+        estado_objetivo = st.multiselect(
+            "Momento del proyecto",
+            ["Solar", "Proyecto básico", "Proyecto ejecutivo", "Obra en curso"],
+            default=["Proyecto básico", "Proyecto ejecutivo"],
+        )
 
-    with col2:
-        estados_sel = st.multiselect("Estado de obra", options=estados_options, default=estados_options)
-    with col3:
-        ciudades_sel = st.multiselect("Ciudad", options=ciudades_options)
+        min_viviendas = st.number_input(
+            "Mínimo nº de viviendas (si aplica)",
+            min_value=0,
+            step=10,
+            value=0,
+        )
 
-    # Si no hay nada, mostramos info y salimos
-    if not query and not estados_sel and not ciudades_sel:
-        st.info("Empieza escribiendo algo en el buscador o aplica algún filtro.")
-        return
+        min_potencial = st.number_input(
+            "Potencial mínimo estimado para 2N (€)",
+            min_value=0,
+            step=50000,
+            value=0,
+        )
 
-    # ================= BÚSQUEDA EN PROYECTOS =================
-    st.markdown(
-        """
-        <div class="apple-card-light">
-            <div class="badge">Resultados</div>
-            <h3 style="margin-top:8px; margin-bottom:4px;">📁 Resultados en proyectos</h3>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if df_p.empty:
-        st.warning("No hay proyectos registrados todavía.")
+    # --------- Si la búsqueda es de clientes ----------
     else:
-        dfp = df_p.copy()
+        tipo_cliente = st.multiselect(
+            "Tipo de cliente",
+            ["Promotora", "Ingeniería", "Arquitectura", "Integrator Partner", "Fondo"],
+            default=["Promotora", "Ingeniería", "Arquitectura"],
+        )
 
-        # Texto libre
-        if query:
-            q = query.lower()
-            columnas_busq = [
-                col
-                for col in ["nombre_obra", "cliente", "cliente_principal", "promotora", "ciudad", "provincia", "notas"]
-                if col in dfp.columns
-            ]
-            if columnas_busq:
-                mask = pd.Series(False, index=dfp.index)
-                for col in columnas_busq:
-                    mask = mask | dfp[col].astype(str).str.lower().str.contains(q)
-                dfp = dfp[mask]
+        foco_negocio = st.multiselect(
+            "Foco principal",
+            ["Residencial lujo", "BTR", "Oficinas", "Hoteles", "Mixto"],
+            default=["Residencial lujo", "BTR"],
+        )
 
-        # Estado
-        if estados_sel and "estado" in dfp.columns:
-            dfp = dfp[dfp["estado"].isin(estados_sel)]
-
-        # Ciudad
-        if ciudades_sel and "ciudad" in dfp.columns:
-            dfp = dfp[dfp["ciudad"].isin(ciudades_sel)]
-
-        if dfp.empty:
-            st.warning("No se han encontrado proyectos con estos criterios.")
-        else:
-            # Orden por fecha_creacion si existe
-            if "fecha_creacion" in dfp.columns:
-                dfp["fecha_creacion"] = pd.to_datetime(
-                    dfp["fecha_creacion"], errors="coerce"
-                )
-                dfp = dfp.sort_values(by="fecha_creacion", ascending=False)
-
-            columnas_proy = [
-                col
-                for col in [
-                    "nombre_obra",
-                    "cliente",
-                    "cliente_principal",
-                    "promotora",
-                    "estado",
-                    "ciudad",
-                    "provincia",
-                    "potencial_eur",
-                    "fecha_creacion",
-                ]
-                if col in dfp.columns
-            ]
-
-            st.markdown(
-                f"<p class='small-caption'>Se han encontrado <strong>{len(dfp)}</strong> proyectos.</p>",
-                unsafe_allow_html=True,
-            )
-
-            st.dataframe(
-                dfp[columnas_proy],
-                hide_index=True,
-                use_container_width=True,
-            )
-
-    # ================= BÚSQUEDA EN CLIENTES =================
-    st.markdown(
-        """
-        <div class="apple-card-light" style="margin-top:1.5rem;">
-            <div class="badge">Resultados</div>
-            <h3 style="margin-top:8px; margin-bottom:4px;">👥 Resultados en clientes</h3>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    horizonte = st.selectbox(
+        "Horizonte temporal",
+        ["Proyectos en licitación ahora", "Entrega 12-24 meses", "Entrega +24 meses"],
+        index=0,
     )
 
-    if df_c.empty:
-        st.info("No hay clientes registrados.")
+    detalle = st.text_area(
+        "Detalles extra que quieres que tenga en cuenta ChatGPT (opcional)",
+        placeholder="Ejemplo: proyectos donde la domótica no sea el foco principal y el acceso IP sí.",
+    )
+
+    # ----------------------------------------------------------------------
+    # BOTÓN GENERAR PROMPT (no hace nada salvo refrescar la interfaz)
+    # ----------------------------------------------------------------------
+    if st.button("🔄 Generar prompt"):
+        pass
+
+    # ----------------------------------------------------------------------
+    # MOSTRAR PROMPT GENERADO
+    # ----------------------------------------------------------------------
+
+    st.markdown("#### 🧠 Prompt generado para ChatGPT")
+
+    prompt = _construir_prompt(
+        tipo_busqueda=tipo_busqueda,
+        zonas=zonas,
+        verticales=verticales if tipo_busqueda == "Proyectos" else None,
+        estado_objetivo=estado_objetivo if tipo_busqueda == "Proyectos" else None,
+        min_viviendas=min_viviendas if tipo_busqueda == "Proyectos" else None,
+        min_potencial=min_potencial if tipo_busqueda == "Proyectos" else None,
+        tipo_cliente=tipo_cliente if tipo_busqueda == "Clientes" else None,
+        foco_negocio=foco_negocio if tipo_busqueda == "Clientes" else None,
+        horizonte=horizonte,
+        detalle=detalle,
+    )
+
+    st.code(prompt, language="markdown")
+    st.caption("Copia este prompt y pégalo en ChatGPT. Pídele siempre que te devuelva un Excel con las columnas que ya usamos en tu CRM.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+#  FUNCIÓN INTERNA PARA MAQUETAR EL PROMPT
+# ============================================================
+
+def _construir_prompt(
+    tipo_busqueda,
+    zonas,
+    verticales=None,
+    estado_objetivo=None,
+    min_viviendas=None,
+    min_potencial=None,
+    tipo_cliente=None,
+    foco_negocio=None,
+    horizonte=None,
+    detalle=None,
+):
+
+    zonas_txt = ", ".join(zonas) if zonas else "toda España"
+
+    # ----------------------------------------------------------------------
+    # SI ES BÚSQUEDA DE PROYECTOS
+    # ----------------------------------------------------------------------
+    if tipo_busqueda == "Proyectos":
+
+        verticales_txt = ", ".join(verticales) if verticales else "cualquier tipología"
+        estado_txt = ", ".join(estado_objetivo) if estado_objetivo else "cualquier fase"
+        extra = f"\n\nDetalles adicionales: {detalle}" if detalle else ""
+
+        return f"""
+Eres un analista de mercado inmobiliario especializado en prescripción de soluciones de control de accesos y videoportero IP (2N).
+
+Quiero que busques **proyectos inmobiliarios** en las zonas: {zonas_txt}.
+Tipos de proyecto objetivo: {verticales_txt}.
+Fase del proyecto: {estado_txt}.
+Horizonte temporal: {horizonte}.
+
+Si hay dato disponible, prioriza proyectos:
+- con un volumen relevante de viviendas (mínimo {min_viviendas} si aplica),
+- y un potencial de inversión en control de accesos / videoportero IP superior a {min_potencial} €.
+
+Devuélveme la información en formato tabla pensando en un Excel con estas columnas:
+
+- Proyecto
+- Ciudad
+- Provincia
+- Tipo_Proyecto
+- Segmento (lujo, estándar, BTR, etc.)
+- Nº_viviendas_aprox
+- Promotora_Fondo
+- Arquitectura
+- Ingenieria
+- Fase_proyecto
+- Fecha_Inicio_Estimada
+- Fecha_Entrega_Estimada
+- Potencial_2N (estimación en € si puedes)
+- Fuente_URL
+- Notas
+
+Quiero como salida SOLO la tabla, sin explicaciones alrededor.
+
+{extra}
+        """.strip()
+
+    # ----------------------------------------------------------------------
+    # SI ES BÚSQUEDA DE CLIENTES
+    # ----------------------------------------------------------------------
     else:
-        dfc = df_c.copy()
 
-        if query:
-            q = query.lower()
-            columnas_busq_c = [
-                col
-                for col in ["nombre", "empresa", "ciudad", "telefono", "email", "notas"]
-                if col in dfc.columns
-            ]
-            if columnas_busq_c:
-                mask_c = pd.Series(False, index=dfc.index)
-                for col in columnas_busq_c:
-                    mask_c = mask_c | dfc[col].astype(str).str.lower().str.contains(q)
-                dfc = dfc[mask_c]
+        tipos_txt = ", ".join(tipo_cliente) if tipo_cliente else "cualquier tipo"
+        foco_txt = ", ".join(foco_negocio) if foco_negocio else "cualquier segmento"
+        extra = f"\n\nDetalles adicionales: {detalle}" if detalle else ""
 
-        if dfc.empty:
-            st.warning("No se han encontrado clientes con estos criterios.")
-        else:
-            columnas_clientes = [
-                col
-                for col in ["nombre", "empresa", "ciudad", "telefono", "email", "fecha_creacion"]
-                if col in dfc.columns
-            ]
+        return f"""
+Eres un analista de negocio especializado en identificar **clientes potenciales para soluciones 2N** (control de accesos y videoportero IP).
 
-            st.markdown(
-                f"<p class='small-caption'>Se han encontrado <strong>{len(dfc)}</strong> clientes.</p>",
-                unsafe_allow_html=True,
-            )
+Quiero que busques **empresas** (no proyectos) en las zonas: {zonas_txt}.
+Tipo de empresa objetivo: {tipos_txt}.
+Foco principal de negocio: {foco_txt}.
+Horizonte temporal: {horizonte}.
 
-            st.dataframe(
-                dfc[columnas_clientes],
-                hide_index=True,
-                use_container_width=True,
-            )
+Devuélveme la información en formato tabla pensando en un Excel con estas columnas:
+
+- Empresa
+- Tipo_Cliente (Promotora, Ingeniería, Arquitectura, Integrator, Fondo)
+- Persona_contacto_principal
+- Cargo
+- Email
+- Teléfono
+- Ciudad
+- Provincia
+- Web
+- LinkedIn
+- Notas
+
+Quiero como salida SOLO la tabla, sin explicaciones alrededor.
+
+{extra}
+        """.strip()
