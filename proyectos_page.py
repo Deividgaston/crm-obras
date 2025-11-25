@@ -15,7 +15,7 @@ from crm_utils import (
     generar_excel_obras_importantes,
 )
 
-# Estilo Apple
+# === Estilo Apple ===
 try:
     from style_injector import inject_apple_style
 except Exception:
@@ -132,6 +132,7 @@ def _render_edit_form(row_data: dict, proy_id: str):
 
 def _open_edit_dialog(row_data: dict, proy_id: str):
     """Abre un cuadro flotante de edición (o fallback inline si la versión no soporta dialog)."""
+    # Streamlit >= 1.33 tiene st.dialog
     if hasattr(st, "dialog"):
         @st.dialog("✏️ Editar proyecto")
         def _dlg():
@@ -140,6 +141,7 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 
         _dlg()
     else:
+        # Fallback: lo mostramos inline con aspecto de tarjeta
         st.markdown("---")
         st.markdown(
             "<div class='apple-card-light'><div class='section-badge'>Edición rápida</div>"
@@ -155,7 +157,7 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 # =====================================================
 
 def render_proyectos():
-    # Estilo Apple en toda la página
+    # ✅ Aplicar estilo Apple a esta página
     inject_apple_style()
 
     st.markdown(
@@ -286,6 +288,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista")
 
+    # “Pastillas” de vista rápida
     try:
         vista = st.segmented_control(
             "Modo de vista",
@@ -308,6 +311,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 
 def _vista_tabla(df_filtrado: pd.DataFrame):
+    # --------- PIPELINE POR ESTADO ----------
     st.markdown("#### 🧪 Pipeline (conteo por estado)")
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
@@ -327,24 +331,31 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
     else:
         st.info("No hay información de estados con los filtros aplicados.")
 
+    # --------- TABLA PRINCIPAL ---------
     st.markdown("#### 📂 Lista de proyectos filtrados")
 
     if df_filtrado.empty:
         st.warning("No hay proyectos que cumplan los filtros seleccionados.")
         return
 
+    # df_raw mantiene todos los campos, incluido id, para poder editar
     df_raw = df_filtrado.reset_index(drop=True).copy()
     ids = df_raw["id"].tolist()
 
+    # df_ui es lo que mostramos en la tabla (sin id)
     df_ui = df_raw.drop(columns=["id"])
+
+    # columna seleccionar
     df_ui["seleccionar"] = False
 
+    # Reordenamos columnas: primero nombre_obra, luego seleccionar y después resto
     cols = list(df_ui.columns)
     if "nombre_obra" in cols:
         cols.remove("nombre_obra")
         cols.insert(0, "nombre_obra")
     if "seleccionar" in cols:
         cols.remove("seleccionar")
+        # queremos seleccionar justo después del nombre
         insert_pos = 1 if "nombre_obra" in cols else 0
         cols.insert(insert_pos, "seleccionar")
 
