@@ -16,7 +16,6 @@ except Exception:
 # ============================
 
 def _to_df(data):
-    """Convierte datos en DataFrame sin ambigüedad."""
     if data is None:
         return pd.DataFrame()
     if isinstance(data, pd.DataFrame):
@@ -56,21 +55,31 @@ def _fecha_txt(f: date | None):
 
 
 # ============================
-# PANEL (AGENDA)
+# PANEL ULTRA COMPACTO SALESFORCE
 # ============================
 
 def render_panel():
     inject_apple_style()
 
-    st.markdown("### Agenda de acciones")
-    st.caption("Seguimientos y tareas ordenadas por urgencia")
+    # TÍTULO SUPER PEQUEÑO
+    st.markdown(
+        """
+        <div style="margin-bottom:4px;">
+            <span style="font-size:0.95rem; font-weight:600;">Agenda de acciones</span><br>
+            <span style="font-size:0.75rem; color:#6b7b93;">
+                Seguimientos y tareas urgentes en formato compacto.
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # ---------------- Cargar datos ----------------
     try:
         clientes_raw = get_clientes()
         proyectos_raw = get_proyectos()
     except Exception as e:
-        st.error("Error cargando datos desde Firestore.")
+        st.error("Error cargando datos.")
         st.code(str(e))
         return
 
@@ -85,38 +94,30 @@ def render_panel():
     if not df_proyectos.empty:
         for _, r in df_proyectos.iterrows():
             fecha_seg = _parse_fecha(r.get("fecha_seguimiento"))
-            if not fecha_seg:
-                continue
-
-            acciones.append({
-                "tipo": "Seguimiento",
-                "proyecto": r.get("nombre_obra", "Sin nombre"),
-                "cliente": r.get("cliente_principal", "—"),
-                "ciudad": r.get("ciudad", "—"),
-                "provincia": r.get("provincia", "—"),
-                "fecha": fecha_seg,
-                "prioridad": r.get("prioridad", "Media"),
-            })
+            if fecha_seg:
+                acciones.append({
+                    "tipo": "Seguimiento",
+                    "proyecto": r.get("nombre_obra", ""),
+                    "cliente": r.get("cliente_principal", "—"),
+                    "ciudad": r.get("ciudad", "—"),
+                    "fecha": fecha_seg,
+                })
 
     # ---------------- Tareas ----------------
     if "tareas" in df_proyectos.columns:
         for _, r in df_proyectos.iterrows():
-            tareas = r.get("tareas") or []
-            for t in tareas:
+            for t in r.get("tareas") or []:
                 if t.get("completado"):
                     continue
                 fecha_lim = _parse_fecha(t.get("fecha_limite"))
                 if not fecha_lim:
                     continue
-
                 acciones.append({
                     "tipo": t.get("tipo", "Tarea"),
-                    "proyecto": r.get("nombre_obra", "Sin nombre"),
+                    "proyecto": r.get("nombre_obra", ""),
                     "cliente": r.get("cliente_principal", "—"),
                     "ciudad": r.get("ciudad", "—"),
-                    "provincia": r.get("provincia", "—"),
                     "fecha": fecha_lim,
-                    "prioridad": r.get("prioridad", "Media"),
                 })
 
     if not acciones:
@@ -125,42 +126,65 @@ def render_panel():
 
     df_acc = pd.DataFrame(acciones).sort_values("fecha")
 
-    # ---------------- KPIs compactos ----------------
+    # ---------------- KPIs Estrechos ----------------
     retrasadas = df_acc[df_acc["fecha"] < hoy]
     hoy_df = df_acc[df_acc["fecha"] == hoy]
     semana = df_acc[(df_acc["fecha"] > hoy) & (df_acc["fecha"] <= en_7)]
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Totales", len(df_acc))
-    c2.metric("Retrasadas", len(retrasadas))
-    c3.metric("Hoy", len(hoy_df))
-    c4.metric("Próx 7 días", len(semana))
+    # Métricas estilo Salesforce ultra compactas
+    st.markdown(
+        """
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <div class="metric-card" style="min-width:100px;">
+                <div class="metric-title">Totales</div>
+                <div class="metric-value">{}</div>
+            </div>
+            <div class="metric-card" style="min-width:100px;">
+                <div class="metric-title">Retrasadas</div>
+                <div class="metric-value">{}</div>
+            </div>
+            <div class="metric-card" style="min-width:100px;">
+                <div class="metric-title">Hoy</div>
+                <div class="metric-value">{}</div>
+            </div>
+            <div class="metric-card" style="min-width:120px;">
+                <div class="metric-title">Próx 7 días</div>
+                <div class="metric-value">{}</div>
+            </div>
+        </div>
+        """.format(len(df_acc), len(retrasadas), len(hoy_df), len(semana)),
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("---")
+    # ---------------- Listas estilo Salesforce compactas ----------------
 
-    # ---------------- Listas estilo Salesforce ----------------
+    col_late, col_today, col_week = st.columns([1, 1, 1])
 
-    col_late, col_today, col_week = st.columns(3)
-
-    def _listado(col, titulo, df):
+    def _render_list(col, title, data):
         with col:
-            st.markdown(f"**{titulo}**")
-            if df.empty:
-                st.caption("Sin acciones")
+            st.markdown(
+                f"<div style='font-size:0.78rem; font-weight:600; margin-bottom:4px;'>{title}</div>",
+                unsafe_allow_html=True,
+            )
+
+            if data.empty:
+                st.caption("—")
                 return
 
-            for _, row in df.iterrows():
+            # Items compactos
+            for _, row in data.iterrows():
                 st.markdown(
                     f"""
-                    <div class="next-item">
-                        <strong>{_fecha_txt(row['fecha'])}</strong> · {row['tipo']}
-                        <br><small>{row['proyecto']} – {row['cliente']} ({row['ciudad']})</small>
+                    <div class="next-item" style="padding:4px 6px;">
+                        <div style="font-size:0.78rem;"><b>{_fecha_txt(row['fecha'])}</b> — {row['tipo']}</div>
+                        <div style="font-size:0.72rem; color:#6b7b93;">
+                            {row['proyecto']} · {row['cliente']} ({row['ciudad']})
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-    _listado(col_late, "⏰ Retrasadas", retrasadas)
-    _listado(col_today, "📍 Hoy", hoy_df)
-    _listado(col_week, "📅 Próximos 7 días", semana)
-
+    _render_list(col_late, "⏰ Retrasadas", retrasadas)
+    _render_list(col_today, "📍 Hoy", hoy_df)
+    _render_list(col_week, "📅 Próximos 7 días", semana)
