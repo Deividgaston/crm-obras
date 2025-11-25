@@ -12,7 +12,14 @@ def load_dashboard_data() -> pd.DataFrame:
     no machaca Firestore en cada rerun.
     """
     proyectos = get_proyectos()
-    df = pd.DataFrame(proyectos)
+
+    # Acepta lista de dicts, DataFrame o None
+    if proyectos is None:
+        df = pd.DataFrame()
+    elif isinstance(proyectos, pd.DataFrame):
+        df = proyectos.copy()
+    else:
+        df = pd.DataFrame(proyectos)
 
     if df.empty:
         return df
@@ -58,13 +65,9 @@ def load_dashboard_data() -> pd.DataFrame:
         base = None
 
     if base is not None:
-        df["promotora_display"] = base.fillna(
-            df.get("promotora", df.get("cliente", ""))
-        )
+        df["promotora_display"] = base.fillna("").astype(str)
     else:
-        df["promotora_display"] = df.get(
-            "promotora", df.get("cliente", "")
-        ).fillna("")
+        df["promotora_display"] = ""
 
     return df
 
@@ -127,13 +130,18 @@ def compute_funnel_estado(df: pd.DataFrame) -> pd.DataFrame:
         "Perdido",
         "Paralizado",
     ]
-    counts = df["estado"].value_counts()
+
+    conteo = df["estado"].value_counts().to_dict()
     data = []
-    for est in orden:
-        data.append({
-            "estado": est,
-            "proyectos": int(counts.get(est, 0)),
-        })
+
+    for estado in orden:
+        data.append(
+            {
+                "estado": estado,
+                "proyectos": int(conteo.get(estado, 0)),
+            }
+        )
+
     return pd.DataFrame(data)
 
 
@@ -167,6 +175,7 @@ def compute_potencial_por_provincia(df: pd.DataFrame) -> pd.DataFrame:
         potencial=("potencial_eur", "sum"),
     ).reset_index()
     g = g[g["provincia"].str.strip() != ""]
+    g = g.sort_values("potencial", ascending=False)
     return g
 
 
