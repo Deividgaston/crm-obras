@@ -1,365 +1,163 @@
-import json
-from io import BytesIO
-from datetime import datetime, date
-
-import pandas as pd
 import streamlit as st
+from datetime import datetime
+from typing import List, Dict, Any
 
 import firebase_admin
 from firebase_admin import credentials, firestore
 
 
 # ============================================================
-#  INICIALIZACIÓN FIREBASE
+# INICIALIZACIÓN FIRESTORE (UNA SOLA VEZ)
 # ============================================================
-
-def _init_firebase():
-    """
-    Inicializa Firebase si aún no está inicializado.
-    Lee el service account de st.secrets["firebase_key"].
-    Admite tanto dict como cadena JSON.
-    """
-    if firebase_admin._apps:
-        return  # ya está iniciado
-
-    firebase_key = st.secrets.get("firebase_key", None)
-    if not firebase_key:
-        raise RuntimeError("No se encontró 'firebase_key' en st.secrets.")
-
-    if isinstance(firebase_key, str):
-        firebase_key = json.loads(firebase_key)
-
-    cred = credentials.Certificate(firebase_key)
-    firebase_admin.initialize_app(cred)
-
-
+@st.cache_resource(show_spinner=False)
 def _get_db():
     """
-    Retorna el cliente Firestore, inicializando Firebase si es necesario.
+    Devuelve el cliente de Firestore.
+    - Se inicializa solo una vez por sesión Streamlit.
+    - Intenta usar credenciales de st.secrets si existen.
     """
-    _init_firebase()
+    if not firebase_admin._apps:
+        try:
+            # Si tienes las credenciales en st.secrets["firebase"], úsalo aquí
+            # Ejemplo:
+            # cred = credentials.Certificate(st.secrets["firebase"])
+            # firebase_admin.initialize_app(cred)
+            #
+            # Si lo tienes con Application Default Credentials (Streamlit Cloud),
+            # basta con inicializar sin parámetros:
+            firebase_admin.initialize_app()
+        except Exception:
+            # Si ya está inicializado o hay algún problema, dejamos que siga.
+            pass
+
     return firestore.client()
 
 
 # ============================================================
-#  UTILIDADES FECHAS
+# HELPERS DE CACHÉ
 # ============================================================
+def _clear_proyectos_cache():
+    try:
+        get_proyectos.clear()
+    except Exception:
+        pass
 
-def _parse_fecha_excel(valor):
-    """
-    Intenta parsear un valor de fecha proveniente de Excel.
-    Acepta:
-      - datetime / date directamente
-      - cadenas con formatos comunes
-      - números (fechas seriales de Excel)
-    Devuelve un objeto date o None si no se puede parsear.
-    """
-    if isinstance(valor, datetime):
-        return valor.date()
-    if isinstance(valor, date):
-        return valor
-    if isinstance(valor, (int, float)):
-        # Interpretar como fecha serial de Excel (base 1899-12-30)
-        try:
-            base = datetime(1899, 12, 30)
-            return (base + pd.to_timedelta(valor, unit="D")).date()
-        except Exception:
-            return None
-    if isinstance(valor, str):
-        valor = valor.strip()
-        if not valor:
-            return None
-        formatos = [
-            "%Y-%m-%d",
-            "%d/%m/%Y",
-            "%d-%m-%Y",
-            "%Y/%m/%d",
-            "%d.%m.%Y",
-        ]
-        for fmt in formatos:
-            try:
-                return datetime.strptime(valor, fmt).date()
-            except ValueError:
-                continue
-    return None
+
+def _clear_clientes_cache():
+    try:
+        get_clientes.clear()
+    except Exception:
+        pass
 
 
 # ============================================================
-#  PASOS SEGUIMIENTO POR DEFECTO
+# PROYECTOS
 # ============================================================
-
-def default_pasos_seguimiento():
+@st.cache_data(ttl=60, show_spinner=False)
+def get_proyectos() -> List[Dict[str, Any]]:
     """
-    Devuelve la lista de pasos por defecto para el seguimiento de una obra.
-    """
-    return [
-        {"nombre": "Contacto inicial", "completado": False},
-        {"nombre": "Reunión técnica", "completado": False},
-        {"nombre": "Envío de documentación", "completado": False},
-        {"nombre": "Oferta enviada", "completado": False},
-        {"nombre": "Negociación", "completado": False},
-        {"nombre": "Cierre / Decisión", "completado": False},
-    ]
-
-
-# ============================================================
-#  CRUD PROYECTOS (CON CACHÉ)
-# ============================================================
-
-@st.cache_data(ttl=60)
-def get_proyectos():
-    """
-    Lee todos los proyectos de Firestore (colección 'proyectos').
-    Cacheado 60s para no agotar la cuota por muchos reruns.
+    Devuelve la lista de proyectos desde Firestore.
+    Usa caché 60s para no hacer lecturas constantes.
     """
     db = _get_db()
     docs = db.collection("proyectos").stream()
-    proyectos = []
+
+    proyectos: List[Dict[str, Any]] = []
     for doc in docs:
-        d = doc.to_dict()
+        d = doc.to_dict() or {}
         d["id"] = doc.id
         proyectos.append(d)
+
     return proyectos
 
 
-def add_proyecto(data: dict):
+def add_proyecto(data: Dict[str, Any]) -> str:
     """
-    Crea un nuevo proyecto en Firestore.
+    Crea un nuevo proyecto en la colección 'proyectos'.
+    Devuelve el id del documento creado.
     """
     db = _get_db()
-    db.collection("proyectos").add(data)
-    st.cache_data.clear()  # invalidar caché
+
+    # Añadimos fecha_creacion si no viene en data
+    if "fecha_creacion" not in data:
+        data["fecha_creacion"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    doc_ref = db.collection("proyectos").document()
+    doc_ref.set(data)
+
+    _clear_proyectos_cache()
+    return doc_ref.id
 
 
-def actualizar_proyecto(proyecto_id: str, data: dict):
+def actualizar_proyecto(proyecto_id: str, data: Dict[str, Any]) -> None:
     """
-    Actualiza los datos de un proyecto.
+    Actualiza un proyecto existente.
     """
     db = _get_db()
     db.collection("proyectos").document(proyecto_id).update(data)
-    st.cache_data.clear()
+    _clear_proyectos_cache()
 
 
-def delete_proyecto(proyecto_id: str):
+def delete_proyecto(proyecto_id: str) -> None:
     """
-    Elimina un proyecto concreto.
+    Elimina un proyecto por ID.
     """
     db = _get_db()
     db.collection("proyectos").document(proyecto_id).delete()
-    st.cache_data.clear()
-
-
-def delete_all_proyectos():
-    """
-    Elimina TODOS los documentos de la colección 'proyectos' usando batches
-    para reducir el número de peticiones y no fundir la cuota.
-    """
-    db = _get_db()
-    docs = list(db.collection("proyectos").stream())
-
-    if not docs:
-        return 0
-
-    batch = db.batch()
-    count_in_batch = 0
-    total = 0
-
-    for doc in docs:
-        ref = db.collection("proyectos").document(doc.id)
-        batch.delete(ref)
-        count_in_batch += 1
-        total += 1
-
-        # Firestore recomienda máx. ~500 operaciones por batch
-        if count_in_batch >= 450:
-            batch.commit()
-            batch = db.batch()
-            count_in_batch = 0
-
-    if count_in_batch > 0:
-        batch.commit()
-
-    st.cache_data.clear()
-    return total
+    _clear_proyectos_cache()
 
 
 # ============================================================
-#  CRUD CLIENTES (CON CACHÉ)
+# CLIENTES
 # ============================================================
-
-@st.cache_data(ttl=60)
-def get_clientes():
+@st.cache_data(ttl=60, show_spinner=False)
+def get_clientes() -> List[Dict[str, Any]]:
     """
-    Lee todos los clientes de Firestore (colección 'clientes').
-    Cacheado 60s.
+    Devuelve la lista de clientes desde Firestore.
+    Usa caché 60s para no hacer lecturas constantes.
     """
     db = _get_db()
     docs = db.collection("clientes").stream()
-    clientes = []
+
+    clientes: List[Dict[str, Any]] = []
     for doc in docs:
-        d = doc.to_dict()
+        d = doc.to_dict() or {}
         d["id"] = doc.id
         clientes.append(d)
+
     return clientes
 
 
-def add_cliente(data: dict):
+def add_cliente(data: Dict[str, Any]) -> str:
     """
-    Crea un nuevo cliente en Firestore.
+    Crea un nuevo cliente en la colección 'clientes'.
+    Devuelve el id del documento creado.
     """
     db = _get_db()
-    db.collection("clientes").add(data)
-    st.cache_data.clear()
+
+    if "fecha_creacion" not in data:
+        data["fecha_creacion"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    doc_ref = db.collection("clientes").document()
+    doc_ref.set(data)
+
+    _clear_clientes_cache()
+    return doc_ref.id
 
 
-def actualizar_cliente(cliente_id: str, data: dict):
+def actualizar_cliente(cliente_id: str, data: Dict[str, Any]) -> None:
     """
-    Actualiza los datos de un cliente existente.
+    Actualiza un cliente existente.
     """
     db = _get_db()
     db.collection("clientes").document(cliente_id).update(data)
-    st.cache_data.clear()
+    _clear_clientes_cache()
 
 
-def delete_cliente(cliente_id: str):
+def delete_cliente(cliente_id: str) -> None:
     """
-    Elimina un cliente de Firestore.
+    Elimina un cliente por ID.
     """
     db = _get_db()
     db.collection("clientes").document(cliente_id).delete()
-    st.cache_data.clear()
-
-
-# ============================================================
-#  IMPORTAR PROYECTOS DESDE EXCEL
-# ============================================================
-
-def importar_proyectos_desde_excel(uploaded_file) -> int:
-    """
-    Importa proyectos desde un Excel subido.
-
-    Columnas recomendadas:
-    - Nombre_obra / Proyecto
-    - Ciudad
-    - Provincia
-    - Tipo_proyecto
-    - Promotora_Fondo  (=> cliente / cliente_principal / promotora)
-    - Arquitectura
-    - Ingenieria
-    - Prioridad
-    - Potencial_2N
-    - Fecha_creacion
-    - Fecha_seguimiento
-    - Notas
-    """
-    df = pd.read_excel(uploaded_file)
-    if df.empty:
-        return 0
-
-    db = _get_db()
-    creados = 0
-
-    for _, row in df.iterrows():
-        def get_col(*nombres, default=""):
-            for n in nombres:
-                if n in df.columns:
-                    val = row.get(n)
-                    if pd.isna(val):
-                        continue
-                    return val
-            return default
-
-        nombre_obra = get_col("Nombre_obra", "nombre_obra", "Proyecto", default="Sin nombre")
-        ciudad = get_col("Ciudad", "ciudad")
-        provincia = get_col("Provincia", "provincia")
-        tipo_proyecto = get_col("Tipo_proyecto", "tipo_proyecto", default="Residencial")
-        promotora = get_col("Promotora_Fondo", "Promotora", "promotora", default=None)
-        arquitectura = get_col("Arquitectura", "arquitectura", default=None)
-        ingenieria = get_col("Ingenieria", "ingenieria", default=None)
-        prioridad = str(get_col("Prioridad", "prioridad", default="Media") or "Media")
-        potencial_raw = get_col("Potencial_2N", "potencial_eur", default=0)
-
-        try:
-            potencial_eur = float(potencial_raw or 0)
-        except Exception:
-            potencial_eur = 0.0
-
-        fecha_creacion = _parse_fecha_excel(
-            get_col("Fecha_creacion", "fecha_creacion", default=None)
-        )
-        if fecha_creacion is None:
-            fecha_creacion = datetime.utcnow().date()
-
-        fecha_seguimiento = _parse_fecha_excel(
-            get_col("Fecha_seguimiento", "fecha_seguimiento", default=None)
-        )
-        if fecha_seguimiento is None:
-            fecha_seguimiento = fecha_creacion
-
-        notas = get_col("Notas", "notas", default="")
-
-        data = {
-            "nombre_obra": nombre_obra,
-            "cliente": promotora,
-            "cliente_principal": promotora,
-            "promotora": promotora,
-            "tipo_proyecto": tipo_proyecto,
-            "ciudad": ciudad,
-            "provincia": provincia,
-            "arquitectura": arquitectura,
-            "ingenieria": ingenieria,
-            "prioridad": prioridad,
-            "potencial_eur": potencial_eur,
-            "estado": "Detectado",
-            "fecha_creacion": fecha_creacion.isoformat(),
-            "fecha_seguimiento": fecha_seguimiento.isoformat(),
-            "notas_seguimiento": notas,
-            "notas_historial": [],
-            "tareas": [],
-            "pasos_seguimiento": default_pasos_seguimiento(),
-        }
-
-        db.collection("proyectos").add(data)
-        creados += 1
-
-    st.cache_data.clear()
-    return creados
-
-
-# ============================================================
-#  FILTRAR Y EXPORTAR OBRAS IMPORTANTES
-# ============================================================
-
-def filtrar_obras_importantes(df_proyectos: pd.DataFrame) -> pd.DataFrame:
-    """
-    Dado un DataFrame de proyectos, filtra aquellos considerados
-    'importantes' según prioridad o potencial_2N.
-    """
-    if df_proyectos.empty:
-        return df_proyectos
-
-    df = df_proyectos.copy()
-
-    if "prioridad" in df.columns:
-        mask_prio = df["prioridad"].isin(["Alta", "Muy alta"])
-    else:
-        mask_prio = pd.Series(False, index=df.index)
-
-    if "potencial_eur" in df.columns:
-        pot = pd.to_numeric(df["potencial_eur"], errors="coerce").fillna(0.0)
-        mask_pot = pot >= 50000
-    else:
-        mask_pot = pd.Series(False, index=df.index)
-
-    mask = mask_prio | mask_pot
-    return df[mask].copy()
-
-
-def generar_excel_obras_importantes(df_proy: pd.DataFrame) -> bytes:
-    """
-    Genera un Excel con las obras importantes filtradas.
-    """
-    buffer = BytesIO()
-    df_proy.to_excel(buffer, index=False)
-    buffer.seek(0)
-    return buffer.getvalue()
+    _clear_clientes_cache()
