@@ -15,12 +15,34 @@ from crm_utils import (
     generar_excel_obras_importantes,
 )
 
-# === Estilo Apple ===
-try:
-    from style_injector import inject_apple_style
-except Exception:
-    def inject_apple_style():
-        pass
+# =====================================================
+# CACHÉ PARA REDUCIR LLAMADAS A FIREBASE
+# =====================================================
+
+
+@st.cache_data(show_spinner=False)
+def load_proyectos() -> pd.DataFrame | None:
+    """Carga proyectos desde Firebase con caché."""
+    return get_proyectos()
+
+
+@st.cache_data(show_spinner=False)
+def load_clientes() -> pd.DataFrame | None:
+    """Carga clientes desde Firebase con caché."""
+    return get_clientes()
+
+
+def invalidate_proyectos_cache():
+    load_proyectos.clear()
+
+
+def invalidate_clientes_cache():
+    load_clientes.clear()
+
+
+# =====================================================
+# UTILIDADES
+# =====================================================
 
 
 def _parse_fecha_iso(valor):
@@ -39,12 +61,13 @@ def _parse_fecha_iso(valor):
 
 
 # =====================================================
-# HELPERS PARA DIALOG DE EDICIÓN
+# EDICIÓN DE PROYECTOS
 # =====================================================
 
+
 def _render_edit_form(row_data: dict, proy_id: str):
-    """Formulario de edición reutilizable (se usa en dialog o inline)."""
-    df_clientes = get_clientes()
+    """Formulario de edición reutilizable."""
+    df_clientes = load_clientes()
     nombres_clientes = ["(sin asignar)"]
     if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
         nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
@@ -53,6 +76,7 @@ def _render_edit_form(row_data: dict, proy_id: str):
 
     with st.form(f"form_edit_proyecto_{proy_id}"):
         col1, col2 = st.columns(2)
+
         with col1:
             nombre_obra = st.text_input(
                 "Nombre del proyecto / obra",
@@ -61,32 +85,43 @@ def _render_edit_form(row_data: dict, proy_id: str):
             cliente_principal = st.selectbox(
                 "Cliente principal (promotor)",
                 nombres_clientes,
-                index=nombres_clientes.index(row_data.get("cliente_principal")) if row_data.get("cliente_principal") in nombres_clientes else 0,
+                index=(
+                    nombres_clientes.index(row_data.get("cliente_principal"))
+                    if row_data.get("cliente_principal") in nombres_clientes
+                    else 0
+                ),
             )
+            tipo_opciones = ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"]
             tipo_proyecto = st.selectbox(
                 "Tipo de proyecto",
-                ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"],
-                index=["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"].index(
-                    row_data.get("tipo_proyecto", "Residencial lujo")
-                )
-                if row_data.get("tipo_proyecto") in ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"]
+                tipo_opciones,
+                index=tipo_opciones.index(row_data.get("tipo_proyecto", "Residencial lujo"))
+                if row_data.get("tipo_proyecto") in tipo_opciones
                 else 0,
             )
             ciudad = st.text_input("Ciudad", value=row_data.get("ciudad", ""))
             provincia = st.text_input("Provincia", value=row_data.get("provincia", ""))
+
         with col2:
-            arquitectura = st.text_input("Arquitectura", value=row_data.get("arquitectura", "") or "")
-            ingenieria = st.text_input("Ingeniería", value=row_data.get("ingenieria", "") or "")
+            arquitectura = st.text_input(
+                "Arquitectura",
+                value=row_data.get("arquitectura", "") or "",
+            )
+            ingenieria = st.text_input(
+                "Ingeniería",
+                value=row_data.get("ingenieria", "") or "",
+            )
+            prioridad_opciones = ["Alta", "Media", "Baja"]
             prioridad = st.selectbox(
                 "Prioridad",
-                ["Alta", "Media", "Baja"],
-                index=["Alta", "Media", "Baja"].index(row_data.get("prioridad", "Media")),
+                prioridad_opciones,
+                index=prioridad_opciones.index(row_data.get("prioridad", "Media")),
             )
             potencial_eur = st.number_input(
                 "Potencial estimado 2N (€)",
                 min_value=0.0,
-                step=10000.0,
-                value=float(row_data.get("potencial_eur", 50000.0) or 0.0),
+                step=10_000.0,
+                value=float(row_data.get("potencial_eur", 50_000.0) or 0.0),
             )
             fecha_seg = st.date_input(
                 "Fecha de seguimiento",
@@ -124,6 +159,7 @@ def _render_edit_form(row_data: dict, proy_id: str):
 
         try:
             actualizar_proyecto(proy_id, data_update)
+            invalidate_proyectos_cache()
             st.success("Proyecto actualizado correctamente.")
             st.rerun()
         except Exception as e:
@@ -131,8 +167,7 @@ def _render_edit_form(row_data: dict, proy_id: str):
 
 
 def _open_edit_dialog(row_data: dict, proy_id: str):
-    """Abre un cuadro flotante de edición (o fallback inline si la versión no soporta dialog)."""
-    # Streamlit >= 1.33 tiene st.dialog
+    """Abre un cuadro flotante de edición (o inline si no hay dialog)."""
     if hasattr(st, "dialog"):
         @st.dialog("✏️ Editar proyecto")
         def _dlg():
@@ -141,7 +176,6 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 
         _dlg()
     else:
-        # Fallback: lo mostramos inline con aspecto de tarjeta
         st.markdown("---")
         st.markdown(
             "<div class='apple-card-light'><div class='section-badge'>Edición rápida</div>"
@@ -153,68 +187,12 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 
 
 # =====================================================
-# PÁGINA PRINCIPAL DE PROYECTOS
+# FILTROS BÁSICOS
 # =====================================================
 
-def render_proyectos():
-    # ✅ Aplicar estilo Apple a esta página
-    inject_apple_style()
 
-    st.markdown(
-        """
-        <div class="apple-card">
-            <div class="section-badge">Proyectos</div>
-            <h1 style="margin-top:4px; margin-bottom:4px;">Pipeline de prescripción</h1>
-            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
-                Gestiona obras, estados de seguimiento y tareas vinculadas. 
-                Usa la vista analítica para ver dónde está el valor y la vista de tareas
-                para no dejar ningún proyecto enfriarse.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    df_proy = get_proyectos()
-
-    if df_proy is None or df_proy.empty:
-        st.info("Todavía no hay proyectos guardados en Firestore.")
-        _render_import_export(df_proy_empty=True)
-        return
-
-    tab_vista, tab_dash, tab_duplicados, tab_import, tab_alta = st.tabs(
-        [
-            "📁 Vista general",
-            "📊 Dashboard analítico",
-            "🧬 Duplicados",
-            "📥 Importar / Exportar",
-            "➕ Alta proyecto",
-        ]
-    )
-
-    with tab_vista:
-        _render_vista_general(df_proy)
-
-    with tab_dash:
-        _render_dashboard(df_proy)
-
-    with tab_duplicados:
-        _render_duplicados(df_proy)
-
-    with tab_import:
-        _render_import_export(df_proy_empty=False, df_proy=df_proy)
-
-    with tab_alta:
-        _render_alta_manual()
-
-
-# =====================================================
-# VISTA GENERAL (tabla + vistas rápidas)
-# =====================================================
-
-def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
+def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
     df = df.copy()
-
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
 
     ciudades = (
@@ -265,54 +243,29 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str):
             key=f"{key_prefix}_prioridad",
         )
 
-    mask = pd.Series([True] * len(df))
-
     if ciudad_sel != "Todas":
-        mask &= df["ciudad"].fillna("") == ciudad_sel
+        df = df[df["ciudad"] == ciudad_sel]
 
-    if estado_sel != "Todos":
-        mask &= df["estado"].fillna("") == estado_sel
+    if estado_sel != "Todos" and "estado" in df.columns:
+        df = df[df["estado"] == estado_sel]
 
-    if tipo_sel != "Todos":
-        mask &= df["tipo_proyecto"].fillna("") == tipo_sel
+    if tipo_sel != "Todos" and "tipo_proyecto" in df.columns:
+        df = df[df["tipo_proyecto"] == tipo_sel]
 
-    if prioridad_sel != "Todas":
-        mask &= df["prioridad"].fillna("") == prioridad_sel
+    if prioridad_sel != "Todas" and "prioridad" in df.columns:
+        df = df[df["prioridad"] == prioridad_sel]
 
-    df_filtrado = df[mask].copy()
-    return df_filtrado
+    return df
 
 
-def _render_vista_general(df_proy: pd.DataFrame):
-    st.markdown("### Pipeline y vista rápida")
-
-    df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista")
-
-    # “Pastillas” de vista rápida
-    try:
-        vista = st.segmented_control(
-            "Modo de vista",
-            ["Tabla", "Seguimientos", "Tareas"],
-            default="Tabla",
-        )
-    except Exception:
-        vista = st.radio(
-            "Modo de vista",
-            ["Tabla", "Seguimientos", "Tareas"],
-            horizontal=True,
-        )
-
-    if vista == "Tabla":
-        _vista_tabla(df_filtrado)
-    elif vista == "Seguimientos":
-        _vista_seguimientos(df_filtrado)
-    else:
-        _vista_tareas(df_filtrado)
+# =====================================================
+# VISTA GENERAL: TABLA, SEGUIMIENTOS, TAREAS
+# =====================================================
 
 
 def _vista_tabla(df_filtrado: pd.DataFrame):
-    # --------- PIPELINE POR ESTADO ----------
     st.markdown("#### 🧪 Pipeline (conteo por estado)")
+
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
             "Detectado",
@@ -326,41 +279,41 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
         ]
         counts = df_filtrado["estado"].value_counts()
         cols_pipe = st.columns(len(estados))
-        for col, est in zip(cols_pipe, estados):
-            col.metric(est, int(counts.get(est, 0)))
-    else:
-        st.info("No hay información de estados con los filtros aplicados.")
+        for i, estado in enumerate(estados):
+            with cols_pipe[i]:
+                valor = int(counts.get(estado, 0))
+                st.metric(label=estado, value=valor)
 
-    # --------- TABLA PRINCIPAL ---------
-    st.markdown("#### 📂 Lista de proyectos filtrados")
+    st.markdown("---")
 
     if df_filtrado.empty:
-        st.warning("No hay proyectos que cumplan los filtros seleccionados.")
+        st.info("No hay proyectos con los filtros actuales.")
         return
 
-    # df_raw mantiene todos los campos, incluido id, para poder editar
-    df_raw = df_filtrado.reset_index(drop=True).copy()
-    ids = df_raw["id"].tolist()
+    df_ui = df_filtrado.copy()
 
-    # df_ui es lo que mostramos en la tabla (sin id)
-    df_ui = df_raw.drop(columns=["id"])
+    if "id" not in df_ui.columns:
+        st.error("Falta la columna 'id' en los proyectos.")
+        return
 
-    # columna seleccionar
-    df_ui["seleccionar"] = False
+    ids = df_ui["id"].tolist()
+    df_ui.insert(0, "seleccionar", False)
 
-    # Reordenamos columnas: primero nombre_obra, luego seleccionar y después resto
-    cols = list(df_ui.columns)
-    if "nombre_obra" in cols:
-        cols.remove("nombre_obra")
-        cols.insert(0, "nombre_obra")
-    if "seleccionar" in cols:
-        cols.remove("seleccionar")
-        # queremos seleccionar justo después del nombre
-        insert_pos = 1 if "nombre_obra" in cols else 0
-        cols.insert(insert_pos, "seleccionar")
+    cols_basicas = [
+        "seleccionar",
+        "nombre_obra",
+        "cliente_principal",
+        "ciudad",
+        "provincia",
+        "estado",
+        "prioridad",
+        "potencial_eur",
+    ]
+    cols = [c for c in cols_basicas if c in df_ui.columns]
 
     st.markdown(
-        "<p style='font-size:0.82rem; color:#9CA3AF;'>Selecciona una obra y usa los botones inferiores para editarla o borrarla.</p>",
+        "<p style='font-size:0.82rem; color:#9CA3AF;'>Selecciona una obra y usa los "
+        "botones inferiores para editarla o borrarla.</p>",
         unsafe_allow_html=True,
     )
 
@@ -389,10 +342,12 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                 idxs = [i for i, v in seleccionados.items() if v]
                 if not idxs:
                     st.warning("No hay ninguna obra seleccionada.")
+                elif len(idxs) > 1:
+                    st.warning("Selecciona solo una obra para editar.")
                 else:
                     idx = idxs[0]
                     proy_id = ids[idx]
-                    row_data = df_raw.iloc[idx].to_dict()
+                    row_data = df_filtrado[df_filtrado["id"] == proy_id].iloc[0].to_dict()
                     _open_edit_dialog(row_data, proy_id)
 
     with col_acc2:
@@ -401,19 +356,21 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                 st.error("No se ha encontrado la columna 'seleccionar'.")
             else:
                 seleccionados = edited_df["seleccionar"]
-                if not seleccionados.any():
-                    st.warning("No hay proyectos marcados para borrar.")
+                idxs = [i for i, v in seleccionados.items() if v]
+                if not idxs:
+                    st.warning("No hay obras seleccionadas.")
                 else:
                     total = 0
-                    for row_idx, marcado in seleccionados.items():
-                        if marcado:
-                            try:
-                                delete_proyecto(ids[row_idx])
-                                total += 1
-                            except Exception as e:
-                                st.error(f"No se pudo borrar un proyecto: {e}")
-                    st.success(f"Proyectos eliminados: {total}")
-                    st.rerun()
+                    for row_idx in idxs:
+                        try:
+                            delete_proyecto(ids[row_idx])
+                            invalidate_proyectos_cache()
+                            total += 1
+                        except Exception as e:
+                            st.error(f"No se pudo borrar un proyecto: {e}")
+                    if total:
+                        st.success(f"Proyectos eliminados: {total}")
+                        st.rerun()
 
 
 def _vista_seguimientos(df_filtrado: pd.DataFrame):
@@ -424,8 +381,8 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
         return
 
     hoy = date.today()
-
     registros = []
+
     for _, row in df_filtrado.iterrows():
         fecha_seg = _parse_fecha_iso(row.get("fecha_seguimiento"))
         if not fecha_seg:
@@ -443,39 +400,38 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
         )
 
     if not registros:
-        st.info("No hay fechas de seguimiento registradas en estos proyectos.")
+        st.info("No hay fechas de seguimiento registradas.")
         return
 
     df_seg = pd.DataFrame(registros)
     df_seg = df_seg.sort_values("Fecha_seguimiento")
 
-    col1, col2 = st.columns([2, 1])
+    st.dataframe(
+        df_seg,
+        hide_index=True,
+        use_container_width=True,
+    )
+
+    opciones = {f"{r['Proyecto']} ({r['Fecha_seguimiento']})": r["id"] for _, r in df_seg.iterrows()}
+
+    col1, col2 = st.columns(2)
     with col1:
-        st.dataframe(
-            df_seg[["Proyecto", "Cliente", "Ciudad", "Estado", "Fecha_seguimiento", "Prioridad"]],
-            hide_index=True,
-            use_container_width=True,
+        seleccion = st.selectbox(
+            "Selecciona un proyecto para actualizar su seguimiento",
+            ["(ninguno)"] + list(opciones.keys()),
         )
 
     with col2:
-        st.markdown("##### Acciones rápidas")
-        st.caption("Selecciona una obra abajo para posponer 1 semana su seguimiento.")
-
-        opciones = {
-            f"{r['Proyecto']} ({r['Fecha_seguimiento'].strftime('%d/%m/%y')})": r["id"]
-            for _, r in df_seg.iterrows()
-        }
-        if opciones:
-            seleccion = st.selectbox("Proyecto", list(opciones.keys()))
-            if st.button("⏰ Posponer 1 semana"):
-                proy_id = opciones[seleccion]
-                nueva_fecha = (hoy + timedelta(days=7)).isoformat()
-                try:
-                    actualizar_proyecto(proy_id, {"fecha_seguimiento": nueva_fecha})
-                    st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"No se pudo actualizar: {e}")
+        if st.button("⏰ Posponer 1 semana") and seleccion != "(ninguno)":
+            proy_id = opciones[seleccion]
+            nueva_fecha = (hoy + timedelta(days=7)).isoformat()
+            try:
+                actualizar_proyecto(proy_id, {"fecha_seguimiento": nueva_fecha})
+                invalidate_proyectos_cache()
+                st.success(f"Seguimiento pospuesto a {nueva_fecha}.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"No se pudo actualizar: {e}")
 
 
 def _vista_tareas(df_filtrado: pd.DataFrame):
@@ -500,84 +456,81 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
             )
 
     if not registros:
-        st.info("Todavía no hay tareas registradas en los proyectos.")
+        st.info("No hay tareas abiertas en los proyectos filtrados.")
         return
 
-    df_t = pd.DataFrame(registros)
-    df_t = df_t.sort_values(["Completada", "Fecha_límite"], ascending=[True, True])
+    df_tareas = pd.DataFrame(registros)
+    df_tareas = df_tareas.sort_values(
+        ["Completada", "Fecha_límite"],
+        ascending=[True, True],
+    )
 
     st.dataframe(
-        df_t,
+        df_tareas,
         hide_index=True,
         use_container_width=True,
     )
 
 
+def _render_vista_general(df_proy: pd.DataFrame):
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("### 📁 Vista general de proyectos", unsafe_allow_html=True)
+
+    df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista_general")
+
+    st.markdown("---")
+
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+        vista = st.radio(
+            "Modo de vista",
+            ["Tabla", "Seguimientos", "Tareas"],
+            horizontal=True,
+        )
+
+    if vista == "Tabla":
+        _vista_tabla(df_filtrado)
+    elif vista == "Seguimientos":
+        _vista_seguimientos(df_filtrado)
+    else:
+        _vista_tareas(df_filtrado)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 # =====================================================
-# DASHBOARD ANALÍTICO
+# DASHBOARD (OBRAS IMPORTANTES)
 # =====================================================
+
 
 def _render_dashboard(df_proy: pd.DataFrame):
-    st.subheader("📈 Dashboard de obras")
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("### 📊 Vista analítica (obras importantes)", unsafe_allow_html=True)
 
-    df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="dash")
-
-    if df_filtrado.empty:
-        st.info("No hay datos para mostrar en el dashboard con estos filtros.")
+    if df_proy.empty:
+        st.info("No hay proyectos para mostrar en el dashboard.")
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    if "potencial_eur" not in df_filtrado.columns:
-        df_filtrado["potencial_eur"] = 0.0
+    df_imp = filtrar_obras_importantes(df_proy)
+    if df_imp.empty:
+        st.info("No hay obras importantes según los filtros definidos.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
-    agrupacion_opciones = [
-        "Estado / Seguimiento",
-        "Ciudad",
-        "Provincia",
-        "Tipo de proyecto",
-        "Prioridad",
-        "Rango de potencial (€)",
-    ]
-    dim_map = {
-        "Estado / Seguimiento": "estado",
-        "Ciudad": "ciudad",
-        "Provincia": "provincia",
-        "Tipo de proyecto": "tipo_proyecto",
-        "Prioridad": "prioridad",
-    }
+    group_col = st.selectbox(
+        "Agrupar por",
+        ["provincia", "ciudad", "tipo_proyecto"],
+        index=0,
+    )
 
-    col_d1, col_d2 = st.columns([2, 1])
-    with col_d1:
-        agrupacion = st.selectbox(
-            "Agrupar por", agrupacion_opciones, index=0, key="dash_agrupacion"
-        )
-    with col_d2:
-        metrica = st.radio(
-            "Métrica",
-            ["Número de obras", "Potencial total (€)"],
-            horizontal=False,
-            key="dash_metrica",
-        )
+    if group_col not in df_imp.columns:
+        st.warning(f"No existe la columna '{group_col}' en los datos.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
-    df_plot = df_filtrado.copy()
-
-    if agrupacion == "Rango de potencial (€)":
-        potencial = df_plot["potencial_eur"].fillna(0)
-        bins = [0, 50000, 100000, 200000, 500000, 1_000_000_000]
-        labels = ["< 50k", "50k-100k", "100k-200k", "200k-500k", "> 500k"]
-        df_plot["rango_potencial"] = pd.cut(
-            potencial, bins=bins, labels=labels, include_lowest=True
-        )
-        group_col = "rango_potencial"
-        titulo_eje = "Rango de potencial (€)"
-    else:
-        group_col = dim_map.get(agrupacion)
-        if group_col not in df_plot.columns:
-            st.info("No hay datos suficientes para esta agrupación.")
-            return
-        titulo_eje = agrupacion
-
-    agg_df = (
-        df_plot.groupby(group_col)
+    df_group = (
+        df_imp.groupby(group_col)
         .agg(
             num_obras=("id", "count"),
             potencial_total=("potencial_eur", "sum"),
@@ -585,36 +538,46 @@ def _render_dashboard(df_proy: pd.DataFrame):
         .reset_index()
     )
 
-    if agg_df.empty:
-        st.info("No hay datos para esta agrupación.")
-        return
+    col1, col2 = st.columns(2)
 
-    if metrica == "Número de obras":
-        y_field = "num_obras"
-        y_title = "Número de obras"
-    else:
-        y_field = "potencial_total"
-        y_title = "Potencial total (€)"
-
-    chart = (
-        alt.Chart(agg_df)
-        .mark_bar()
-        .encode(
-            x=alt.X(f"{group_col}:N", sort="-y", title=titulo_eje),
-            y=alt.Y(f"{y_field}:Q", title=y_title),
-            tooltip=[group_col, "num_obras", "potencial_total"],
+    with col1:
+        st.subheader("Número de obras")
+        chart_count = (
+            alt.Chart(df_group)
+            .mark_bar()
+            .encode(
+                x=alt.X(f"{group_col}:N", sort="-y", title=group_col.capitalize()),
+                y=alt.Y("num_obras:Q", title="Número de obras"),
+                tooltip=[group_col, "num_obras", "potencial_total"],
+            )
+            .properties(height=350)
         )
-        .properties(height=350)
-    )
+        st.altair_chart(chart_count, use_container_width=True)
 
-    st.altair_chart(chart, use_container_width=True)
+    with col2:
+        st.subheader("Potencial económico")
+        chart_potencial = (
+            alt.Chart(df_group)
+            .mark_bar()
+            .encode(
+                x=alt.X(f"{group_col}:N", sort="-y", title=group_col.capitalize()),
+                y=alt.Y("potencial_total:Q", title="Potencial total (€)"),
+                tooltip=[group_col, "num_obras", "potencial_total"],
+            )
+            .properties(height=350)
+        )
+        st.altair_chart(chart_potencial, use_container_width=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =====================================================
 # DUPLICADOS
 # =====================================================
 
+
 def _render_duplicados(df_proy: pd.DataFrame):
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("🧬 Revisión de posibles proyectos duplicados")
 
     df_tmp = df_proy.copy()
@@ -623,6 +586,7 @@ def _render_duplicados(df_proy: pd.DataFrame):
 
     if not key_cols:
         st.info("No hay suficientes campos para detectar duplicados automáticamente.")
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
     df_tmp["dup_key"] = df_tmp[key_cols].astype(str).agg(" | ".join, axis=1)
@@ -630,80 +594,62 @@ def _render_duplicados(df_proy: pd.DataFrame):
     df_dups = df_tmp[duplicated_mask].copy()
 
     if df_dups.empty:
-        st.success(
-            "No se han detectado proyectos duplicados por nombre + cliente + ciudad + provincia. ✅"
-        )
+        st.success("No se han detectado proyectos duplicados.")
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    grupos = df_dups["dup_key"].unique()
-    st.warning(
-        f"Se han detectado {len(grupos)} grupos de proyectos que podrían estar duplicados."
-    )
-    st.caption("Revisa y borra los que sobren para mantener limpio el CRM.")
+    st.info("Se han detectado posibles duplicados. Revisa las filas agrupadas:")
 
-    for g in grupos:
-        grupo_df = df_dups[df_dups["dup_key"] == g]
-        titulo = grupo_df.iloc[0].get("nombre_obra", "Proyecto sin nombre")
-        with st.expander(f"Posibles duplicados: {titulo}"):
-            show_cols = [
-                "id",
-                "nombre_obra",
-                "cliente_principal",
-                "ciudad",
-                "provincia",
-                "estado",
-                "fecha_creacion",
-                "fecha_seguimiento",
-            ]
-            show_cols = [c for c in show_cols if c in grupo_df.columns]
-            st.dataframe(
-                grupo_df[show_cols], hide_index=True, use_container_width=True
-            )
+    for key, group in df_dups.groupby("dup_key"):
+        st.markdown(f"**Grupo:** {key}")
+        st.dataframe(
+            group.drop(columns=["dup_key"]),
+            use_container_width=True,
+            hide_index=True,
+        )
 
-            for _, row in grupo_df.iterrows():
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(
-                        f"• {row.get('nombre_obra','')} "
-                        f"({row.get('cliente_principal','—')} – {row.get('ciudad','—')})"
-                    )
-                with col2:
-                    if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
-                        delete_proyecto(row["id"])
-                        st.success("Proyecto borrado.")
-                        st.rerun()
+        for _, row in group.iterrows():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"- {row.get('nombre_obra', 'Sin nombre')} ({row.get('id')})")
+            with col2:
+                if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
+                    delete_proyecto(row["id"])
+                    invalidate_proyectos_cache()
+                    st.success("Proyecto borrado.")
+                    st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =====================================================
 # IMPORTAR / EXPORTAR
 # =====================================================
 
-def _render_import_export(df_proy_empty: bool, df_proy=None):
+
+def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = None):
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("📤 Exportar / 📥 Importar")
 
     if not df_proy_empty and df_proy is not None:
-        st.markdown("#### Exportar Excel de obras importantes")
-        df_importantes = filtrar_obras_importantes(df_proy)
-        if df_importantes.empty:
-            st.info(
-                "No hay obras importantes según criterios (prioridad Alta o potencial ≥ 50k€)."
-            )
-        else:
-            output = generar_excel_obras_importantes(df_proy)
-            fecha_str = date.today().isoformat()
-            st.download_button(
-                label=f"⬇️ Descargar Excel obras importantes ({fecha_str})",
-                data=output,
-                file_name=f"obras_importantes_{fecha_str}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
+        st.markdown("##### Exportar obras importantes a Excel")
+        if st.button("⬇️ Descargar Excel de obras importantes"):
+            try:
+                excel_bytes = generar_excel_obras_importantes(df_proy)
+                st.download_button(
+                    "Descargar Excel",
+                    data=excel_bytes,
+                    file_name="obras_importantes.xlsx",
+                    mime=(
+                        "application/vnd.openxmlformats-officedocument."
+                        "spreadsheetml.sheet"
+                    ),
+                )
+            except Exception as e:
+                st.error(f"No se pudo generar el Excel: {e}")
 
-    st.markdown("#### Importar proyectos desde Excel (ChatGPT)")
-    st.caption(
-        "Sube el Excel que te genero desde ChatGPT. "
-        "Formato de fechas: 30/11/25 o 30/11/2025 (dd/mm/aa). "
-        "El campo Promotora_Fondo se usará como cliente principal (promotor)."
-    )
+    st.markdown("---")
+    st.markdown("##### Importar proyectos desde Excel")
 
     uploaded_file = st.file_uploader(
         "Sube aquí el archivo .xlsx con los proyectos",
@@ -719,6 +665,7 @@ def _render_import_export(df_proy_empty: bool, df_proy=None):
 
             if st.button("🚀 Importar estos proyectos al CRM"):
                 creados = importar_proyectos_desde_excel(uploaded_file)
+                invalidate_proyectos_cache()
                 st.success(f"Importación completada. Proyectos creados: {creados}")
                 st.rerun()
         except Exception as e:
@@ -726,15 +673,19 @@ def _render_import_export(df_proy_empty: bool, df_proy=None):
     else:
         st.info("Sube un Excel para poder importarlo.")
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 # =====================================================
 # ALTA MANUAL
 # =====================================================
 
+
 def _render_alta_manual():
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.subheader("➕ Alta manual de proyecto")
 
-    df_clientes = get_clientes()
+    df_clientes = load_clientes()
     nombres_clientes = ["(sin asignar)"]
     if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
         nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
@@ -753,15 +704,16 @@ def _render_alta_manual():
             )
             ciudad = st.text_input("Ciudad")
             provincia = st.text_input("Provincia")
+
         with col2:
-            arquitectura = st.text_input("Arquitectura")
-            ingenieria = st.text_input("Ingeniería")
-            prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"])
+            arquitectura = st.text_input("Arquitectura (opcional)")
+            ingenieria = st.text_input("Ingeniería (opcional)")
+            prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"], index=1)
             potencial_eur = st.number_input(
                 "Potencial estimado 2N (€)",
                 min_value=0.0,
-                step=10000.0,
-                value=50000.0,
+                step=10_000.0,
+                value=50_000.0,
             )
             fecha_seg = st.date_input(
                 "Primera fecha de seguimiento", value=date.today()
@@ -780,6 +732,7 @@ def _render_alta_manual():
             )
             add_proyecto(
                 {
+                    # Datos principales del proyecto
                     "nombre_obra": nombre_obra,
                     "cliente_principal": promotor_nombre,
                     "promotora": promotor_nombre,
@@ -794,8 +747,66 @@ def _render_alta_manual():
                     "fecha_seguimiento": fecha_seg.isoformat(),
                     "notas_seguimiento": notas,
                     "notas_historial": [],
-                    "tareas": [],
+                    "tareas": default_pasos_seguimiento() if callable(default_pasos_seguimiento) else [],
                 }
             )
+            invalidate_proyectos_cache()
             st.success("Proyecto creado correctamente.")
             st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =====================================================
+# PÁGINA PRINCIPAL DE PROYECTOS
+# =====================================================
+
+
+def render_proyectos():
+    st.markdown(
+        """
+        <div class="apple-card">
+            <div class="section-badge">Proyectos</div>
+            <h1 style="margin-top:4px; margin-bottom:4px;">Pipeline de prescripción</h1>
+            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
+                Gestiona obras, estados de seguimiento y tareas vinculadas. 
+                Usa la vista analítica para ver dónde está el valor y la vista de tareas
+                para no dejar ningún proyecto enfriarse.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    df_proy = load_proyectos()
+
+    if df_proy is None or df_proy.empty:
+        st.info("Todavía no hay proyectos guardados en Firestore.")
+        _render_import_export(df_proy_empty=True)
+        _render_alta_manual()
+        return
+
+    tab_vista, tab_dash, tab_duplicados, tab_import, tab_alta = st.tabs(
+        [
+            "📁 Vista general",
+            "📊 Dashboard",
+            "🧬 Duplicados",
+            "📤/📥 Importar / Exportar",
+            "➕ Alta manual",
+        ]
+    )
+
+    with tab_vista:
+        _render_vista_general(df_proy)
+
+    with tab_dash:
+        _render_dashboard(df_proy)
+
+    with tab_duplicados:
+        _render_duplicados(df_proy)
+
+    with tab_import:
+        _render_import_export(df_proy_empty=False, df_proy=df_proy)
+
+    with tab_alta:
+        _render_alta_manual()
