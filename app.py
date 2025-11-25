@@ -2,7 +2,7 @@ import streamlit as st
 
 from panel_page import render_panel
 from proyectos_page import render_proyectos
-from clientes_page import render_clientes
+from clientes_page import render_clientes_page
 from buscar_page import render_buscar
 from dashboard_page import render_dashboard
 
@@ -50,7 +50,7 @@ def main():
         render_proyectos()
 
     elif menu == "Clientes":
-        render_clientes()
+        render_clientes_page()
 
     elif menu == "Buscar":
         render_buscar()
