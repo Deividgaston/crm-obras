@@ -7,6 +7,24 @@ from crm_utils import (
 )
 
 
+# ==========================
+# HELPERS (optimizar Firebase)
+# ==========================
+@st.cache_data(show_spinner=False)
+def load_clientes():
+    """Carga clientes desde Firebase con cache para evitar llamadas repetidas."""
+    df = get_clientes()
+    return df
+
+
+def invalidate_clientes_cache():
+    """Invalida la cache cuando hay cambios en Firebase."""
+    load_clientes.clear()
+
+
+# ==========================
+# PÁGINA PRINCIPAL
+# ==========================
 def render_clientes_page() -> None:
     """Página de gestión de clientes del CRM."""
 
@@ -25,7 +43,7 @@ def render_clientes_page() -> None:
         unsafe_allow_html=True,
     )
 
-    # === Alta de cliente ===
+    # ========= FORM ALTA CLIENTE =========
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown("#### ➕ Añadir nuevo cliente", unsafe_allow_html=True)
 
@@ -55,17 +73,18 @@ def render_clientes_page() -> None:
             st.warning("Pon al menos un nombre o una empresa.")
         else:
             nuevo_cliente = {
-                "nombre": nombre,
-                "empresa": empresa,
+                "nombre": nombre.strip(),
+                "empresa": empresa.strip(),
                 "tipo_cliente": tipo_cliente,
-                "email": email,
-                "telefono": telefono,
-                "ciudad": ciudad,
-                "provincia": provincia,
-                "notas": notas,
+                "email": email.strip(),
+                "telefono": telefono.strip(),
+                "ciudad": ciudad.strip(),
+                "provincia": provincia.strip(),
+                "notas": notas.strip(),
             }
             try:
-                add_cliente(nuevo_cliente)
+                add_cliente(nuevo_cliente)  # === 1 llamada a Firebase ===
+                invalidate_clientes_cache()
                 st.success("Cliente guardado correctamente.")
                 st.rerun()
             except Exception as e:  # noqa: BLE001
@@ -73,19 +92,24 @@ def render_clientes_page() -> None:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # === Listado + borrado de clientes ===
+    # ========= LISTADO + BORRADO =========
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown("#### 📋 Listado de clientes", unsafe_allow_html=True)
 
-    df_clientes = get_clientes()
+    df_clientes = load_clientes()  # === 1 sola llamada a Firebase (cacheada) ===
 
     if df_clientes is None or df_clientes.empty:
         st.info("Aún no hay clientes en el CRM.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    # Copia para UI y gestionamos la columna id por separado
+    # Manejamos id aparte para el borrado
     df_ui = df_clientes.copy()
+    if "id" not in df_ui.columns:
+        st.error("Falta la columna 'id' en los clientes.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
     ids = df_ui["id"].tolist()
     df_ui = df_ui.drop(columns=["id"])
 
@@ -119,11 +143,14 @@ def render_clientes_page() -> None:
                     if not marcado:
                         continue
                     try:
-                        delete_cliente(ids[row_idx])
+                        delete_cliente(ids[row_idx])  # === llamadas puntuales a Firebase
                         total += 1
                     except Exception as e:  # noqa: BLE001
                         st.error(f"No se pudo borrar un cliente: {e}")
-                st.success(f"Clientes eliminados: {total}")
-                st.rerun()
+
+                if total > 0:
+                    invalidate_clientes_cache()
+                    st.success(f"Clientes eliminados: {total}")
+                    st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
