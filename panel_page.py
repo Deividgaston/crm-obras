@@ -14,50 +14,61 @@ except Exception:
 # ===============================================================
 # HELPERS
 # ===============================================================
-def _parse_fecha_iso(valor):
-    """
-    Convierte distintos formatos de fecha (iso, date, datetime, str, serial Excel)
-    en un date. Si no se puede, devuelve None.
-    """
+
+def _to_dataframe(data):
+    """Convierte listas/dicts/DataFrame en DataFrame sin ambigüedad lógica."""
+    if data is None:
+        return pd.DataFrame()
+    if isinstance(data, pd.DataFrame):
+        return data.copy()
+    if isinstance(data, (list, tuple)) and not data:
+        return pd.DataFrame()
+    return pd.DataFrame(data)
+
+
+# =============================================================
+# FORMATEO DE FECHAS
+# =============================================================
+
+def _parse_fecha(valor):
+    """Convierte una fecha en date o None."""
     if not valor:
         return None
-
     if isinstance(valor, date) and not isinstance(valor, datetime):
         return valor
-
     if isinstance(valor, datetime):
         return valor.date()
-
-    if isinstance(valor, (int, float)):
-        # Por si algún día se cuela un serial de Excel
-        base = datetime(1899, 12, 30)
-        try:
-            return (base + timedelta(days=float(valor))).date()
-        except Exception:
-            return None
-
     if isinstance(valor, str):
-        valor = valor.strip()
-        if not valor:
-            return None
         formatos = [
             "%Y-%m-%d",
-            "%Y-%m-%dT%H:%M:%S",
-            "%Y-%m-%d %H:%M",
             "%d/%m/%Y",
-            "%d-%m-%Y",
+            "%Y/%m/%d",
         ]
         for fmt in formatos:
             try:
                 return datetime.strptime(valor, fmt).date()
-            except ValueError:
+            except Exception:
                 continue
     return None
 
 
-# ===============================================================
+def _formatear_fecha(fecha: date | None) -> str:
+    if not fecha:
+        return "Sin fecha"
+    hoy = date.today()
+    if fecha == hoy:
+        return "Hoy"
+    if fecha == hoy + timedelta(days=1):
+        return "Mañana"
+    if fecha == hoy - timedelta(days=1):
+        return "Ayer"
+    return fecha.strftime("%d/%m/%Y")
+
+
+# =============================================================
 # PANEL PRINCIPAL
-# ===============================================================
+# =============================================================
+
 def render_panel():
     """
     Panel principal tipo 'agenda' con estilo Apple Dark:
@@ -74,9 +85,9 @@ def render_panel():
         <div class="apple-card">
             <div class="badge">Agenda de acciones</div>
             <h1 style="margin-top: 4px; margin-bottom:4px;">Qué tengo que hacer ahora</h1>
-            <p style="margin-bottom: 0; font-size:0.9rem; color:#9ca3af;">
-                Vista unificada de seguimientos y tareas sobre tus proyectos clave.
-                Perfecto para empezar el día sabiendo a quién llamar, qué ofertas mover
+            <p style="margin-bottom: 0; color: #9CA3AF;">
+                Una vista única para combinar seguimientos y tareas críticas, 
+                para que empieces el día sabiendo a quién llamar, qué ofertas mover
                 y qué obras no se pueden enfriar.
             </p>
         </div>
@@ -94,8 +105,8 @@ def render_panel():
             st.code(str(e))
             return
 
-    df_clientes = pd.DataFrame(lista_clientes) if lista_clientes else pd.DataFrame()
-    df_proyectos = pd.DataFrame(lista_proyectos) if lista_proyectos else pd.DataFrame()
+    df_clientes = _to_dataframe(lista_clientes)
+    df_proyectos = _to_dataframe(lista_proyectos)
 
     # ================= CONSTRUCCIÓN DE ACCIONES =================
     acciones = []  # cada acción es un dict: {tipo, subtipo, fecha, texto, detalle, estado, prioridad}
@@ -107,147 +118,130 @@ def render_panel():
     if not df_proyectos.empty:
         for _, row in df_proyectos.iterrows():
             nombre_obra = row.get("nombre_obra", "Sin nombre")
-            estado = row.get("estado", "Detectado") or "Detectado"
-            prioridad = row.get("prioridad", "Media") or "Media"
-            cliente = (
-                row.get("cliente_principal")
-                or row.get("promotora")
-                or row.get("cliente")
-                or ""
+            cliente = row.get("cliente_principal", "—")
+            ciudad = row.get("ciudad", "—")
+            provincia = row.get("provincia", "—")
+            prioridad = row.get("prioridad", "Media")
+            estado = row.get("estado", "Detectado")
+
+            fecha_seg = _parse_fecha(row.get("fecha_seguimiento"))
+            if not fecha_seg:
+                continue
+
+            texto = f"Seguimiento obra: {nombre_obra}"
+            detalle = f"{cliente} · {ciudad}, {provincia}"
+
+            acciones.append(
+                {
+                    "tipo": "seguimiento",
+                    "subtipo": "Seguimiento",
+                    "fecha": fecha_seg,
+                    "texto": texto,
+                    "detalle": detalle,
+                    "estado": estado,
+                    "prioridad": prioridad,
+                }
             )
 
-            fecha_seg = _parse_fecha_iso(row.get("fecha_seguimiento"))
-            if fecha_seg:
+    # --- Tareas por proyecto (tareas.fecha_limite) ---
+    if not df_proyectos.empty and "tareas" in df_proyectos.columns:
+        for _, row in df_proyectos.iterrows():
+            nombre_obra = row.get("nombre_obra", "Sin nombre")
+            cliente = row.get("cliente_principal", "—")
+            ciudad = row.get("ciudad", "—")
+            provincia = row.get("provincia", "—")
+            prioridad_proy = row.get("prioridad", "Media")
+
+            tareas = row.get("tareas") or []
+            for t in tareas:
+                fecha_lim = _parse_fecha(t.get("fecha_limite"))
+                if not fecha_lim:
+                    continue
+
+                titulo = t.get("titulo", "(sin título)")
+                tipo_tarea = t.get("tipo", "Tarea")
+                completado = bool(t.get("completado", False))
+
+                if completado:
+                    continue
+
+                texto = f"{tipo_tarea}: {titulo}"
+                detalle = f"{nombre_obra} · {cliente} · {ciudad}, {provincia}"
+                estado = row.get("estado", "Detectado")
+
                 acciones.append(
                     {
-                        "tipo": "Seguimiento",
-                        "subtipo": "Proyecto",
-                        "fecha": fecha_seg,
-                        "texto": nombre_obra,
-                        "detalle": cliente,
+                        "tipo": "tarea",
+                        "subtipo": tipo_tarea,
+                        "fecha": fecha_lim,
+                        "texto": texto,
+                        "detalle": detalle,
                         "estado": estado,
-                        "prioridad": prioridad,
+                        "prioridad": prioridad_proy,
                     }
                 )
 
-            # --- TAREAS asociadas al proyecto (si existen) ---
-            tareas = row.get("tareas") or []
-            if isinstance(tareas, list):
-                for t in tareas:
-                    # Estructura esperada: {"titulo":..., "fecha_limite":..., "completado": bool}
-                    fecha_lim = _parse_fecha_iso(t.get("fecha_limite"))
-                    if not fecha_lim:
-                        continue
-
-                    titulo = t.get("titulo") or "(Tarea sin título)"
-                    completado = bool(t.get("completado"))
-                    acciones.append(
-                        {
-                            "tipo": "Tarea",
-                            "subtipo": "Proyecto",
-                            "fecha": fecha_lim,
-                            "texto": titulo,
-                            "detalle": nombre_obra,
-                            "estado": "Completada" if completado else "Pendiente",
-                            "prioridad": prioridad,
-                        }
-                    )
-
-    # (Opcional futuro) acciones ligadas directamente a clientes (por ahora no se añaden)
-
-    # Si no hay acciones, mostramos tarjeta vacía
     if not acciones:
-        st.markdown(
-            """
-            <div class="apple-card-light">
-                <div class="badge">Sin acciones pendientes</div>
-                <h3 style="margin-top:8px; margin-bottom:4px;">Todo al día ✅</h3>
-                <p style="font-size:0.9rem; margin-bottom:0; color:#9ca3af;">
-                    Todavía no hay seguimientos ni tareas con fecha asignada. 
-                    Usa la página de <strong>Proyectos</strong> para añadir tareas 
-                    y fechas de seguimiento que aparecerán aquí.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.info("No hay acciones pendientes (seguimientos o tareas) en este momento.")
         return
 
-    # ================= KPIs DE AGENDA =================
-    acciones_atrasadas = [a for a in acciones if a["fecha"] < hoy]
-    acciones_hoy = [a for a in acciones if a["fecha"] == hoy]
-    acciones_semana = [a for a in acciones if hoy < a["fecha"] <= en_7]
+    df_acc = pd.DataFrame(acciones)
 
-    st.markdown(
-        """
-        <div class="apple-card-light">
-            <h2 class="section-title">📊 Resumen de acciones</h2>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    # ================= KPIs SUPERIORES =================
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("⏰ Retrasadas", len(acciones_atrasadas))
-    with col2:
-        st.metric("📍 Para hoy", len(acciones_hoy))
-    with col3:
-        st.metric("📅 Próximos 7 días", len(acciones_semana))
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    total_acciones = len(df_acc)
+    atrasadas = len(df_acc[df_acc["fecha"] < hoy])
+    hoy_count = len(df_acc[df_acc["fecha"] == hoy])
+    semana_count = len(df_acc[(df_acc["fecha"] > hoy) & (df_acc["fecha"] <= en_7)])
 
-    # ================= LISTAS DETALLADAS =================
-    st.markdown(
-        """
-        <div class="apple-card-light">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <div class="badge">Próximos pasos</div>
-                    <h3 style="margin-top:8px; margin-bottom:4px;">Agenda por prioridad temporal</h3>
-                </div>
-            </div>
-            <p class="small-caption">
-                Acciones ordenadas en retrasadas, para hoy y próximos 7 días. 
-                Cada línea combina seguimiento o tarea con el proyecto y su prioridad.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with col_k1:
+        st.metric("Acciones totales", total_acciones)
+
+    with col_k2:
+        st.metric("Retrasadas", atrasadas)
+
+    with col_k3:
+        st.metric("Para hoy", hoy_count)
+
+    with col_k4:
+        st.metric("Próximos 7 días", semana_count)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ================= TRES COLUMNAS: RETRASADAS / HOY / 7 DÍAS =================
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("### Próximas acciones", unsafe_allow_html=True)
 
     col_late, col_today, col_week = st.columns(3)
 
-    def _render_lista(col, titulo, acciones_lista, emoji):
+    acciones_atrasadas = df_acc[df_acc["fecha"] < hoy].sort_values("fecha")
+    acciones_hoy = df_acc[df_acc["fecha"] == hoy].sort_values("fecha")
+    acciones_semana = df_acc[(df_acc["fecha"] > hoy) & (df_acc["fecha"] <= en_7)].sort_values("fecha")
+
+    def _render_lista(col, titulo, df_list: pd.DataFrame, icono: str):
         with col:
-            st.markdown(
-                f"<p style='font-size:0.9rem; color:#E5E7EB; margin-bottom:6px;'><strong>{emoji} {titulo}</strong></p>",
-                unsafe_allow_html=True,
-            )
-            if not acciones_lista:
-                st.markdown(
-                    "<p style='color:#6B7280; font-size:0.78rem;'>Nada pendiente en este bloque.</p>",
-                    unsafe_allow_html=True,
-                )
+            st.markdown(f"#### {icono} {titulo}")
+            if df_list.empty:
+                st.caption("Sin acciones.")
                 return
 
-            # Ordenamos por fecha ascendente
-            acciones_ordenadas = sorted(acciones_lista, key=lambda x: x["fecha"])
+            for _, row in df_list.iterrows():
+                fecha_txt = _formatear_fecha(row.get("fecha"))
+                texto = row.get("texto", "")
+                detalle = row.get("detalle", "")
+                subtipo = row.get("subtipo", "")
+                prioridad = row.get("prioridad", "Media")
+                estado = row.get("estado", "—")
 
-            for a in acciones_ordenadas[:30]:  # límite de 30 por columna
-                fecha_txt = a["fecha"].strftime("%d/%m/%y")
-                texto = a["texto"]
-                detalle = a.get("detalle", "")
-                tipo = a["tipo"]
-                subtipo = a["subtipo"]
-                prioridad = a.get("prioridad", "Media")
-                estado = a.get("estado", "")
-
-                pill_estado = (
-                    "<span class='badge-inline'>Seguimiento</span>"
-                    if tipo == "Seguimiento"
-                    else "<span class='badge-inline'>Tarea</span>"
-                )
+                if prioridad == "Alta":
+                    pill_estado = "<span class='pill pill-red'>Alta</span>"
+                elif prioridad == "Media":
+                    pill_estado = "<span class='pill pill-amber'>Media</span>"
+                else:
+                    pill_estado = "<span class='pill pill-slate'>Baja</span>"
 
                 html = f"""
                 <div class="next-item">
