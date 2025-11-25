@@ -6,14 +6,18 @@ from crm_utils import get_clientes, get_proyectos
 
 try:
     from style_injector import inject_apple_style
-except:
+except Exception:
     def inject_apple_style():
         pass
 
 
+# ===============================================================
+# HELPERS
+# ===============================================================
 def _parse_fecha_iso(valor):
     """
-    Convierte distintos formatos de fecha (iso, date, datetime, str) en date.
+    Convierte distintos formatos de fecha (iso, date, datetime, str, serial Excel)
+    en un date. Si no se puede, devuelve None.
     """
     if not valor:
         return None
@@ -25,7 +29,7 @@ def _parse_fecha_iso(valor):
         return valor.date()
 
     if isinstance(valor, (int, float)):
-        # por si algún día se cuela serial de Excel
+        # Por si algún día se cuela un serial de Excel
         base = datetime(1899, 12, 30)
         try:
             return (base + timedelta(days=float(valor))).date()
@@ -51,92 +55,117 @@ def _parse_fecha_iso(valor):
     return None
 
 
+# ===============================================================
+# PANEL PRINCIPAL
+# ===============================================================
 def render_panel():
+    """
+    Panel principal tipo 'agenda' con estilo Apple Dark:
+    - Cabecera Apple card
+    - KPIs de acciones
+    - Listas de acciones: Retrasadas / Hoy / Próximos 7 días
+    - Acciones = Seguimientos por fecha + Tareas por fecha
+    """
     inject_apple_style()
 
-    # Cabecera tipo Apple
+    # Cabecera tipo Apple card
     st.markdown(
         """
         <div class="apple-card">
-            <div class="section-badge">Agenda de acciones</div>
+            <div class="badge">Agenda de acciones</div>
             <h1 style="margin-top: 4px; margin-bottom:4px;">Qué tengo que hacer ahora</h1>
-            <p style="margin-bottom: 0; font-size:0.9rem;">
-                Vista unificada de seguimientos y tareas sobre proyectos y clientes.
-                Ideal para empezar el día sabiendo a quién llamar, qué ofertas mover
-                y qué proyectos no se pueden enfriar.
+            <p style="margin-bottom: 0; font-size:0.9rem; color:#9ca3af;">
+                Vista unificada de seguimientos y tareas sobre tus proyectos clave.
+                Perfecto para empezar el día sabiendo a quién llamar, qué ofertas mover
+                y qué obras no se pueden enfriar.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ================= CARGA DE DATOS =================
+    # ================= CARGA DE DATOS (UNA SOLA VEZ) =================
     with st.spinner("Cargando agenda desde la base de datos…"):
         try:
-            lista_clientes = get_clientes()
-            lista_proyectos = get_proyectos()
+            lista_clientes = get_clientes()     # cacheado en crm_utils
+            lista_proyectos = get_proyectos()   # cacheado en crm_utils
         except Exception as e:
-            st.error("No se han podido cargar los datos desde Firestore.")
+            st.error("❌ No se han podido cargar los datos desde Firestore.")
             st.code(str(e))
             return
 
     df_clientes = pd.DataFrame(lista_clientes) if lista_clientes else pd.DataFrame()
     df_proyectos = pd.DataFrame(lista_proyectos) if lista_proyectos else pd.DataFrame()
 
-    acciones = []  # tipo, subtipo, fecha, texto, detalle, estado, prioridad
+    # ================= CONSTRUCCIÓN DE ACCIONES =================
+    acciones = []  # cada acción es un dict: {tipo, subtipo, fecha, texto, detalle, estado, prioridad}
 
     hoy = date.today()
     en_7 = hoy + timedelta(days=7)
 
-    # ---- Seguimientos en proyectos (fecha_seguimiento) ----
+    # --- Seguimientos en proyectos (fecha_seguimiento) ---
     if not df_proyectos.empty:
         for _, row in df_proyectos.iterrows():
+            nombre_obra = row.get("nombre_obra", "Sin nombre")
+            estado = row.get("estado", "Detectado") or "Detectado"
+            prioridad = row.get("prioridad", "Media") or "Media"
+            cliente = (
+                row.get("cliente_principal")
+                or row.get("promotora")
+                or row.get("cliente")
+                or ""
+            )
+
             fecha_seg = _parse_fecha_iso(row.get("fecha_seguimiento"))
-            estado = row.get("estado", "Detectado")
             if fecha_seg:
                 acciones.append(
                     {
                         "tipo": "Seguimiento",
                         "subtipo": "Proyecto",
                         "fecha": fecha_seg,
-                        "texto": row.get("nombre_obra", "Sin nombre"),
-                        "detalle": row.get("cliente_principal") or row.get("cliente") or "",
+                        "texto": nombre_obra,
+                        "detalle": cliente,
                         "estado": estado,
-                        "prioridad": row.get("prioridad", "Media"),
+                        "prioridad": prioridad,
                     }
                 )
 
-            # TAREAS asociadas al proyecto (si existen)
+            # --- TAREAS asociadas al proyecto (si existen) ---
             tareas = row.get("tareas") or []
             if isinstance(tareas, list):
                 for t in tareas:
+                    # Estructura esperada: {"titulo":..., "fecha_limite":..., "completado": bool}
                     fecha_lim = _parse_fecha_iso(t.get("fecha_limite"))
                     if not fecha_lim:
                         continue
+
+                    titulo = t.get("titulo") or "(Tarea sin título)"
+                    completado = bool(t.get("completado"))
                     acciones.append(
                         {
                             "tipo": "Tarea",
                             "subtipo": "Proyecto",
                             "fecha": fecha_lim,
-                            "texto": t.get("titulo", "(sin título)"),
-                            "detalle": row.get("nombre_obra", "Sin obra"),
-                            "estado": "Completada" if t.get("completado") else "Pendiente",
-                            "prioridad": row.get("prioridad", "Media"),
+                            "texto": titulo,
+                            "detalle": nombre_obra,
+                            "estado": "Completada" if completado else "Pendiente",
+                            "prioridad": prioridad,
                         }
                     )
 
-    # (Futuro) se podrían añadir tareas/seguimientos sobre clientes aquí.
+    # (Opcional futuro) acciones ligadas directamente a clientes (por ahora no se añaden)
 
+    # Si no hay acciones, mostramos tarjeta vacía
     if not acciones:
         st.markdown(
             """
             <div class="apple-card-light">
-                <div class="section-badge">Sin acciones pendientes</div>
+                <div class="badge">Sin acciones pendientes</div>
                 <h3 style="margin-top:8px; margin-bottom:4px;">Todo al día ✅</h3>
-                <p style="font-size:0.9rem; margin-bottom:0;">
+                <p style="font-size:0.9rem; margin-bottom:0; color:#9ca3af;">
                     Todavía no hay seguimientos ni tareas con fecha asignada. 
                     Usa la página de <strong>Proyectos</strong> para añadir tareas 
-                    y fechas de seguimiento.
+                    y fechas de seguimiento que aparecerán aquí.
                 </p>
             </div>
             """,
@@ -144,10 +173,19 @@ def render_panel():
         )
         return
 
-    # ================= MÉTRICAS RESUMEN =================
+    # ================= KPIs DE AGENDA =================
     acciones_atrasadas = [a for a in acciones if a["fecha"] < hoy]
     acciones_hoy = [a for a in acciones if a["fecha"] == hoy]
     acciones_semana = [a for a in acciones if hoy < a["fecha"] <= en_7]
+
+    st.markdown(
+        """
+        <div class="apple-card-light">
+            <h2 class="section-title">📊 Resumen de acciones</h2>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -157,16 +195,23 @@ def render_panel():
     with col3:
         st.metric("📅 Próximos 7 días", len(acciones_semana))
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
     # ================= LISTAS DETALLADAS =================
     st.markdown(
         """
         <div class="apple-card-light">
             <div style="display:flex; align-items:center; justify-content:space-between;">
                 <div>
-                    <div class="section-badge">Próximos pasos</div>
+                    <div class="badge">Próximos pasos</div>
                     <h3 style="margin-top:8px; margin-bottom:4px;">Agenda por prioridad temporal</h3>
                 </div>
             </div>
+            <p class="small-caption">
+                Acciones ordenadas en retrasadas, para hoy y próximos 7 días. 
+                Cada línea combina seguimiento o tarea con el proyecto y su prioridad.
+            </p>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -186,8 +231,10 @@ def render_panel():
                 )
                 return
 
+            # Ordenamos por fecha ascendente
             acciones_ordenadas = sorted(acciones_lista, key=lambda x: x["fecha"])
-            for a in acciones_ordenadas[:20]:
+
+            for a in acciones_ordenadas[:30]:  # límite de 30 por columna
                 fecha_txt = a["fecha"].strftime("%d/%m/%y")
                 texto = a["texto"]
                 detalle = a.get("detalle", "")
@@ -214,5 +261,3 @@ def render_panel():
     _render_lista(col_late, "Retrasadas", acciones_atrasadas, "⏰")
     _render_lista(col_today, "Para hoy", acciones_hoy, "📍")
     _render_lista(col_week, "Próximos 7 días", acciones_semana, "📅")
-
-    st.markdown("</div>", unsafe_allow_html=True)
