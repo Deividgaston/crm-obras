@@ -1,17 +1,14 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
+
+from crm_utils import get_proyectos
 
 try:
     from style_injector import inject_apple_style
 except Exception:
     def inject_apple_style():
         pass
-
-from dashboard_utils import (
-    load_dashboard_data,
-    compute_kpis,
-    compute_funnel_estado,
-)
 
 
 def render_dashboard():
@@ -35,45 +32,50 @@ def render_dashboard():
     )
 
     # ===========================
-    # CARGA DE DATOS (NORMALIZADOS)
+    # CARGA DE DATOS
     # ===========================
     try:
-        df_p = load_dashboard_data()
+        proyectos = get_proyectos()
     except Exception as e:
         st.error("No se pudieron cargar los datos del CRM.")
         st.code(str(e))
         return
 
-    if df_p is None or df_p.empty:
-        st.info("Todavía no hay proyectos en el CRM.")
-        return
+    df_p = pd.DataFrame(proyectos) if proyectos is not None else pd.DataFrame()
 
     # ===========================
     # KPIs SUPERIORES
     # ===========================
-    kpis = compute_kpis(df_p)
-
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("Total Proyectos", int(kpis["total_proyectos"]))
+        st.metric("Total Proyectos", len(df_p))
 
     with col2:
-        ganados = int((df_p["estado"] == "Ganado").sum()) if "estado" in df_p.columns else 0
+        if not df_p.empty and "estado" in df_p.columns:
+            ganados = df_p[df_p["estado"] == "Ganado"].shape[0]
+        else:
+            ganados = 0
         st.metric("Proyectos Ganados", ganados)
 
     with col3:
-        perdidos = int((df_p["estado"] == "Perdido").sum()) if "estado" in df_p.columns else 0
+        if not df_p.empty and "estado" in df_p.columns:
+            perdidos = df_p[df_p["estado"] == "Perdido"].shape[0]
+        else:
+            perdidos = 0
         st.metric("Proyectos Perdidos", perdidos)
 
     with col4:
-        total_pot = float(kpis["total_potencial"])
+        if not df_p.empty and "potencial_eur" in df_p.columns:
+            total_pot = float(df_p["potencial_eur"].sum())
+        else:
+            total_pot = 0.0
         st.metric("Potencial Total (€)", f"{total_pot:,.0f}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ===========================
-    # DISTRIBUCIÓN POR ESTADO (TABLA)
+    # DISTRIBUCIÓN POR ESTADO (GRÁFICO CIRCULAR)
     # ===========================
     st.markdown(
         """
@@ -85,20 +87,33 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    funnel_df = compute_funnel_estado(df_p)
-
-    if not funnel_df.empty:
-        tabla_estado = funnel_df.rename(columns={"estado": "Estado", "proyectos": "Total"})
-        st.dataframe(
-            tabla_estado,
-            use_container_width=True,
-            hide_index=True,
+    if not df_p.empty and "estado" in df_p.columns:
+        df_estado = (
+            df_p["estado"]
+            .fillna("Sin estado")
+            .value_counts()
+            .reset_index()
         )
+        df_estado.columns = ["estado", "total"]
+
+        chart_estado = (
+            alt.Chart(df_estado)
+            .mark_arc(outerRadius=110, innerRadius=40)
+            .encode(
+                theta=alt.Theta("total:Q", stack=True),
+                color=alt.Color(
+                    "estado:N",
+                    legend=alt.Legend(title="Estado"),
+                ),
+                tooltip=["estado:N", "total:Q"],
+            )
+        )
+        st.altair_chart(chart_estado, use_container_width=True)
     else:
         st.info("No hay información de estados para mostrar.")
 
     # ===========================
-    # DISTRIBUCIÓN POR CIUDAD
+    # DISTRIBUCIÓN POR CIUDAD (GRÁFICO CIRCULAR)
     # ===========================
     st.markdown(
         """
@@ -110,22 +125,31 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    if "ciudad" in df_p.columns and not df_p.empty:
-        tabla_ciudades = (
+    if not df_p.empty and "ciudad" in df_p.columns:
+        df_ciudad = (
             df_p["ciudad"]
             .fillna("Sin ciudad")
             .value_counts()
+            .head(10)
             .reset_index()
         )
-        tabla_ciudades.columns = ["Ciudad", "Total"]
+        df_ciudad.columns = ["ciudad", "total"]
 
-        st.dataframe(
-            tabla_ciudades,
-            hide_index=True,
-            use_container_width=True,
+        chart_ciudad = (
+            alt.Chart(df_ciudad)
+            .mark_arc(outerRadius=110, innerRadius=40)
+            .encode(
+                theta=alt.Theta("total:Q", stack=True),
+                color=alt.Color(
+                    "ciudad:N",
+                    legend=alt.Legend(title="Ciudad"),
+                ),
+                tooltip=["ciudad:N", "total:Q"],
+            )
         )
+        st.altair_chart(chart_ciudad, use_container_width=True)
     else:
-        st.info("No hay campo 'ciudad' en tus proyectos.")
+        st.info("No hay información de ciudades para mostrar.")
 
     # ===========================
     # LISTA DE PROYECTOS GANADOS
@@ -140,28 +164,24 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    if "estado" in df_p.columns:
+    if not df_p.empty and "estado" in df_p.columns:
         df_ganados = df_p[df_p["estado"] == "Ganado"]
 
         if df_ganados.empty:
             st.info("No hay proyectos ganados todavía.")
         else:
-            columnas_preferidas = [
-                "nombre_obra",
-                "cliente_principal",
-                "promotora_display",
-                "cliente",
-                "ciudad",
-                "provincia",
-                "potencial_eur",
-                "fecha_creacion",
+            columnas = [
+                c
+                for c in ["nombre_obra", "cliente", "ciudad", "potencial_eur", "fecha_creacion"]
+                if c in df_ganados.columns
             ]
-            columnas = [c for c in columnas_preferidas if c in df_ganados.columns]
-
-            st.dataframe(
-                df_ganados[columnas],
-                hide_index=True,
-                use_container_width=True,
-            )
+            if columnas:
+                st.dataframe(
+                    df_ganados[columnas],
+                    hide_index=True,
+                    use_container_width=True,
+                )
+            else:
+                st.info("No hay columnas para mostrar en el detalle de proyectos ganados.")
     else:
-        st.info("Los proyectos no tienen campo de 'estado', no se puede listar ganados.")
+        st.info("Los proyectos no tienen campo 'estado', no se puede listar ganados.")
