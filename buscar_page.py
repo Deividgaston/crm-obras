@@ -16,6 +16,9 @@ def render_buscar():
 
     inject_apple_style()
 
+    # ⚠️ MARCA DE VERSIÓN PARA COMPROBAR QUE ESTE ARCHIVO SE ESTÁ EJECUTANDO
+    st.markdown("🟢 <b>VERSIÓN NUEVA DE BUSCAR_PAGE.PY CARGADA</b>", unsafe_allow_html=True)
+
     st.markdown(
         """
         <div class="apple-card">
