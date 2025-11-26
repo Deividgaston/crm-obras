@@ -25,7 +25,7 @@ def app():
     inject_apple_style()
 
     # ==========================
-    # ESTILO GLOBAL CLARO
+    # ESTILO GLOBAL CLARO + BOTONES
     # ==========================
     st.markdown(
         """
@@ -60,31 +60,35 @@ def app():
             margin-top:-4px;
         }
 
-        /* TOOLBAR HORIZONTAL (radio disfrazado de botones) */
-        div[data-baseweb="radio"] > div {
-            display:flex !important;
-            gap:8px;
-            flex-wrap:wrap;
+        /* BOTONES DE LA BARRA DE HERRAMIENTAS */
+        .toolbar-row {
+            margin: 8px 18px 2px 18px;
         }
-        div[data-baseweb="radio"] label {
+        .toolbar-row .stButton>button {
             background:#ffffff;
             border:1px solid #d8dde6;
             border-radius:4px;
-            padding:4px 10px;
+            padding:4px 14px;
             font-size:13px;
             font-weight:500;
             color:#032D60;
             cursor:pointer;
         }
-        /* Oculta el circulito del radio */
-        div[data-baseweb="radio"] input {
-            display:none;
+        .toolbar-row .stButton>button:hover {
+            background:#e5f1fb;
+            border-color:#1b96ff;
         }
-        /* Estado activo */
-        div[data-baseweb="radio"] input:checked + div {
+
+        /* Botón activo: lo simulamos con una clase en un contenedor */
+        .toolbar-active>button {
             background:#e5f1fb !important;
             border-color:#1b96ff !important;
             color:#032D60 !important;
+        }
+
+        /* Opcional: inputs algo más claros sobre fondo gris */
+        div[data-baseweb="select"] > div {
+            background-color:#ffffff !important;
         }
         </style>
         """,
@@ -107,30 +111,46 @@ def app():
     )
 
     # ==========================
-    # TOOLBAR SECCIONES
+    # ESTADO DE NAVEGACIÓN
     # ==========================
-    col_toolbar = st.container()
-    with col_toolbar:
-        menu = st.radio(
-            "Secciones",
-            ["Panel", "Proyectos", "Buscar", "Dashboard"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="nav_toolbar",
-        )
+    pages = ["Panel", "Proyectos", "Buscar", "Dashboard"]
+    if "page" not in st.session_state:
+        st.session_state["page"] = "Panel"
+
+    current = st.session_state["page"]
+
+    # ==========================
+    # BARRA DE HERRAMIENTAS (BOTONES)
+    # ==========================
+    toolbar = st.container()
+    with toolbar:
+        st.markdown('<div class="toolbar-row">', unsafe_allow_html=True)
+        cols = st.columns(len(pages))
+        for i, name in enumerate(pages):
+            with cols[i]:
+                # decidimos si este botón es el activo
+                btn_class = "toolbar-active" if current == name else ""
+                st.markdown(f'<div class="{btn_class}">', unsafe_allow_html=True)
+                if st.button(name, key=f"nav_{name}"):
+                    st.session_state["page"] = name
+                    st.experimental_rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")  # pequeño espacio
 
     # ==========================
     # ROUTING
     # ==========================
-    if menu == "Panel":
+    page = st.session_state["page"]
+
+    if page == "Panel":
         render_panel()
-    elif menu == "Proyectos":
+    elif page == "Proyectos":
         render_proyectos()
-    elif menu == "Buscar":
+    elif page == "Buscar":
         render_buscar()
-    elif menu == "Dashboard":
+    elif page == "Dashboard":
         render_dashboard()
 
 
