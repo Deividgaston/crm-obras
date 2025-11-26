@@ -27,7 +27,7 @@ def app():
         page_icon="🏗️",
     )
 
-    # Estilo global compacto pero estable
+    # Estilos globales
     st.markdown(
         """
         <style>
@@ -35,7 +35,7 @@ def app():
             html, body, * { user-select:text !important; }
 
             .block-container {
-                padding-top: 0.7rem !important;
+                padding-top: 1rem !important;
             }
 
             .stButton > button {
@@ -55,20 +55,23 @@ def app():
     if "page" not in st.session_state:
         st.session_state["page"] = "panel"
 
-    # Título DGO Insight (texto, cuando tengamos el logo lo cambiamos)
+    # ===============================
+    #   CABECERA CON TU LOGO
+    # ===============================
     st.markdown(
         """
-        <div style="font-size:22px;font-weight:700;color:#032D60;margin-bottom:2px;">
-            DGO Insight
-        </div>
-        <div style="font-size:12px;color:#5A6872;margin-bottom:6px;">
-            Herramienta interna para seguimiento de prescripción y pipeline de obras.
-        </div>
+        <div style="display:flex;align-items:center;margin-bottom:10px;">
         """,
         unsafe_allow_html=True,
     )
 
-    # Botones de navegación
+    st.image("/mnt/data/Logo Dgo insight.png", width=240)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ===============================
+    #   BOTONES DE NAVEGACIÓN
+    # ===============================
     cols = st.columns(len(PAGES))
     for (key, (label, _)), col in zip(PAGES.items(), cols):
         with col:
@@ -78,10 +81,15 @@ def app():
                 st.session_state["page"] = key
                 st.rerun()
 
-    # Contenido de la página
+    # ===============================
+    #   CONTENIDO DE LA PÁGINA
+    # ===============================
     _, renderer = PAGES[st.session_state["page"]]
     renderer()
 
 
 if __name__ == "__main__":
     app()
+
+
+
