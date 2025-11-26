@@ -122,12 +122,12 @@ def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
 
 
 # =====================================================
-# PANEL (DISEÑO ULTRA COMPACTO)
+# PANEL (DISEÑO ULTRA COMPACTO + TAG GRANDE)
 # =====================================================
 def render_panel():
     inject_apple_style()
 
-    # ===== Estilo reducido al mínimo =====
+    # ===== ESTILOS =====
     st.markdown(
         """
         <style>
@@ -135,10 +135,11 @@ def render_panel():
             display:flex;
             align-items:center;
             justify-content:space-between;
-            padding:2px 0 4px 0;
-            margin-bottom:4px;
+            padding:2px 0 6px 0;
+            margin-bottom:6px;
             border-bottom:1px solid #d8dde6;
         }
+
         .crm-compact-title {
             font-size:15px;
             font-weight:600;
@@ -147,22 +148,27 @@ def render_panel():
             padding:0;
             line-height:15px;
         }
+
         .crm-compact-subtitle {
-            font-size:10px;
+            font-size:11px;
             color:#5A6872;
             margin:0;
+            padding:0;
             line-height:12px;
         }
-        .crm-compact-tag {
-            font-size:10px;
-            padding:1px 6px;
-            border-radius:8px;
+
+        /* ★ TAG GRANDE TIPO SALESFORCE ★ */
+        .crm-tag-big {
+            font-size:13px;
+            font-weight:500;
+            padding:4px 12px;
+            border-radius:14px;
             background:#e5f2ff;
-            border:1px solid #c5dcf5;
+            border:1px solid #b7d4f5;
             color:#032D60;
-            height:16px;
             display:flex;
             align-items:center;
+            height:28px;
         }
 
         .crm-small-metric .stMetric {
@@ -175,22 +181,22 @@ def render_panel():
         unsafe_allow_html=True,
     )
 
-    # ===== Cabecera súper compacta =====
+    # ===== CABECERA =====
     st.markdown(
         """
         <div class="crm-compact-header">
             <div>
                 <div class="crm-compact-title">Panel</div>
-                <div class="crm-compact-subtitle">
-                    Agenda: seguimientos y tareas del día.
-                </div>
+                <div class="crm-compact-subtitle">Agenda de seguimientos y tareas del día</div>
             </div>
-            <div class="crm-compact-tag">Vista · Agenda</div>
+
+            <div class="crm-tag-big">Vista · Agenda</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # ===== DATOS =====
     df = load_proyectos()
 
     if df is None or df.empty:
@@ -200,7 +206,7 @@ def render_panel():
     acciones = _extraer_acciones(df)
     atrasadas, hoy_list, prox7 = _particionar_acciones(acciones)
 
-    # === Métricas muy compactas ===
+    # ===== MÉTRICAS =====
     st.markdown('<div class="apple-card-light crm-small-metric">', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Acciones", len(acciones))
@@ -209,7 +215,7 @@ def render_panel():
     col4.metric("Próx. 7 días", len(prox7))
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # === Listas compactas ===
+    # ===== LISTAS =====
     colA, colB, colC = st.columns([1.1, 1, 1])
     with colA:
         _render_lista_acciones("📌 Retrasadas", atrasadas)
