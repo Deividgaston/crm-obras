@@ -28,7 +28,7 @@ def app():
         page_icon="🏗️",
     )
 
-    # Ocultar cabecera, menú y footer Streamlit
+    # === Habilitar copiar/pegar y ocultar barra Streamlit ===
     st.markdown("""
         <style>
             #MainMenu {visibility: hidden;}
@@ -40,26 +40,25 @@ def app():
                 user-select: text !important;
             }
 
-            /* Botones compactos */
+            /* Botones de navegación compactos */
             .stButton > button {
                 border-radius: 8px;
                 padding: 4px 10px !important;
-                min-height: 0px !important;
                 height: 34px !important;
                 font-size: 14px !important;
-                margin-bottom: 0px !important;
+                margin: 0 !important;
             }
 
-            /* Eliminar espacio automático entre secciones */
+            /* Reducir padding superior global de Streamlit */
             .block-container {
-                padding-top: 6px !important;
+                padding-top: 4px !important;
             }
 
-            /* Quitar espacio debajo de los botones */
-            .nav-spacer {
+            /* Quitar espacio entre botones y el contenido */
+            .nav-separator {
+                height: 2px;
                 margin: 0;
                 padding: 0;
-                height: 4px;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -69,41 +68,36 @@ def app():
     if "page" not in st.session_state:
         st.session_state["page"] = "panel"
 
-    # ========================== CABECERA GLOBAL ==========================
+    # === CABECERA GLOBAL ===
     st.markdown(
-        """
-        <div style="display:flex;justify-content:space-between;
-                    padding:0px 0px 4px 0px;margin-bottom:4px;
-                    border-bottom:1px solid #d8dde6;">
-            <div style="font-size:12px;color:#5A6872;">
-                Herramienta interna para seguimiento de prescripción y pipeline de obras.
-            </div>
-
-            <div style="font-size:12px;color:#5A6872;">
-                Panel · Proyectos · Scouting · Dashboard
-            </div>
-        </div>
-        """,
+        '<div style="display:flex;justify-content:space-between;'
+        'padding:0 0 4px 0;margin:0;border-bottom:1px solid #e3e8ee;">'
+        '<div style="font-size:12px;color:#5A6872;">'
+        'Herramienta interna para seguimiento de prescripción y pipeline de obras.'
+        '</div>'
+        '<div style="font-size:12px;color:#5A6872;">'
+        'Panel · Proyectos · Scouting · Dashboard'
+        '</div>'
+        '</div>',
         unsafe_allow_html=True,
     )
 
-    # ========================== BOTONES NAV ==========================
+    # === BOTONES DE NAVEGACIÓN (compactos y sin margen) ===
     cols = st.columns(len(PAGES))
 
     for (key, (label, _)), col in zip(PAGES.items(), cols):
         with col:
-            active = st.session_state["page"] == key
-            text = f"● {label}" if active else label
-            if st.button(text, use_container_width=True, key=f"nav_{key}"):
+            is_active = st.session_state["page"] == key
+            button_text = f"● {label}" if is_active else label
+            if st.button(button_text, use_container_width=True, key=f"nav_{key}"):
                 st.session_state["page"] = key
                 st.rerun()
 
-    # Spacer super compacto
-    st.markdown("<div class='nav-spacer'></div>", unsafe_allow_html=True)
+    # Eliminar todo el espacio entre nav y página
+    st.markdown("<div class='nav-separator'></div>", unsafe_allow_html=True)
 
-    # ========================== CONTENIDO ==========================
-    current = st.session_state["page"]
-    _, renderer = PAGES.get(current, PAGES["panel"])
+    # === RENDER DE LA PÁGINA ACTUAL ===
+    _, renderer = PAGES[st.session_state["page"]]
     renderer()
 
 
