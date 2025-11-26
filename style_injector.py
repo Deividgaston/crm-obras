@@ -9,9 +9,9 @@ def inject_apple_style():
     st.markdown(
         """
         <style>
-        /* =========================================
+        /* =============================
            RESET GLOBAL A MODO CLARO
-        ========================================= */
+        ============================= */
         :root {
             color-scheme: light !important;
         }
@@ -25,20 +25,15 @@ def inject_apple_style():
                          sans-serif;
         }
 
-        /* TODO lo que cuelga del contenedor principal usa texto oscuro */
-        [data-testid="stAppViewContainer"] * {
-            color: #16325c !important;
-        }
-
         .block-container {
             padding-top: 0.5rem;
             padding-bottom: 2rem;
             max-width: 1300px;
         }
 
-        /* =========================================
+        /* =============================
            CARDS
-        ========================================= */
+        ============================= */
         .apple-card {
             background: #ffffff;
             border-radius: 0.75rem;
@@ -80,9 +75,9 @@ def inject_apple_style():
             margin-bottom: 12px;
         }
 
-        /* =========================================
+        /* =============================
            TITULOS / TEXTOS
-        ========================================= */
+        ============================= */
         h1, h2, h3, h4, h5, h6 {
             color: #032D60 !important;
         }
@@ -90,9 +85,9 @@ def inject_apple_style():
             color: #16325c !important;
         }
 
-        /* =========================================
+        /* =============================
            BOTONES GENERALES
-        ========================================= */
+        ============================= */
         .stButton>button {
             background: #0170D2;
             color: #ffffff !important;
@@ -108,12 +103,9 @@ def inject_apple_style():
             color: #ffffff !important;
         }
 
-        /* La barra superior se estiliza aparte en app.py.
-           Esto solo afecta al resto de botones. */
-
-        /* =========================================
+        /* =============================
            INPUTS / SELECTS
-        ========================================= */
+        ============================= */
         div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             border-radius: 4px;
@@ -130,9 +122,10 @@ def inject_apple_style():
             gap: 12px;
         }
 
-        /* =========================================
+        /* =============================
            TABLAS / DATAFRAME / DATAEDITOR
-        ========================================= */
+           (FORZAMOS MODO CLARO A LO BRUTO)
+        ============================= */
         [data-testid="stDataFrame"],
         [data-testid="stDataEditor"] {
             background:#ffffff !important;
@@ -140,27 +133,23 @@ def inject_apple_style():
             border: 1px solid #d8dde6 !important;
         }
 
-        [data-testid="stDataFrame"] table,
-        [data-testid="stDataEditor"] table {
-            background:#ffffff !important;
+        [data-testid="stDataFrame"] *,
+        [data-testid="stDataEditor"] * {
+            background-color:#ffffff !important;
             color:#16325c !important;
-        }
-
-        [data-testid="stDataFrame"] th,
-        [data-testid="stDataFrame"] td,
-        [data-testid="stDataEditor"] th,
-        [data-testid="stDataEditor"] td {
             border-color:#d8dde6 !important;
         }
 
-        [data-testid="stDataFrame"] thead,
-        [data-testid="stDataEditor"] thead {
+        /* cabeceras un poco distintas */
+        [data-testid="stDataFrame"] thead *,
+        [data-testid="stDataEditor"] thead * {
             background-color:#f4f6f9 !important;
+            font-weight:600 !important;
         }
 
-        /* =========================================
+        /* =============================
            TABS
-        ========================================= */
+        ============================= */
         button[role="tab"] {
             font-size: 13px !important;
             color:#032D60 !important;
