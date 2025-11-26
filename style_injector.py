@@ -3,8 +3,10 @@ import streamlit as st
 
 def inject_apple_style():
     """
-    Tema único tipo Salesforce Lightning para todo el CRM.
-    Fuerza modo claro, texto oscuro y tablas legibles.
+    Tema tipo Salesforce Lightning para todo el CRM:
+    - Modo claro
+    - Texto oscuro
+    - Tablas legibles
     """
     st.markdown(
         """
@@ -124,7 +126,6 @@ def inject_apple_style():
 
         /* =============================
            TABLAS / DATAFRAME / DATAEDITOR
-           (FORZAMOS MODO CLARO A LO BRUTO)
         ============================= */
         [data-testid="stDataFrame"],
         [data-testid="stDataEditor"] {
@@ -133,18 +134,34 @@ def inject_apple_style():
             border: 1px solid #d8dde6 !important;
         }
 
-        [data-testid="stDataFrame"] *,
-        [data-testid="stDataEditor"] * {
-            background-color:#ffffff !important;
+        /* Solo tocamos tabla y cabecera, no usamos "*" */
+        [data-testid="stDataFrame"] table,
+        [data-testid="stDataEditor"] table {
             color:#16325c !important;
+            background:#ffffff !important;
+        }
+
+        [data-testid="stDataFrame"] thead,
+        [data-testid="stDataEditor"] thead {
+            background-color:#f4f6f9 !important;
+        }
+
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td,
+        [data-testid="stDataEditor"] th,
+        [data-testid="stDataEditor"] td {
             border-color:#d8dde6 !important;
         }
 
-        /* cabeceras un poco distintas */
-        [data-testid="stDataFrame"] thead *,
-        [data-testid="stDataEditor"] thead * {
-            background-color:#f4f6f9 !important;
+        /* =============================
+           MÉTRICAS (Pipeline por estado)
+        ============================= */
+        [data-testid="stMetricValue"] {
+            color:#032D60 !important;
             font-weight:600 !important;
+        }
+        [data-testid="stMetricLabel"] {
+            color:#5A6872 !important;
         }
 
         /* =============================
