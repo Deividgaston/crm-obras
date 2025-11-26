@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-from datetime import date
 
 from crm_utils import (
     get_proyectos,
@@ -43,11 +42,23 @@ def _tabla_crm(df: pd.DataFrame):
 
 
 # ============================================================================
-# GRÁFICOS ALTAR (FONDO BLANCO)
+# GRÁFICOS ALTAR (FONDO BLANCO, COMPATIBLE)
 # ============================================================================
 
 COLOR_AZUL = "#0170D2"
 COLOR_AZUL_CLARO = "#5AB0F5"
+
+
+def _aplicar_tema_blanco(chart: alt.Chart) -> alt.Chart:
+    """
+    Aplica fondo blanco y sin borde de vista
+    de forma compatible con versiones antiguas de Altair/Vega-Lite.
+    """
+    return (
+        chart
+        .configure_view(stroke=None, fill="white")
+        .configure(background="white")
+    )
 
 
 def _pie_chart(df: pd.DataFrame, col: str, titulo: str):
@@ -58,17 +69,18 @@ def _pie_chart(df: pd.DataFrame, col: str, titulo: str):
     resumen = df[col].value_counts().reset_index()
     resumen.columns = [col, "count"]
 
-    chart = (
-        alt.Chart(resumen, title=None)
+    base = (
+        alt.Chart(resumen)
         .mark_arc()
         .encode(
             theta="count:Q",
             color=alt.Color(f"{col}:N", legend=alt.Legend(title=col)),
             tooltip=[col, "count"],
         )
-        .properties(height=300, width="container", background="white")
-        .configure_view(stroke=None)
+        .properties(height=300, width=300)
     )
+
+    chart = _aplicar_tema_blanco(base)
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -86,17 +98,18 @@ def _bar_chart(df: pd.DataFrame, group_col: str, value_col: str, titulo: str):
         .head(10)
     )
 
-    chart = (
-        alt.Chart(resumen, title=None)
+    base = (
+        alt.Chart(resumen)
         .mark_bar(color=COLOR_AZUL)
         .encode(
             x="num:Q",
             y=alt.Y(f"{group_col}:N", sort="-x"),
             tooltip=[group_col, "num"],
         )
-        .properties(height=300, background="white")
-        .configure_view(stroke=None)
+        .properties(height=300, width=300)
     )
+
+    chart = _aplicar_tema_blanco(base)
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -113,17 +126,18 @@ def _bar_chart_sum(df: pd.DataFrame, group_col: str, sum_col: str, titulo: str):
         .head(10)
     )
 
-    chart = (
-        alt.Chart(resumen, title=None)
+    base = (
+        alt.Chart(resumen)
         .mark_bar(color=COLOR_AZUL_CLARO)
         .encode(
             x=f"{sum_col}:Q",
             y=alt.Y(f"{group_col}:N", sort="-x"),
             tooltip=[group_col, sum_col],
         )
-        .properties(height=300, background="white")
-        .configure_view(stroke=None)
+        .properties(height=300, width=300)
     )
+
+    chart = _aplicar_tema_blanco(base)
     st.altair_chart(chart, use_container_width=True)
 
 
