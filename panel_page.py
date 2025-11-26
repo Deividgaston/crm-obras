@@ -11,90 +11,84 @@ except Exception:
         pass
 
 
-# =====================================================
-# UTILIDADES FECHAS
-# =====================================================
-def _parse_fecha(value) -> date | None:
-    if not value:
+# -------------------------------
+# FECHAS
+# -------------------------------
+def _parse_fecha(v):
+    if not v:
         return None
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return value
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value).date()
-        except Exception:
-            return None
-    return None
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    try:
+        return datetime.fromisoformat(v).date()
+    except:
+        return None
 
 
-# =====================================================
-# EXTRACCIÓN DE ACCIONES
-# =====================================================
-def _extraer_acciones(df) -> List[Dict[str, Any]]:
+# -------------------------------
+# EXTRAER ACCIONES
+# -------------------------------
+def _extraer_acciones(df):
     acciones = []
-
     for _, row in df.iterrows():
-        nombre = row.get("nombre_obra", "Sin nombre")
-        cliente = row.get("cliente_principal", "—")
-        ciudad = row.get("ciudad", "—")
-        estado = row.get("estado", "Detectado")
-        proy_id = row.get("id")
+        nom = row.get("nombre_obra", "Sin nombre")
+        cli = row.get("cliente_principal", "—")
+        cdd = row.get("ciudad", "—")
+        est = row.get("estado", "Detectado")
 
-        fecha_seg = _parse_fecha(row.get("fecha_seguimiento"))
-        if fecha_seg:
-            acciones.append(
-                {
-                    "tipo": "Seguimiento",
-                    "fecha": fecha_seg,
-                    "proyecto": nombre,
-                    "cliente": cliente,
-                    "ciudad": ciudad,
-                    "estado": estado,
-                    "id": proy_id,
-                    "descripcion": row.get("notas_seguimiento", "") or "",
-                }
-            )
+        seg_f = _parse_fecha(row.get("fecha_seguimiento"))
+        if seg_f:
+            acciones.append({
+                "tipo": "Seguimiento",
+                "fecha": seg_f,
+                "proyecto": nom,
+                "cliente": cli,
+                "ciudad": cdd,
+                "estado": est,
+                "descripcion": row.get("notas_seguimiento", "") or "",
+            })
 
+        # TAREAS
         tareas = row.get("tareas") or []
         for t in tareas:
             if not isinstance(t, dict) or t.get("completado"):
                 continue
-            fecha_lim = _parse_fecha(t.get("fecha_limite"))
-            if fecha_lim:
-                acciones.append(
-                    {
-                        "tipo": t.get("tipo", "Tarea"),
-                        "fecha": fecha_lim,
-                        "proyecto": nombre,
-                        "cliente": cliente,
-                        "ciudad": ciudad,
-                        "estado": estado,
-                        "id": proy_id,
-                        "descripcion": t.get("titulo", "") or "",
-                    }
-                )
+            f = _parse_fecha(t.get("fecha_limite"))
+            if f:
+                acciones.append({
+                    "tipo": t.get("tipo", "Tarea"),
+                    "fecha": f,
+                    "proyecto": nom,
+                    "cliente": cli,
+                    "ciudad": cdd,
+                    "estado": est,
+                    "descripcion": t.get("titulo", "") or "",
+                })
 
     acciones.sort(key=lambda x: x["fecha"])
     return acciones
 
 
-def _particionar_acciones(acciones: List[Dict[str, Any]]):
+def _particionar(acciones):
     hoy = date.today()
-    en_7 = hoy + timedelta(days=7)
+    en7 = hoy + timedelta(days=7)
+    atras = [x for x in acciones if x["fecha"] < hoy]
+    hoy_l = [x for x in acciones if x["fecha"] == hoy]
+    prox = [x for x in acciones if hoy < x["fecha"] <= en7]
+    return atras, hoy_l, prox
 
-    atrasadas = [x for x in acciones if x["fecha"] < hoy]
-    hoy_list = [x for x in acciones if x["fecha"] == hoy]
-    prox7 = [x for x in acciones if hoy < x["fecha"] <= en_7]
-    return atrasadas, hoy_list, prox7
 
-
-def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
-    st.markdown(
-        f'<div style="font-size:12px;font-weight:600;color:#032D60;margin-bottom:2px;">{titulo}</div>',
-        unsafe_allow_html=True,
-    )
+# -------------------------------
+# RENDER LISTA
+# -------------------------------
+def _render_lista(titulo, acciones):
+    st.markdown(f"""
+        <div style="font-size:12px;font-weight:600;color:#032D60;margin-bottom:3px;">
+            {titulo}
+        </div>
+    """, unsafe_allow_html=True)
 
     if not acciones:
         st.caption("Sin acciones.")
@@ -104,34 +98,34 @@ def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
         fecha = acc["fecha"].strftime("%d/%m/%Y")
         st.markdown(
             f"""
-            <div class="apple-card-light" style="margin-bottom:4px;padding:5px 7px;">
-                <div style="font-size:10px;color:#5A6872;">
-                    {fecha} · <strong>{acc['tipo']}</strong>
+            <div class="apple-card-light" style="margin-bottom:4px;padding:6px 8px;">
+                <div style="font-size:11px;color:#5A6872;">
+                    {fecha} · <strong>{acc["tipo"]}</strong>
                 </div>
-                <div style="font-size:12px;font-weight:600;color:#032D60;margin:0;">
-                    {acc['proyecto']}
+                <div style="font-size:13px;font-weight:600;color:#032D60;">
+                    {acc["proyecto"]}
                 </div>
-                <div style="font-size:10.5px;color:#5A6872;">
-                    {acc['cliente']} · {acc['ciudad']} · {acc['estado']}
+                <div style="font-size:11px;color:#5A6872;">
+                    {acc["cliente"]} · {acc["ciudad"]} · {acc["estado"]}
                 </div>
-                {"<div style='font-size:10px;margin-top:2px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
+                {f"<div style='font-size:10px;margin-top:4px;'>{acc['descripcion']}</div>" if acc["descripcion"] else ""}
             </div>
             """,
-            unsafe_allow_html=True,
+            unsafe_allow_html=True
         )
 
 
-# =====================================================
-# PANEL (DISEÑO ULTRA COMPACTO + TAG GRANDE)
-# =====================================================
+# -------------------------------
+# PÁGINA PANEL
+# -------------------------------
 def render_panel():
+
     inject_apple_style()
 
-    # ===== ESTILOS =====
-    st.markdown(
-        """
+    # --- ESTILOS ---
+    st.markdown("""
         <style>
-        .crm-compact-header {
+        .crm-header {
             display:flex;
             align-items:center;
             justify-content:space-between;
@@ -139,87 +133,59 @@ def render_panel():
             margin-bottom:6px;
             border-bottom:1px solid #d8dde6;
         }
-
-        .crm-compact-title {
-            font-size:15px;
+        .crm-titulo {
+            font-size:16px;
             font-weight:600;
             color:#032D60;
-            margin:0;
-            padding:0;
-            line-height:15px;
         }
-
-        .crm-compact-subtitle {
+        .crm-subtitulo {
             font-size:11px;
             color:#5A6872;
-            margin:0;
-            padding:0;
-            line-height:12px;
+            margin-top:-2px;
         }
-
-        /* ★ TAG GRANDE TIPO SALESFORCE ★ */
         .crm-tag-big {
             font-size:13px;
             font-weight:500;
-            padding:4px 12px;
+            padding:5px 14px;
             border-radius:14px;
             background:#e5f2ff;
             border:1px solid #b7d4f5;
             color:#032D60;
+            height:30px;
             display:flex;
             align-items:center;
-            height:28px;
-        }
-
-        .crm-small-metric .stMetric {
-            padding-top:0 !important;
-            padding-bottom:0 !important;
-            margin-top:-4px;
         }
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-    # ===== CABECERA =====
-    st.markdown(
-        """
-        <div class="crm-compact-header">
+    # --- CABECERA ---
+    st.markdown("""
+        <div class="crm-header">
             <div>
-                <div class="crm-compact-title">Panel</div>
-                <div class="crm-compact-subtitle">Agenda de seguimientos y tareas del día</div>
+                <div class="crm-titulo">Panel</div>
+                <div class="crm-subtitulo">Agenda de seguimientos y tareas del día</div>
             </div>
-
             <div class="crm-tag-big">Vista · Agenda</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-    # ===== DATOS =====
+    # --- DATOS ---
     df = load_proyectos()
-
     if df is None or df.empty:
         st.info("Todavía no hay proyectos.")
         return
 
     acciones = _extraer_acciones(df)
-    atrasadas, hoy_list, prox7 = _particionar_acciones(acciones)
+    atras, hoy_l, prox7 = _particionar(acciones)
 
-    # ===== MÉTRICAS =====
-    st.markdown('<div class="apple-card-light crm-small-metric">', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Acciones", len(acciones))
-    col2.metric("Retrasadas", len(atrasadas))
-    col3.metric("Hoy", len(hoy_list))
+    col2.metric("Retrasadas", len(atras))
+    col3.metric("Hoy", len(hoy_l))
     col4.metric("Próx. 7 días", len(prox7))
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ===== LISTAS =====
     colA, colB, colC = st.columns([1.1, 1, 1])
-    with colA:
-        _render_lista_acciones("📌 Retrasadas", atrasadas)
-    with colB:
-        _render_lista_acciones("📅 Hoy", hoy_list)
-    with colC:
-        _render_lista_acciones("🔜 Próx. 7 días", prox7)
+
+    with colA: _render_lista("📌 Retrasadas", atras)
+    with colB: _render_lista("📅 Hoy", hoy_l)
+    with colC: _render_lista("🔜 Próx. 7 días", prox7)
