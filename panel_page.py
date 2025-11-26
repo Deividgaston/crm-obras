@@ -11,6 +11,10 @@ except Exception:
         pass
 
 
+# =====================================================
+# UTILIDADES FECHAS
+# =====================================================
+
 def _parse_fecha(value) -> date | None:
     if not value:
         return None
@@ -26,6 +30,10 @@ def _parse_fecha(value) -> date | None:
     return None
 
 
+# =====================================================
+# CONSTRUCCIÓN DE AGENDA
+# =====================================================
+
 def _extraer_acciones(df) -> List[Dict[str, Any]]:
     acciones: List[Dict[str, Any]] = []
 
@@ -36,6 +44,7 @@ def _extraer_acciones(df) -> List[Dict[str, Any]]:
         estado = row.get("estado", "Detectado")
         proy_id = row.get("id")
 
+        # Seguimiento
         fecha_seg = _parse_fecha(row.get("fecha_seguimiento"))
         if fecha_seg:
             acciones.append(
@@ -51,6 +60,7 @@ def _extraer_acciones(df) -> List[Dict[str, Any]]:
                 }
             )
 
+        # Tareas
         tareas = row.get("tareas") or []
         for t in tareas:
             if not isinstance(t, dict):
@@ -97,7 +107,7 @@ def _particionar_acciones(acciones: List[Dict[str, Any]]):
 
 def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
     st.markdown(
-        f'<h5 style="color:#032D60;margin:6px 0 4px 0;">{titulo}</h5>',
+        f'<div style="font-size:13px;font-weight:600;color:#032D60;margin:4px 0 2px 0;">{titulo}</div>',
         unsafe_allow_html=True,
     )
 
@@ -109,35 +119,92 @@ def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
         fecha_txt = acc["fecha"].strftime("%d/%m/%Y")
         st.markdown(
             f"""
-            <div class="apple-card-light" style="margin-bottom:8px;">
-                <div style="font-size:12px;color:#5A6872;">
+            <div class="apple-card-light" style="margin-bottom:6px;padding:6px 8px;">
+                <div style="font-size:11px;color:#5A6872;">
                     {fecha_txt} · <strong>{acc['tipo']}</strong>
                 </div>
-                <div style="font-size:13px;font-weight:600;color:#032D60;">
+                <div style="font-size:12.5px;font-weight:600;color:#032D60;">
                     {acc['proyecto']}
                 </div>
-                <div style="font-size:12px;color:#5A6872;">
+                <div style="font-size:11px;color:#5A6872;">
                     {acc['cliente']} · {acc['ciudad']} · Estado: {acc['estado']}
                 </div>
-                {"<div style='font-size:12px;margin-top:3px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
+                {"<div style='font-size:11px;margin-top:2px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
             </div>
             """,
             unsafe_allow_html=True,
         )
 
 
+# =====================================================
+# PANEL (DISEÑO COMPACTO BASE PARA TODAS LAS PÁGINAS)
+# =====================================================
+
 def render_panel():
     inject_apple_style()
 
+    # ===== Estilos extra para diseño compacto reutilizable =====
     st.markdown(
         """
-        <div class="apple-card">
-            <div class="badge">Agenda</div>
-            <h3 style="margin-top:2px; margin-bottom:2px;">Agenda de acciones</h3>
-            <p>
-                Seguimientos y tareas pendientes ordenadas por urgencia. Vista rápida para saber
-                qué hacer hoy, qué está retrasado y qué viene en la semana.
-            </p>
+        <style>
+        .crm-compact-header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:4px 0 6px 0;
+            border-bottom:1px solid #d8dde6;
+            margin-bottom:6px;
+        }
+        .crm-compact-header-left {
+            display:flex;
+            flex-direction:column;
+            gap:0;
+        }
+        .crm-compact-title {
+            font-size:18px;
+            font-weight:600;
+            color:#032D60;
+            margin:0;
+            padding:0;
+        }
+        .crm-compact-subtitle {
+            font-size:11px;
+            color:#5A6872;
+            margin:0;
+            padding:0;
+        }
+        .crm-compact-tag {
+            font-size:11px;
+            padding:2px 8px;
+            border-radius:999px;
+            background:#e5f2ff;
+            color:#032D60;
+            border:1px solid #c5dcf5;
+            white-space:nowrap;
+        }
+        .crm-compact-metrics {
+            margin-bottom:4px;
+        }
+        .crm-compact-metrics .stMetric {
+            padding-top:0;
+            padding-bottom:0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ===== CABECERA COMPACTA =====
+    st.markdown(
+        """
+        <div class="crm-compact-header">
+            <div class="crm-compact-header-left">
+                <div class="crm-compact-title">Panel</div>
+                <div class="crm-compact-subtitle">
+                    Agenda de seguimientos y tareas · vista rápida de qué hacer hoy.
+                </div>
+            </div>
+            <div class="crm-compact-tag">Vista · Agenda</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -157,25 +224,29 @@ def render_panel():
     total_hoy = len(hoy_list)
     total_prox7 = len(prox7)
 
-    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown(
-        '<h4 style="color:#032D60;margin:0 0 6px 0;">Resumen rápido</h4>',
-        unsafe_allow_html=True,
-    )
-
+    # ===== MÉTRICAS MUY COMPACTAS =====
+    st.markdown('<div class="apple-card-light crm-compact-metrics">', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total acciones", total_acc)
+    col1.metric("Acciones", total_acc)
     col2.metric("Retrasadas", total_atrasadas)
     col3.metric("Hoy", total_hoy)
     col4.metric("Próx. 7 días", total_prox7)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<hr style='margin:8px 0 10px 0;border-color:#d8dde6;'>", unsafe_allow_html=True)
+    # ===== LISTAS EN TRES COLUMNAS (COMPACTO) =====
+    st.markdown(
+        "<div style='margin-top:4px;'>",
+        unsafe_allow_html=True,
+    )
 
-    col_a, col_b, col_c = st.columns([1.2, 1, 1])
+    col_a, col_b, col_c = st.columns([1.1, 1, 1])
+
     with col_a:
         _render_lista_acciones("📌 Retrasadas", atrasadas)
+
     with col_b:
         _render_lista_acciones("📅 Hoy", hoy_list)
+
     with col_c:
         _render_lista_acciones("🔜 Próximos 7 días", prox7)
 
