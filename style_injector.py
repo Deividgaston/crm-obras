@@ -3,7 +3,7 @@ import streamlit as st
 
 def inject_apple_style():
     """
-    Inyecta el estilo global del CRM (look más tipo Salesforce, compacto).
+    Inyecta el estilo global del CRM (look tipo Salesforce, compacto, azul/blanco).
     Usa un flag de session_state para inyectarlo solo una vez.
     """
     if st.session_state.get("crm_style_injected"):
@@ -14,43 +14,44 @@ def inject_apple_style():
     style = """
     <style>
     /* ============================
-       TIPOGRAFÍA + BASE
+       BASE GLOBAL
     ============================ */
     html, body, [class*="css"] {
         font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-        font-size: 13px !important;              /* Más pequeño, estilo CRM */
-        background: #f4f5f7 !important;          /* Gris claro tipo Salesforce */
-        color: #1f2933 !important;
+        font-size: 13px !important;
+        background: #f5f7ff !important;          /* Blanco azulado */
+        color: #1e293b !important;               /* Azul grisáceo, no negro */
     }
 
-    /* CONTENEDOR PRINCIPAL */
+    /* CONTENEDOR PRINCIPAL CENTRADO Y ESTRECHO */
     .block-container {
-        padding-top: 0.8rem;
+        padding-top: 0.6rem;
         padding-bottom: 1.5rem;
-        max-width: 1400px;
+        max-width: 1200px;                       /* Más estrecho */
+        margin: 0 auto;                          /* Centrado */
     }
 
     /* ============================
-       TOP BAR (la usaremos desde app.py)
+       TOP BAR (app.py)
     ============================ */
     .crm-topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0.35rem 0.6rem 0.35rem 0;
-        border-bottom: 1px solid #d0d4dc;
-        margin-bottom: 0.6rem;
+        padding: 0.30rem 0.2rem 0.30rem 0;
+        border-bottom: 1px solid #c7d2fe;
+        margin-bottom: 0.4rem;
     }
 
     .crm-topbar-title {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 600;
-        color: #1f2933;
+        color: #1d4ed8; /* Azul principal */
     }
 
     .crm-topbar-subtitle {
         font-size: 0.78rem;
-        color: #6b7b93;
+        color: #64748b;
     }
 
     .crm-topbar-nav {
@@ -60,19 +61,19 @@ def inject_apple_style():
     }
 
     .crm-nav-pill {
-        padding: 0.25rem 0.7rem;
+        padding: 0.20rem 0.7rem;
         border-radius: 999px;
         font-size: 0.8rem;
         border: 1px solid transparent;
         background: transparent;
-        color: #374151;
+        color: #334155;
         cursor: pointer;
         transition: background 0.15s ease, border-color 0.15s ease;
     }
 
     .crm-nav-pill:hover {
-        background: #e5e7eb;
-        border-color: #cbd2e1;
+        background: #e0ecff;
+        border-color: #bfdbfe;
     }
 
     .crm-nav-pill-active {
@@ -82,54 +83,51 @@ def inject_apple_style():
     }
 
     /* ============================
-       CARDS (reutilizamos clases existentes pero compactas)
+       CARDS COMPACTAS
     ============================ */
 
-    .apple-card {
-        background: #ffffff;
-        border-radius: 6px;
-        padding: 0.6rem 0.75rem;
-        border: 1px solid #d0d4dc;
-        margin-bottom: 0.5rem;
-    }
-
+    .apple-card,
     .apple-card-light {
         background: #ffffff;
         border-radius: 6px;
-        padding: 0.6rem 0.75rem;
-        border: 1px solid #e1e4eb;
-        margin-bottom: 0.6rem;
+        padding: 0.55rem 0.7rem;
+        border: 1px solid #dbe3ff;
+        margin-bottom: 0.5rem;
+    }
+
+    .apple-card {
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     }
 
     .badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.1rem 0.45rem;
+        padding: 0.06rem 0.45rem;
         border-radius: 999px;
-        background: #eef2ff;
-        color: #4b6cb7;
+        background: #e0ecff;
+        color: #1d4ed8;
         font-size: 0.68rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         margin-bottom: 0.15rem;
     }
 
-    /* Títulos y textos compactos */
     .apple-card h1,
     .apple-card h2,
     .apple-card h3,
     .apple-card-light h1,
     .apple-card-light h2,
     .apple-card-light h3 {
-        font-size: 1rem;
-        margin: 0 0 0.15rem 0;
+        font-size: 0.98rem;
+        margin: 0 0 0.12rem 0;
+        color: #0f172a;
     }
 
     .apple-card p,
     .apple-card-light p {
         font-size: 0.8rem;
         margin: 0;
-        color: #6b7b93;
+        color: #6b7280;
     }
 
     /* ============================
@@ -137,48 +135,51 @@ def inject_apple_style():
     ============================ */
     .metric-row {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.45rem;
         flex-wrap: wrap;
+        justify-content: center;
     }
 
     .metric-card {
-        flex: 1 1 0;
-        min-width: 140px;
+        flex: 0 0 auto;
+        min-width: 120px;
         background: #ffffff;
         border-radius: 6px;
-        border: 1px solid #d9dde8;
-        padding: 0.4rem 0.55rem;
+        border: 1px solid #c7d2fe;
+        padding: 0.35rem 0.55rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     }
 
     .metric-title {
-        font-size: 0.72rem;
-        color: #6b7b93;
+        font-size: 0.7rem;
+        color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        margin-bottom: 0.1rem;
+        margin-bottom: 0.05rem;
     }
 
     .metric-value {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         font-weight: 600;
-        color: #111827;
+        color: #1e293b;
         line-height: 1.2;
+        text-align: left;
     }
 
     /* ============================
-       LISTAS / PILLS / DETALLES
+       LISTAS / PILLS / ITEMS
     ============================ */
     .next-item {
-        padding: 0.35rem 0.45rem;
+        padding: 0.32rem 0.5rem;
         border-radius: 4px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e5edff;
         background: #ffffff;
-        margin-bottom: 0.35rem;
+        margin-bottom: 0.3rem;
     }
 
     .next-item small {
-        font-size: 0.76rem;
-        color: #6b7b93;
+        font-size: 0.75rem;
+        color: #6b7280;
     }
 
     .pill {
@@ -204,13 +205,13 @@ def inject_apple_style():
     }
 
     .pill-slate {
-        background: #e5e7eb;
-        color: #374151;
-        border-color: #d1d5db;
+        background: #e5edff;
+        color: #1d4ed8;
+        border-color: #c7d2fe;
     }
 
     /* ============================
-       TABLAS (más densas)
+       TABLAS MÁS DENSAS
     ============================ */
     .stDataFrame table,
     .stDataFrame tbody,
