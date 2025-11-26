@@ -13,26 +13,35 @@ except Exception:
 
 
 def app():
-    # ======================================================
-    # CONFIG
-    # ======================================================
+    # ==========================
+    # CONFIG BÁSICA
+    # ==========================
     st.set_page_config(
         page_title="CRM Prescripción 2N",
         layout="wide",
-        page_icon="🏗️"
+        page_icon="🏗️",
     )
 
     inject_apple_style()
 
-    # ======================================================
-    # TOPBAR SALESFORCE (sin JS, navegación 100% estable)
-    # ======================================================
+    # ==========================
+    # ESTILO GLOBAL CLARO
+    # ==========================
     st.markdown(
         """
         <style>
+        /* Fondo general claro tipo Salesforce */
+        .stApp {
+            background-color: #f4f6f9 !important;
+        }
+        .block-container {
+            padding-top: 0.5rem;
+        }
+
+        /* TOPBAR */
         .topbar{
             width:100%;
-            background:white;
+            background:#ffffff;
             border-bottom:1px solid #d8dde6;
             padding:6px 18px 6px 18px;
             display:flex;
@@ -50,32 +59,71 @@ def app():
             color:#5A6872;
             margin-top:-4px;
         }
-        </style>
 
+        /* TOOLBAR HORIZONTAL (radio disfrazado de botones) */
+        div[data-baseweb="radio"] > div {
+            display:flex !important;
+            gap:8px;
+            flex-wrap:wrap;
+        }
+        div[data-baseweb="radio"] label {
+            background:#ffffff;
+            border:1px solid #d8dde6;
+            border-radius:4px;
+            padding:4px 10px;
+            font-size:13px;
+            font-weight:500;
+            color:#032D60;
+            cursor:pointer;
+        }
+        /* Oculta el circulito del radio */
+        div[data-baseweb="radio"] input {
+            display:none;
+        }
+        /* Estado activo */
+        div[data-baseweb="radio"] input:checked + div {
+            background:#e5f1fb !important;
+            border-color:#1b96ff !important;
+            color:#032D60 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ==========================
+    # TOPBAR
+    # ==========================
+    st.markdown(
+        """
         <div class="topbar">
             <div>
                 <div class="topbar-title">CRM Prescripción 2N</div>
-                <div class="topbar-sub">Pipeline · Scouting · Seguimiento · Dashboard</div>
+                <div class="topbar-sub">Panel · Proyectos · Scouting · Dashboard</div>
             </div>
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
-    # ======================================================
-    # NAVEGACIÓN NUEVA (100% fiable)
-    # ======================================================
-    menu = st.radio(
-        "",
-        ["Panel", "Proyectos", "Buscar", "Dashboard"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="nav_radio"
-    )
+    # ==========================
+    # TOOLBAR SECCIONES
+    # ==========================
+    col_toolbar = st.container()
+    with col_toolbar:
+        menu = st.radio(
+            "Secciones",
+            ["Panel", "Proyectos", "Buscar", "Dashboard"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="nav_toolbar",
+        )
 
-    # ======================================================
+    st.write("")  # pequeño espacio
+
+    # ==========================
     # ROUTING
-    # ======================================================
+    # ==========================
     if menu == "Panel":
         render_panel()
     elif menu == "Proyectos":
