@@ -5,35 +5,13 @@ from typing import Tuple, List
 import pandas as pd
 import streamlit as st
 
-from crm_utils import (
-    get_proyectos,
-    get_clientes,
-    filtrar_obras_importantes,
-)
+from data_cache import load_proyectos
 
 try:
     from style_injector import inject_apple_style
 except Exception:
     def inject_apple_style():
         pass
-
-
-# =====================================================
-# CARGA CACHÉ FIREBASE
-# =====================================================
-
-@st.cache_data(show_spinner=False)
-def load_proyectos() -> pd.DataFrame | None:
-    return get_proyectos()
-
-
-@st.cache_data(show_spinner=False)
-def load_clientes() -> pd.DataFrame | None:
-    return get_clientes()
-
-
-def invalidate_proyectos_cache():
-    load_proyectos.clear()
 
 
 def _parse_date(value):
@@ -50,10 +28,6 @@ def _parse_date(value):
             return None
     return None
 
-
-# =====================================================
-# TABLA RESULTADOS (HTML propia, estilo crm-table)
-# =====================================================
 
 def _render_result_table(df: pd.DataFrame, caption: str = ""):
     if caption:
@@ -97,10 +71,6 @@ def _render_result_table(df: pd.DataFrame, caption: str = ""):
     )
     st.markdown(html_tabla, unsafe_allow_html=True)
 
-
-# =====================================================
-# BÚSQUEDA POR FILTROS
-# =====================================================
 
 def _buscar_por_filtros(df: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -148,7 +118,6 @@ def _buscar_por_filtros(df: pd.DataFrame):
         )
         estado_sel = st.selectbox("Estado / Seguimiento", ["Todos"] + estados)
 
-    # Filtros extra
     col5, col6 = st.columns(2)
     with col5:
         promotores = (
@@ -187,17 +156,8 @@ def _buscar_por_filtros(df: pd.DataFrame):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# =====================================================
-# BÚSQUEDA POR PROMPT
-# =====================================================
-
 def _extraer_umbral_potencial(prompt: str) -> float | None:
-    """
-    Busca expresiones tipo ' > 300k', 'más de 500000', 'potencial 200k', etc.
-    Devuelve umbral en euros.
-    """
     text = prompt.lower().replace(".", "")
-    # patrones: 500k, 500000, 1m, 1.2m
     match = re.search(r"(\d+)\s*(k|m|millones)?", text)
     if not match:
         return None
@@ -211,10 +171,6 @@ def _extraer_umbral_potencial(prompt: str) -> float | None:
 
 
 def _match_valor(text_prompt: str, valores: List[str]) -> str | None:
-    """
-    Devuelve el primer valor de la lista que aparece (como substring case-insensitive)
-    en el prompt.
-    """
     text = text_prompt.lower()
     for v in valores:
         if not isinstance(v, str):
@@ -244,37 +200,30 @@ def _normalizar_estado(prompt: str) -> str | None:
 
 
 def _filtrar_por_prompt(df: pd.DataFrame, prompt: str) -> Tuple[pd.DataFrame, List[str]]:
-    """
-    Heurística sencilla para traducir el prompt a filtros.
-    """
     explicacion: List[str] = []
     df_f = df.copy()
     p = prompt.strip()
     if not p:
         return df_f, explicacion
 
-    # Ciudad
     if "ciudad" in df_f.columns:
         ciudad = _match_valor(p, df_f["ciudad"].dropna().unique().tolist())
         if ciudad:
             df_f = df_f[df_f["ciudad"] == ciudad]
             explicacion.append(f"Ciudad = **{ciudad}**")
 
-    # Provincia
     if "provincia" in df_f.columns:
         prov = _match_valor(p, df_f["provincia"].dropna().unique().tolist())
         if prov and not df_f.empty:
             df_f = df_f[df_f["provincia"] == prov]
             explicacion.append(f"Provincia = **{prov}**")
 
-    # Tipo de proyecto
     if "tipo_proyecto" in df_f.columns:
         tipo = _match_valor(p, df_f["tipo_proyecto"].dropna().unique().tolist())
         if tipo and not df_f.empty:
             df_f = df_f[df_f["tipo_proyecto"] == tipo]
             explicacion.append(f"Tipo de proyecto = **{tipo}**")
 
-    # Prioridad
     if "prioridad" in df_f.columns:
         for key, valor in [("alta", "Alta"), ("media", "Media"), ("baja", "Baja")]:
             if key in p and valor in df_f["prioridad"].unique().tolist():
@@ -282,21 +231,18 @@ def _filtrar_por_prompt(df: pd.DataFrame, prompt: str) -> Tuple[pd.DataFrame, Li
                 explicacion.append(f"Prioridad = **{valor}**")
                 break
 
-    # Estado
     if "estado" in df_f.columns:
         est = _normalizar_estado(p)
         if est and est in df_f["estado"].unique().tolist():
             df_f = df_f[df_f["estado"] == est]
             explicacion.append(f"Estado = **{est}**")
 
-    # Promotor
     if "cliente_principal" in df_f.columns:
         prom = _match_valor(p, df_f["cliente_principal"].dropna().unique().tolist())
         if prom and not df_f.empty:
             df_f = df_f[df_f["cliente_principal"] == prom]
             explicacion.append(f"Cliente principal = **{prom}**")
 
-    # Potencial mínimo
     if "potencial_eur" in df_f.columns:
         umbral = _extraer_umbral_potencial(p)
         if umbral:
@@ -354,10 +300,6 @@ def _buscar_por_prompt(df: pd.DataFrame):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# =====================================================
-# PÁGINA PRINCIPAL
-# =====================================================
 
 def render_buscar():
     inject_apple_style()
