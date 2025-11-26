@@ -28,29 +28,36 @@ def app():
         page_icon="🏗️",
     )
 
-    # === Estilo global compactado ===
-    st.markdown("""
+    # === Estilo global ultra-compacto ===
+    st.markdown(
+        """
         <style>
             #MainMenu, header, footer {visibility: hidden;}
 
             html, body, * { user-select:text !important; }
 
-            /* Ultra compact spacing */
+            /* Quitar casi todo el padding superior del contenido */
             .block-container {
-                padding-top: 1px !important;
+                padding-top: 0.2rem !important;
             }
 
-            /* Botones navegación */
+            /* Reducir separación vertical entre bloques de Streamlit */
+            div[data-testid="stVerticalBlock"] {
+                row-gap: 0.15rem !important;
+            }
+
+            /* Botones navegación compactos */
             .stButton > button {
                 border-radius: 8px;
                 height: 34px !important;
                 font-size: 14px !important;
                 padding: 3px 10px !important;
+                margin: 0 !important;
             }
-
-            .nav-gap { height: 2px; margin:0; padding:0; }
         </style>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
     inject_apple_style()
 
@@ -58,14 +65,17 @@ def app():
         st.session_state["page"] = "panel"
 
     # === Título DGO Insight ===
-    st.markdown("""
+    st.markdown(
+        """
         <div style="font-size:22px;font-weight:700;color:#032D60;margin-bottom:2px;">
             DGO Insight
         </div>
-        <div style="font-size:12px;color:#5A6872;margin-bottom:6px;">
+        <div style="font-size:12px;color:#5A6872;margin-bottom:4px;">
             Herramienta interna para seguimiento de prescripción y pipeline de obras.
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
     # === Botones de navegación ===
     cols = st.columns(len(PAGES))
@@ -77,10 +87,7 @@ def app():
                 st.session_state["page"] = key
                 st.rerun()
 
-    # Pequeñísimo hueco (2px)
-    st.markdown("<div class='nav-gap'></div>", unsafe_allow_html=True)
-
-    # === Cargar página seleccionada ===
+    # (sin nav-gap: pegamos directamente el contenido)
     _, renderer = PAGES[st.session_state["page"]]
     renderer()
 
