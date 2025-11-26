@@ -4,8 +4,6 @@ import altair as alt
 from datetime import date, datetime, timedelta
 
 from crm_utils import (
-    get_clientes,
-    get_proyectos,
     add_proyecto,
     actualizar_proyecto,
     delete_proyecto,
@@ -15,38 +13,19 @@ from crm_utils import (
     generar_excel_obras_importantes,
 )
 
+from data_cache import (
+    load_clientes,
+    load_proyectos,
+    invalidate_clientes_cache,
+    invalidate_proyectos_cache,
+)
+
 try:
     from style_injector import inject_apple_style
 except Exception:
     def inject_apple_style():
         pass
 
-
-# =====================================================
-# CACHÉ FIREBASE
-# =====================================================
-
-@st.cache_data(show_spinner=False)
-def load_proyectos() -> pd.DataFrame | None:
-    return get_proyectos()
-
-
-@st.cache_data(show_spinner=False)
-def load_clientes() -> pd.DataFrame | None:
-    return get_clientes()
-
-
-def invalidate_proyectos_cache():
-    load_proyectos.clear()
-
-
-def invalidate_clientes_cache():
-    load_clientes.clear()
-
-
-# =====================================================
-# UTILS
-# =====================================================
 
 def _parse_fecha_iso(valor):
     if not valor:
@@ -293,7 +272,6 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
         st.info("No hay proyectos con los filtros actuales.")
         return
 
-    # -------- Tabla propia HTML (crm-table) --------
     columnas = [
         "nombre_obra",
         "cliente_principal",
@@ -326,7 +304,6 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
     )
     st.markdown(html_tabla, unsafe_allow_html=True)
 
-    # -------- Selector para acciones --------
     opciones = {}
     for _, row in df_filtrado.iterrows():
         etiqueta = f"{row.get('nombre_obra', 'Sin nombre')} — {row.get('ciudad', '—')} ({row.get('cliente_principal', '—')})"
@@ -422,7 +399,7 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
         )
 
     with col2:
-        if st.button("⏰ Posponer 1 semana") and seleccion != "(ninguna)":
+        if st.button("⏰ Posponer 1 semana") and seleccion != "(ninguno)":
             proy_id = opciones[seleccion]
             nueva_fecha = (hoy + timedelta(days=7)).isoformat()
             try:
@@ -445,6 +422,8 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
     for _, row in df_filtrado.iterrows():
         tareas = row.get("tareas") or []
         for t in tareas:
+            if not isinstance(t, dict):
+                continue
             fecha_lim = _parse_fecha_iso(t.get("fecha_limite"))
             registros.append(
                 {
@@ -474,10 +453,6 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
         use_container_width=True,
     )
 
-
-# =====================================================
-# KANBAN PIPELINE
-# =====================================================
 
 ESTADOS_PIPELINE = [
     "Detectado",
@@ -568,10 +543,6 @@ def _vista_kanban(df_filtrado: pd.DataFrame):
                 )
 
 
-# =====================================================
-# VISTA GENERAL
-# =====================================================
-
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown(
@@ -607,10 +578,6 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# =====================================================
-# RESTO DE PESTAÑAS (igual que antes)
-# =====================================================
 
 def _render_dashboard(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -855,15 +822,12 @@ def _render_alta_manual():
                 }
             )
             invalidate_proyectos_cache()
+            invalidate_clientes_cache()
             st.success("Proyecto creado correctamente.")
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# =====================================================
-# PÁGINA PRINCIPAL
-# =====================================================
 
 def render_proyectos():
     inject_apple_style()
