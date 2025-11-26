@@ -1,6 +1,6 @@
 import streamlit as st
-import altair as alt
 import pandas as pd
+import altair as alt
 
 try:
     from style_injector import inject_apple_style
@@ -27,7 +27,7 @@ def render_dashboard() -> None:
     # ===========================
     st.markdown("### Dashboard de prescripción")
     st.caption(
-        "Resumen de proyectos, concentración por empresa y distribución geográfica."
+        "Resumen de pipeline, concentración por empresa y distribución geográfica."
     )
 
     # ===========================
@@ -49,27 +49,25 @@ def render_dashboard() -> None:
     # ===========================
     kpis = compute_kpis(df)
 
-    kpi_container = st.container()
-    with kpi_container:
-        col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
-        with col1:
-            st.metric("Proyectos totales", int(kpis.get("total_proyectos", 0)))
+    with col1:
+        st.metric("Proyectos totales", int(kpis.get("total_proyectos", 0)))
 
-        with col2:
-            st.metric("Activos", int(kpis.get("proyectos_activos", 0)))
+    with col2:
+        st.metric("Activos", int(kpis.get("proyectos_activos", 0)))
 
-        with col3:
-            total_pot = float(kpis.get("total_potencial", 0.0))
-            st.metric("Potencial total (€)", f"{total_pot:,.0f}")
+    with col3:
+        total_pot = float(kpis.get("total_potencial", 0.0))
+        st.metric("Potencial total (€)", f"{total_pot:,.0f}")
 
-        with col4:
-            ticket_medio = float(kpis.get("ticket_medio", 0.0))
-            st.metric("Ticket medio (€)", f"{ticket_medio:,.0f}")
+    with col4:
+        ticket_medio = float(kpis.get("ticket_medio", 0.0))
+        st.metric("Ticket medio (€)", f"{ticket_medio:,.0f}")
 
-        with col5:
-            ratio = float(kpis.get("ratio_ganados", 0.0))
-            st.metric("Ratio ganados (%)", f"{ratio:.1f}%")
+    with col5:
+        ratio = float(kpis.get("ratio_ganados", 0.0))
+        st.metric("Ratio ganados (%)", f"{ratio:.1f}%")
 
     st.markdown("---")
 
@@ -111,7 +109,9 @@ def render_dashboard() -> None:
                 .mark_arc(outerRadius=90, innerRadius=40)
                 .encode(
                     theta=alt.Theta("proyectos:Q", stack=True),
-                    color=alt.Color("prioridad:N", legend=alt.Legend(title="Prioridad")),
+                    color=alt.Color(
+                        "prioridad:N", legend=alt.Legend(title="Prioridad")
+                    ),
                     tooltip=[
                         alt.Tooltip("prioridad:N", title="Prioridad"),
                         alt.Tooltip("proyectos:Q", title="Proyectos"),
@@ -120,8 +120,7 @@ def render_dashboard() -> None:
                 .properties(height=260)
             )
             st.altair_chart(chart_prio, use_container_width=True)
-
-            st.caption("Proyectos por prioridad")
+            st.caption("Reparto de proyectos por prioridad.")
         else:
             st.caption("Sin datos de prioridad.")
 
