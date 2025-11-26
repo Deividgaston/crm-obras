@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, datetime, timedelta
 
-from crm_utils import get_clientes, get_proyectos
+from crm_utils import get_proyectos
 
 try:
     from style_injector import inject_apple_style
@@ -11,227 +11,228 @@ except Exception:
         pass
 
 
-# ============================
+# ==========================
+# CARGA DATOS (cache)
+# ==========================
+
+@st.cache_data(show_spinner=False)
+def load_proyectos() -> pd.DataFrame | None:
+    return get_proyectos()
+
+
+# ==========================
 # HELPERS
-# ============================
+# ==========================
 
-def _to_df(data):
-    if data is None:
-        return pd.DataFrame()
-    if isinstance(data, pd.DataFrame):
-        return data.copy()
-    if isinstance(data, (list, tuple)) and not data:
-        return pd.DataFrame()
-    return pd.DataFrame(data)
-
-
-def _parse_fecha(v):
-    if not v:
+def _parse_fecha_iso(valor):
+    if not valor:
         return None
-    if isinstance(v, date) and not isinstance(v, datetime):
-        return v
-    if isinstance(v, datetime):
-        return v.date()
-    if isinstance(v, str):
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d"):
-            try:
-                return datetime.strptime(v, fmt).date()
-            except Exception:
-                continue
+    if isinstance(valor, date) and not isinstance(valor, datetime):
+        return valor
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, str):
+        try:
+            return datetime.fromisoformat(valor).date()
+        except Exception:
+            return None
     return None
 
 
-def _fecha_txt(f: date | None):
-    if not f:
-        return "—"
-    h = date.today()
-    if f == h:
+def _relativo(fecha: date, hoy: date) -> str:
+    delta = (fecha - hoy).days
+    if delta == 0:
         return "Hoy"
-    if f == h + timedelta(days=1):
-        return "Mañana"
-    if f == h - timedelta(days=1):
+    if delta == -1:
         return "Ayer"
-    return f.strftime("%d/%m/%Y")
+    if delta == 1:
+        return "Mañana"
+    if delta < -1:
+        return f"Hace {abs(delta)} días"
+    return f"En {delta} días"
 
 
-# ============================
-# PANEL / AGENDA (SLDS)
-# ============================
+# ==========================
+# PANEL PRINCIPAL
+# ==========================
 
 def render_panel():
     inject_apple_style()
 
-    # ---------------------------------
-    # CABECERA TIPO SALESFORCE
-    # ---------------------------------
+    # CABECERA
     st.markdown(
         """
         <div class="apple-card">
             <div class="badge">Agenda</div>
-            <h3 style="margin-top:2px; margin-bottom:2px;">Agenda de acciones</h3>
-            <p>
-                Seguimientos y tareas pendientes ordenadas por urgencia. 
-                Vista rápida para saber qué hacer hoy, qué está retrasado y qué viene en la semana.
+            <h3 style="margin-top:4px; margin-bottom:4px;">Agenda de acciones</h3>
+            <p style="margin-bottom:0;">
+                Seguimientos y tareas pendientes ordenadas por urgencia. Vista rápida para saber
+                qué hacer hoy, qué está retrasado y qué viene en la semana.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ---------------------------------
-    # CARGA DE DATOS
-    # ---------------------------------
-    try:
-        clientes_raw = get_clientes()
-        proyectos_raw = get_proyectos()
-    except Exception as e:
-        st.error("Error cargando datos desde Firestore.")
-        st.code(str(e))
+    df = load_proyectos()
+
+    if df is None or df.empty:
+        st.info("Todavía no hay proyectos en el CRM para generar la agenda.")
         return
 
-    df_clientes = _to_df(clientes_raw)
-    df_proyectos = _to_df(proyectos_raw)
+    hoy = date.today()
 
     acciones = []
-    hoy = date.today()
-    en_7 = hoy + timedelta(days=7)
+    for _, row in df.iterrows():
+        fecha_seg = _parse_fecha_iso(row.get("fecha_seguimiento"))
+        if not fecha_seg:
+            continue
 
-    # ---------------------------------
-    # SEGUIMIENTOS POR PROYECTO
-    # ---------------------------------
-    if not df_proyectos.empty:
-        for _, r in df_proyectos.iterrows():
-            fecha_seg = _parse_fecha(r.get("fecha_seguimiento"))
-            if fecha_seg:
-                acciones.append({
-                    "tipo": "Seguimiento",
-                    "proyecto": r.get("nombre_obra", "Sin nombre"),
-                    "cliente": r.get("cliente_principal", "—"),
-                    "ciudad": r.get("ciudad", "—"),
-                    "provincia": r.get("provincia", "—"),
-                    "fecha": fecha_seg,
-                    "prioridad": r.get("prioridad", "Media"),
-                })
-
-    # ---------------------------------
-    # TAREAS DE CADA PROYECTO
-    # ---------------------------------
-    if "tareas" in df_proyectos.columns:
-        for _, r in df_proyectos.iterrows():
-            tareas = r.get("tareas") or []
-            for t in tareas:
-                if t.get("completado"):
-                    continue
-                fecha_lim = _parse_fecha(t.get("fecha_limite"))
-                if not fecha_lim:
-                    continue
-
-                acciones.append({
-                    "tipo": t.get("tipo", "Tarea"),
-                    "proyecto": r.get("nombre_obra", "Sin nombre"),
-                    "cliente": r.get("cliente_principal", "—"),
-                    "ciudad": r.get("ciudad", "—"),
-                    "provincia": r.get("provincia", "—"),
-                    "fecha": fecha_lim,
-                    "prioridad": r.get("prioridad", "Media"),
-                })
+        acciones.append(
+            {
+                "fecha": fecha_seg,
+                "proyecto": row.get("nombre_obra", "Sin nombre"),
+                "cliente": row.get("cliente_principal", "—"),
+                "ciudad": row.get("ciudad", "—"),
+                "provincia": row.get("provincia", "—"),
+                "tipo": "Seguimiento",
+            }
+        )
 
     if not acciones:
-        st.info("No hay acciones pendientes en la agenda.")
+        st.info("No hay acciones de seguimiento planificadas.")
         return
 
-    df_acc = pd.DataFrame(acciones).sort_values("fecha")
+    df_acc = pd.DataFrame(acciones)
 
-    # ---------------------------------
-    # KPIs TIPO SUMMARY PANEL SF
-    # ---------------------------------
-    retrasadas = df_acc[df_acc["fecha"] < hoy]
-    hoy_df = df_acc[df_acc["fecha"] == hoy]
-    semana = df_acc[(df_acc["fecha"] > hoy) & (df_acc["fecha"] <= en_7)]
+    atrasadas = df_acc[df_acc["fecha"] < hoy].sort_values("fecha")
+    hoy_df = df_acc[df_acc["fecha"] == hoy].sort_values("fecha")
+    prox7 = df_acc[(df_acc["fecha"] > hoy) & (df_acc["fecha"] <= hoy + timedelta(days=7))].sort_values("fecha")
 
+    total_acciones = len(df_acc)
+    num_retrasadas = len(atrasadas)
+    num_hoy = len(hoy_df)
+    num_prox7 = len(prox7)
+
+    # =====================================
+    # KPIs
+    # =====================================
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
+
+    c1.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-title">Total acciones</div>
+            <div class="metric-value">{total_acciones}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    c2.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-title">Retrasadas</div>
+            <div class="metric-value">{num_retrasadas}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    c3.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-title">Hoy</div>
+            <div class="metric-value">{num_hoy}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    c4.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-title">Próx. 7 días</div>
+            <div class="metric-value">{num_prox7}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    # =====================================
+    # LISTAS POR COLUMNA
+    # =====================================
+    col_r, col_h, col_p = st.columns(3)
+
+    # --- Retrasadas ---
+    with col_r:
         st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-title">Total acciones</div>
-                <div class="metric-value">{len(df_acc)}</div>
+            """
+            <div style="font-size:13px; font-weight:600; color:#C23934; margin-bottom:4px;">
+                🔁 Retrasadas
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with c2:
+        if atrasadas.empty:
+            st.caption("Sin acciones.")
+        else:
+            for _, a in atrasadas.iterrows():
+                _render_action_card(a, hoy)
+
+    # --- Hoy ---
+    with col_h:
         st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-title">Retrasadas</div>
-                <div class="metric-value">{len(retrasadas)}</div>
+            """
+            <div style="font-size:13px; font-weight:600; color:#032D60; margin-bottom:4px;">
+                📍 Hoy
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with c3:
+        if hoy_df.empty:
+            st.caption("Sin acciones.")
+        else:
+            for _, a in hoy_df.iterrows():
+                _render_action_card(a, hoy)
+
+    # --- Próximos 7 días ---
+    with col_p:
         st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-title">Hoy</div>
-                <div class="metric-value">{len(hoy_df)}</div>
+            """
+            <div style="font-size:13px; font-weight:600; color:#032D60; margin-bottom:4px;">
+                📅 Próximos 7 días
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with c4:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-title">Próx. 7 días</div>
-                <div class="metric-value">{len(semana)}</div>
+        if prox7.empty:
+            st.caption("Sin acciones.")
+        else:
+            for _, a in prox7.iterrows():
+                _render_action_card(a, hoy)
+
+
+def _render_action_card(a: pd.Series, hoy: date):
+    fecha = a["fecha"]
+    proyecto = a["proyecto"]
+    cliente = a["cliente"]
+    ciudad = a["ciudad"]
+    provincia = a["provincia"]
+    relativo = _relativo(fecha, hoy)
+
+    st.markdown(
+        f"""
+        <div class="apple-card-light" style="margin-bottom:8px;">
+            <div style="font-size:12px; font-weight:600; color:#032D60;">
+                {relativo} · Seguimiento
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("")
-
-    # ---------------------------------
-    # LISTADO TIPO "LIGHTNING LAYOUT"
-    # ---------------------------------
-    col_late, col_today, col_week = st.columns(3)
-
-    def _render_list(col, titulo, icono, df):
-        with col:
-            st.markdown(
-                f"""
-                <div style="margin-bottom:4px;">
-                    <span style="font-size:13px; font-weight:600; color:#032D60;">
-                        {icono} {titulo}
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            if df.empty:
-                st.caption("Sin acciones.")
-                return
-
-            for _, row in df.iterrows():
-                st.markdown(
-                    f"""
-                    <div class="next-item">
-                        <div style="font-size:13px; margin-bottom:2px;">
-                            <strong>{_fecha_txt(row['fecha'])}</strong>
-                            &nbsp;·&nbsp; {row['tipo']}
-                        </div>
-                        <div style="font-size:12px;">
-                            {row['proyecto']} – {row['cliente']}
-                            <span style="color:#5A6872;">({row['ciudad']})</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-    _render_list(col_late, "Retrasadas", "⏰", retrasadas)
-    _render_list(col_today, "Hoy", "📍", hoy_df)
-    _render_list(col_week, "Próximos 7 días", "📅", semana)
+            <div style="font-size:12px; margin-top:2px;">
+                {proyecto}
+            </div>
+            <div style="font-size:11.5px; color:#5A6872; margin-top:2px;">
+                {cliente} — {ciudad} ({provincia})
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
