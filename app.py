@@ -19,6 +19,8 @@ PAGES = {
     "dashboard": ("Dashboard", render_dashboard),
 }
 
+LOGO_PATH = "Logo Dgo insight.png"  # archivo junto a app.py
+
 
 def app():
     st.set_page_config(
@@ -56,16 +58,21 @@ def app():
         st.session_state["page"] = "panel"
 
     # ===============================
-    #   CABECERA CON TU LOGO
+    #   CABECERA CON LOGO
     # ===============================
     st.markdown(
-        """
-        <div style="display:flex;align-items:center;margin-bottom:10px;">
-        """,
+        "<div style='display:flex;align-items:center;margin-bottom:10px;'>",
         unsafe_allow_html=True,
     )
 
-    st.image("/mnt/data/Logo Dgo insight.png", width=240)
+    # Intentar mostrar el logo; si falla, mostrar texto
+    try:
+        st.image(LOGO_PATH, width=240)
+    except Exception:
+        st.markdown(
+            "<div style='font-size:22px;font-weight:700;color:#032D60;'>DGO Insight</div>",
+            unsafe_allow_html=True,
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -90,6 +97,3 @@ def app():
 
 if __name__ == "__main__":
     app()
-
-
-
