@@ -261,7 +261,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 # =====================================================
 
 def _vista_tabla(df_filtrado: pd.DataFrame):
-    st.markdown("##### Pipeline por estado")
+    st.markdown("##### Pipeline por estado", unsafe_allow_html=True)
 
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
@@ -281,7 +281,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                 valor = int(counts.get(estado, 0))
                 st.metric(label=estado, value=valor)
 
-    st.markdown("---")
+    st.markdown("<hr style='margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -317,6 +317,10 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                 "Sel.",
                 help="Selecciona una obra para acciones rápidas",
                 default=False,
+            ),
+            "potencial_eur": st.column_config.NumberColumn(
+                "Potencial (€)",
+                format="%.0f",
             ),
         },
         hide_index=True,
@@ -367,7 +371,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
 
 
 def _vista_seguimientos(df_filtrado: pd.DataFrame):
-    st.markdown("##### Seguimientos por fecha")
+    st.markdown("##### Seguimientos por fecha", unsafe_allow_html=True)
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -428,7 +432,7 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
 
 
 def _vista_tareas(df_filtrado: pd.DataFrame):
-    st.markdown("##### Tareas abiertas por proyecto")
+    st.markdown("##### Tareas abiertas por proyecto", unsafe_allow_html=True)
 
     registros = []
 
@@ -465,6 +469,10 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
     )
 
 
+# =====================================================
+# KANBAN PIPELINE
+# =====================================================
+
 ESTADOS_PIPELINE = [
     "Detectado",
     "Seguimiento",
@@ -478,7 +486,7 @@ ESTADOS_PIPELINE = [
 
 
 def _vista_kanban(df_filtrado: pd.DataFrame):
-    st.markdown("##### Kanban del pipeline")
+    st.markdown("##### Kanban del pipeline", unsafe_allow_html=True)
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -550,6 +558,10 @@ def _vista_kanban(df_filtrado: pd.DataFrame):
                     unsafe_allow_html=True,
                 )
 
+
+# =====================================================
+# VISTA GENERAL (Pestaña)
+# =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -710,20 +722,19 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
 
     if not df_proy_empty and df_proy is not None:
         st.markdown("##### Exportar obras importantes a Excel")
-        if st.button("⬇️ Descargar Excel de obras importantes"):
-            try:
-                excel_bytes = generar_excel_obras_importantes(df_proy)
-                st.download_button(
-                    "Descargar Excel",
-                    data=excel_bytes,
-                    file_name="obras_importantes.xlsx",
-                    mime=(
-                        "application/vnd.openxmlformats-officedocument."
-                        "spreadsheetml.sheet"
-                    ),
-                )
-            except Exception as e:
-                st.error(f"No se pudo generar el Excel: {e}")
+        try:
+            excel_bytes = generar_excel_obras_importantes(df_proy)
+            st.download_button(
+                "⬇️ Descargar Excel de obras importantes",
+                data=excel_bytes,
+                file_name="obras_importantes.xlsx",
+                mime=(
+                    "application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet"
+                ),
+            )
+        except Exception as e:
+            st.error(f"No se pudo generar el Excel: {e}")
 
     st.markdown("---")
     st.markdown("##### Importar proyectos desde Excel")
