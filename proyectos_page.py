@@ -293,17 +293,8 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
         st.info("No hay proyectos con los filtros actuales.")
         return
 
-    df_ui = df_filtrado.copy()
-
-    if "id" not in df_ui.columns:
-        st.error("Falta la columna 'id' en los proyectos.")
-        return
-
-    ids = df_ui["id"].tolist()
-    df_ui.insert(0, "seleccionar", False)
-
-    cols_basicas = [
-        "seleccionar",
+    # Tabla en claro (solo lectura)
+    columnas = [
         "nombre_obra",
         "cliente_principal",
         "ciudad",
@@ -312,68 +303,56 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
         "prioridad",
         "potencial_eur",
     ]
-    cols = [c for c in cols_basicas if c in df_ui.columns]
+    columnas = [c for c in columnas if c in df_filtrado.columns]
 
-    st.caption("Selecciona una obra y usa los botones para editarla o borrarla:")
-
-    edited_df = st.data_editor(
-        df_ui[cols],
-        column_config={
-            "seleccionar": st.column_config.CheckboxColumn(
-                "Sel.",
-                help="Selecciona una obra para acciones rápidas",
-                default=False,
-            ),
-            "potencial_eur": st.column_config.NumberColumn(
-                "Potencial (€)",
-                format="%.0f",
-            ),
-        },
+    st.dataframe(
+        df_filtrado[columnas],
         hide_index=True,
         use_container_width=True,
-        key="tabla_proyectos_editor",
     )
 
-    col_acc1, col_acc2 = st.columns(2)
+    # Selector de proyecto para acciones
+    opciones = {}
+    for _, row in df_filtrado.iterrows():
+        etiqueta = f"{row.get('nombre_obra', 'Sin nombre')} — {row.get('ciudad', '—')} ({row.get('cliente_principal', '—')})"
+        opciones[etiqueta] = row["id"]
 
-    with col_acc1:
-        if st.button("✏️ Editar proyecto seleccionado"):
-            if "seleccionar" not in edited_df.columns:
-                st.error("No se ha encontrado la columna 'seleccionar'.")
-            else:
-                seleccionados = edited_df["seleccionar"]
-                idxs = [i for i, v in seleccionados.items() if v]
-                if not idxs:
-                    st.warning("No hay ninguna obra seleccionada.")
-                elif len(idxs) > 1:
-                    st.warning("Selecciona solo una obra para editar.")
-                else:
-                    idx = idxs[0]
-                    proy_id = ids[idx]
-                    row_data = df_filtrado[df_filtrado["id"] == proy_id].iloc[0].to_dict()
-                    _open_edit_dialog(row_data, proy_id)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption("Selecciona una obra para editarla o borrarla:")
 
-    with col_acc2:
-        if st.button("🗑️ Borrar proyectos seleccionados"):
-            if "seleccionar" not in edited_df.columns:
-                st.error("No se ha encontrado la columna 'seleccionar'.")
+    col_sel, col_edit, col_del = st.columns([3, 1, 1])
+
+    with col_sel:
+        seleccion = st.selectbox(
+            "",
+            ["(ninguna)"] + list(opciones.keys()),
+            index=0,
+            label_visibility="collapsed",
+            key="proyecto_seleccionado_tabla",
+        )
+
+    with col_edit:
+        if st.button("✏️ Editar"):
+            if seleccion == "(ninguna)":
+                st.warning("Primero selecciona una obra.")
             else:
-                seleccionados = edited_df["seleccionar"]
-                idxs = [i for i, v in seleccionados.items() if v]
-                if not idxs:
-                    st.warning("No hay obras seleccionadas.")
-                else:
-                    total = 0
-                    for row_idx in idxs:
-                        try:
-                            delete_proyecto(ids[row_idx])
-                            invalidate_proyectos_cache()
-                            total += 1
-                        except Exception as e:
-                            st.error(f"No se pudo borrar un proyecto: {e}")
-                    if total:
-                        st.success(f"Proyectos eliminados: {total}")
-                        st.rerun()
+                proy_id = opciones[seleccion]
+                row_data = df_filtrado[df_filtrado["id"] == proy_id].iloc[0].to_dict()
+                _open_edit_dialog(row_data, proy_id)
+
+    with col_del:
+        if st.button("🗑️ Borrar"):
+            if seleccion == "(ninguna)":
+                st.warning("Primero selecciona una obra.")
+            else:
+                proy_id = opciones[seleccion]
+                try:
+                    delete_proyecto(proy_id)
+                    invalidate_proyectos_cache()
+                    st.success("Proyecto borrado.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"No se pudo borrar el proyecto: {e}")
 
 
 def _vista_seguimientos(df_filtrado: pd.DataFrame):
@@ -615,7 +594,8 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 
 # =====================================================
-# DASHBOARD OBRAS IMPORTANTES
+# DASHBOARD OBRAS IMPORTANTES / DUPLICADOS / IMPORT / ALTA
+# (SIN CAMBIOS RESPECTO A LA VERSIÓN ANTERIOR)
 # =====================================================
 
 def _render_dashboard(df_proy: pd.DataFrame):
@@ -689,10 +669,6 @@ def _render_dashboard(df_proy: pd.DataFrame):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# =====================================================
-# DUPLICADOS
-# =====================================================
-
 def _render_duplicados(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown(
@@ -741,10 +717,6 @@ def _render_duplicados(df_proy: pd.DataFrame):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# =====================================================
-# IMPORTAR / EXPORTAR
-# =====================================================
 
 def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = None):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -796,10 +768,6 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# =====================================================
-# ALTA MANUAL
-# =====================================================
 
 def _render_alta_manual():
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -885,29 +853,6 @@ def _render_alta_manual():
 
 def render_proyectos():
     inject_apple_style()
-
-    # Estilo extra específico para tablas (texto y bordes claros)
-    st.markdown(
-        """
-        <style>
-        [data-testid="stDataFrame"] table,
-        [data-testid="stDataEditor"] table {
-            color:#16325c !important;
-        }
-        [data-testid="stDataFrame"] th,
-        [data-testid="stDataFrame"] td,
-        [data-testid="stDataEditor"] th,
-        [data-testid="stDataEditor"] td {
-            border-color:#d8dde6 !important;
-        }
-        [data-testid="stDataFrame"] thead,
-        [data-testid="stDataEditor"] thead {
-            background-color:#f4f6f9 !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
     st.markdown(
         """
