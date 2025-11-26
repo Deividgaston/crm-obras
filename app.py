@@ -14,12 +14,20 @@ except Exception:
 
 def app():
     # ==========================
-    # CONFIG BÁSICA
+    # CONFIG BÁSICA + TEMA LIGHT
     # ==========================
     st.set_page_config(
         page_title="CRM Prescripción 2N",
         layout="wide",
         page_icon="🏗️",
+        initial_sidebar_state="collapsed",
+        theme={
+            "base": "light",
+            "primaryColor": "#0170D2",
+            "backgroundColor": "#f4f6f9",
+            "secondaryBackgroundColor": "#ffffff",
+            "textColor": "#16325c",
+        },
     )
 
     inject_apple_style()
