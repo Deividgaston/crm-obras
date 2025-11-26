@@ -1,6 +1,12 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+from datetime import date
+
+from crm_utils import (
+    get_proyectos,
+    filtrar_obras_importantes,
+)
 
 try:
     from style_injector import inject_apple_style
@@ -8,176 +14,228 @@ except Exception:
     def inject_apple_style():
         pass
 
-from dashboard_utils import (
-    load_dashboard_data,
-    compute_kpis,
-    compute_funnel_estado,
-    compute_potencial_por_provincia,
-    compute_ranking_promotoras,
-    compute_prioridades,
-)
+
+# ============================================================================
+# CARGA CACHÉ
+# ============================================================================
+
+@st.cache_data(show_spinner=False)
+def load_proyectos_dashboard() -> pd.DataFrame | None:
+    return get_proyectos()
 
 
-# ==========================================================
-# DASHBOARD SLDS + PESTAÑA KANBAN
-# ==========================================================
+# ============================================================================
+# TABLA CRM (HTML)
+# ============================================================================
+
+def _tabla_crm(df: pd.DataFrame):
+    if df.empty:
+        st.info("No hay datos para esta tabla.")
+        return
+
+    html = df.to_html(
+        index=False,
+        classes="crm-table",
+        border=0,
+        justify="left",
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+# ============================================================================
+# GRÁFICOS ALTARIA (COLORES SALESFORCE)
+# ============================================================================
+
+COLOR_AZUL = "#0170D2"
+COLOR_AZUL_CLARO = "#5AB0F5"
+COLOR_GRIS = "#5A6872"
+
+
+def _pie_chart(df: pd.DataFrame, col: str, titulo: str):
+    if df.empty or col not in df.columns:
+        st.warning(f"No hay datos para {titulo}.")
+        return
+
+    resumen = df[col].value_counts().reset_index()
+    resumen.columns = [col, "count"]
+
+    chart = (
+        alt.Chart(resumen)
+        .mark_arc()
+        .encode(
+            theta="count:Q",
+            color=alt.Color(f"{col}:N", legend=alt.Legend(title=col)),
+            tooltip=[col, "count"],
+        )
+        .properties(height=300, width="container")
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+def _bar_chart(df: pd.DataFrame, group_col: str, value_col: str, titulo: str):
+    if df.empty or group_col not in df.columns:
+        st.warning(f"No hay datos para {titulo}.")
+        return
+
+    resumen = (
+        df.groupby(group_col)[value_col]
+        .count()
+        .reset_index()
+        .rename(columns={value_col: "num"})
+        .sort_values("num", ascending=False)
+        .head(10)
+    )
+
+    chart = (
+        alt.Chart(resumen)
+        .mark_bar(color=COLOR_AZUL)
+        .encode(
+            x="num:Q",
+            y=alt.Y(f"{group_col}:N", sort="-x"),
+            tooltip=[group_col, "num"],
+        )
+        .properties(height=300)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+def _bar_chart_sum(df: pd.DataFrame, group_col: str, sum_col: str, titulo: str):
+    if df.empty or group_col not in df.columns or sum_col not in df.columns:
+        st.warning(f"No hay datos para {titulo}.")
+        return
+
+    resumen = (
+        df.groupby(group_col)[sum_col]
+        .sum()
+        .reset_index()
+        .sort_values(sum_col, ascending=False)
+        .head(10)
+    )
+
+    chart = (
+        alt.Chart(resumen)
+        .mark_bar(color=COLOR_AZUL_CLARO)
+        .encode(
+            x=f"{sum_col}:Q",
+            y=alt.Y(f"{group_col}:N", sort="-x"),
+            tooltip=[group_col, sum_col],
+        )
+        .properties(height=300)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+# ============================================================================
+# DASHBOARD
+# ============================================================================
 
 def render_dashboard():
     inject_apple_style()
 
-    # HEADER
-    st.markdown("""
+    st.markdown(
+        """
         <div class="apple-card">
             <div class="badge">Dashboard</div>
-            <h3 style="margin-top:2px; margin-bottom:2px;">Análisis y pipeline</h3>
-            <p>Datos agregados, actividad por promotora, mapa geográfico y vista Kanban.</p>
+            <h3 style="margin-top:2px; margin-bottom:2px;">Análisis general de la actividad</h3>
+            <p>
+                Visualiza la distribución completa de tus proyectos, el potencial económico,
+                los clientes con más obras y las zonas prioritarias. Todo en un vistazo.
+            </p>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # CARGA DATOS
-    try:
-        df = load_dashboard_data()
-    except Exception as e:
-        st.error("Error cargando datos del dashboard.")
-        st.code(str(e))
-        return
+    df = load_proyectos_dashboard()
 
     if df is None or df.empty:
-        st.info("No hay proyectos suficientes para generar dashboard.")
+        st.info("No hay proyectos para analizar todavía.")
         return
 
-    # TABS PRINCIPALES
-    tab_general, tab_kanban = st.tabs([
-        "📊 Resumen",
-        "🗂 Kanban"
-    ])
+    # ============================================================================
+    # MÉTRICAS GENERALES
+    # ============================================================================
 
-    # ======================================================
-    # TAB 1: DASHBOARD / RESUMEN
-    # ======================================================
-    with tab_general:
+    total = len(df)
+    total_potencial = df["potencial_eur"].fillna(0).sum()
+    ciudades = df["ciudad"].dropna().nunique()
+    clientes = df["cliente_principal"].dropna().nunique()
 
-        # KPIs
-        k = compute_kpis(df)
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown(
+        '<h4 style="color:#032D60;margin:0 0 8px 0;">📊 Resumen general</h4>',
+        unsafe_allow_html=True,
+    )
 
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.markdown(f"""<div class="metric-card"><div class="metric-title">Proyectos</div><div class="metric-value">{k['total_proyectos']}</div></div>""", unsafe_allow_html=True)
-        c2.markdown(f"""<div class="metric-card"><div class="metric-title">Activos</div><div class="metric-value">{k['proyectos_activos']}</div></div>""", unsafe_allow_html=True)
-        c3.markdown(f"""<div class="metric-card"><div class="metric-title">Potencial (€)</div><div class="metric-value">{k['total_potencial']:,.0f}</div></div>""", unsafe_allow_html=True)
-        c4.markdown(f"""<div class="metric-card"><div class="metric-title">Ticket Medio (€)</div><div class="metric-value">{k['ticket_medio']:,.0f}</div></div>""", unsafe_allow_html=True)
-        c5.markdown(f"""<div class="metric-card"><div class="metric-title">Ganados (%)</div><div class="metric-value">{k['ratio_ganados']:.1f}%</div></div>""", unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Proyectos totales", total)
+    col2.metric("Potencial total (€)", f"{total_potencial:,.0f}")
+    col3.metric("Ciudades", ciudades)
+    col4.metric("Clientes", clientes)
 
-        st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        # PIPELINE + PRIORIDAD
-        st.markdown("### 📂 Pipeline y prioridades")
+    # ============================================================================
+    # DISTRIBUCIÓN POR ESTADO / TIPO
+    # ============================================================================
 
-        col1, col2 = st.columns([3, 2])
+    colA, colB = st.columns(2)
+    with colA:
+        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+        st.markdown("<h4>Distribución por estado</h4>", unsafe_allow_html=True)
+        _pie_chart(df, "estado", "Estados")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        with col1:
-            fdf = compute_funnel_estado(df)
-            if fdf is not None and not fdf.empty:
-                chart = (
-                    alt.Chart(fdf)
-                    .mark_bar(size=22)
-                    .encode(
-                        x=alt.X("proyectos:Q", title="Proyectos"),
-                        y=alt.Y("estado:N", sort="-x", title="Estado"),
-                        color=alt.Color("estado:N", legend=None),
-                        tooltip=["estado", "proyectos"],
-                    )
-                    .properties(height=280)
-                )
-                st.altair_chart(chart, use_container_width=True)
+    with colB:
+        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+        st.markdown("<h4>Distribución por tipo de proyecto</h4>", unsafe_allow_html=True)
+        _pie_chart(df, "tipo_proyecto", "Tipos")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        with col2:
-            pdf = compute_prioridades(df)
-            if pdf is not None and not pdf.empty:
-                donut = (
-                    alt.Chart(pdf)
-                    .mark_arc(innerRadius=40, outerRadius=90)
-                    .encode(
-                        theta="proyectos:Q",
-                        color="prioridad:N",
-                        tooltip=["prioridad", "proyectos"],
-                    )
-                    .properties(height=260)
-                )
-                st.altair_chart(donut, use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown("---")
+    # ============================================================================
+    # OBRAS POR CLIENTE / OBRAS POR CIUDAD
+    # ============================================================================
 
-        # RANKING PROMOTORAS
-        st.markdown("### 🏢 Ranking por promotora")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+        st.markdown("<h4>Clientes con más obras</h4>", unsafe_allow_html=True)
+        _bar_chart(df, "cliente_principal", "id", "Clientes top")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        col1, col2 = st.columns([3, 2])
-        r = compute_ranking_promotoras(df, top_n=15)
+    with col2:
+        st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+        st.markdown("<h4>Ciudades con más obras</h4>", unsafe_allow_html=True)
+        _bar_chart(df, "ciudad", "id", "Ciudades top")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        with col1:
-            if r is not None and not r.empty:
-                chart = (
-                    alt.Chart(r)
-                    .mark_bar(size=18)
-                    .encode(
-                        x="proyectos:Q",
-                        y=alt.Y("promotora_display:N", sort="-x"),
-                        tooltip=["promotora_display", "proyectos", "potencial"],
-                        color=alt.Color("promotora_display:N", legend=None),
-                    )
-                    .properties(height=340)
-                )
-                st.altair_chart(chart, use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        with col2:
-            if r is not None and not r.empty:
-                st.dataframe(
-                    r.rename(columns={
-                        "promotora_display": "Promotora",
-                        "proyectos": "Obras",
-                        "potencial": "Potencial (€)"
-                    }),
-                    hide_index=True,
-                    use_container_width=True
-                )
+    # ============================================================================
+    # POTENCIAL POR CLIENTE
+    # ============================================================================
 
-        st.markdown("---")
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("<h4>Potencial económico por cliente (€)</h4>", unsafe_allow_html=True)
+    _bar_chart_sum(df, "cliente_principal", "potencial_eur", "Potencial por cliente")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        # GEO
-        st.markdown("### 🗺 Distribución por provincia")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        col1, col2 = st.columns([3, 2])
-        g = compute_potencial_por_provincia(df)
+    # ============================================================================
+    # TABLA OBRAS IMPORTANTES
+    # ============================================================================
 
-        with col1:
-            if g is not None and not g.empty:
-                chart = (
-                    alt.Chart(g)
-                    .mark_bar(size=18)
-                    .encode(
-                        x="potencial:Q",
-                        y=alt.Y("provincia:N", sort="-x"),
-                        tooltip=["provincia", "proyectos", "potencial"],
-                        color=alt.Color("provincia:N", legend=None),
-                    )
-                    .properties(height=330)
-                )
-                st.altair_chart(chart, use_container_width=True)
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("<h4>🏆 Obras importantes</h4>", unsafe_allow_html=True)
 
-        with col2:
-            if g is not None and not g.empty:
-                st.dataframe(
-                    g.rename(columns={
-                        "provincia": "Provincia",
-                        "proyectos": "Obras",
-                        "potencial": "Potencial (€)"
-                    }),
-                    hide_index=True,
-                    use_container_width=True
-                )
+    df_imp = filtrar_obras_importantes(df)
+    if df_imp.empty:
+        st.caption("No se han identificado obras importantes según el criterio actual.")
+    else:
+        _tabla_crm(df_imp)
 
-    # ======================================================
-    # TAB 2: KANBAN
-    # ======================================================
-    with tab_kanban:
-        from dashboard_kanban import render_kanban
-        render_kanban(df)
+    st.markdown("</div>", unsafe_allow_html=True)
