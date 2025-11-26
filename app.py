@@ -12,145 +12,84 @@ except Exception:
         pass
 
 
+PAGES = {
+    "panel": ("Panel", render_panel),
+    "proyectos": ("Proyectos", render_proyectos),
+    "buscar": ("Buscar", render_buscar),
+    "dashboard": ("Dashboard", render_dashboard),
+}
+
+
 def app():
     # ==========================
-    # CONFIG BÁSICA (solo args soportados)
+    # CONFIGURACIÓN GENERAL
     # ==========================
     st.set_page_config(
         page_title="CRM Prescripción 2N",
         layout="wide",
         page_icon="🏗️",
-        initial_sidebar_state="collapsed",
     )
 
-    inject_apple_style()
-
-    # ==========================
-    # ESTILO GLOBAL CLARO + BOTONES SUPERIORES
-    # ==========================
+    # Ocultar cabecera, menú y footer de Streamlit
     st.markdown(
         """
         <style>
-        .stApp {
-            background-color: #f4f6f9 !important;
-        }
-        .block-container {
-            padding-top: 0.5rem;
-        }
-
-        /* TOPBAR */
-        .topbar{
-            width:100%;
-            background:#ffffff;
-            border-bottom:1px solid #d8dde6;
-            padding:6px 18px 6px 18px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        }
-        .topbar-title{
-            font-size:17px;
-            font-weight:600;
-            color:#032D60;
-            margin:0;
-        }
-        .topbar-sub{
-            font-size:12px;
-            color:#5A6872;
-            margin-top:-4px;
-        }
-
-        /* BOTONES DE LA BARRA DE HERRAMIENTAS */
-        .toolbar-row {
-            margin: 8px 18px 2px 18px;
-        }
-        .toolbar-row .stButton>button {
-            background:#ffffff;
-            border:1px solid #d8dde6;
-            border-radius:4px;
-            padding:6px 18px;
-            font-size:13px;
-            font-weight:500;
-            color:#032D60;
-            cursor:pointer;
-        }
-        .toolbar-row .stButton>button:hover {
-            background:#e5f1fb;
-            border-color:#1b96ff;
-        }
-
-        /* Botón activo */
-        .toolbar-active>button {
-            background:#0170D2 !important;
-            border-color:#0170D2 !important;
-            color:#ffffff !important;
-        }
-
-        /* Selects sobre fondo blanco */
-        div[data-baseweb="select"] > div {
-            background-color:#ffffff !important;
-        }
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
         </style>
         """,
         unsafe_allow_html=True,
     )
 
+    inject_apple_style()
+
+    if "page" not in st.session_state:
+        st.session_state["page"] = "panel"
+
     # ==========================
-    # TOPBAR
+    # ENCABEZADO TIPO SALESFORCE
     # ==========================
     st.markdown(
         """
-        <div class="topbar">
-            <div>
-                <div class="topbar-title">CRM Prescripción 2N</div>
-                <div class="topbar-sub">Panel · Proyectos · Scouting · Dashboard</div>
+        <div class="apple-card" style="margin-bottom:12px;">
+            <div style="font-size:13px;color:#5A6872;margin-bottom:2px;">
+                Panel · Proyectos · Scouting · Dashboard
             </div>
+            <h2 style="margin:0;color:#032D60;">CRM Prescripción 2N</h2>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     # ==========================
-    # ESTADO DE NAVEGACIÓN
+    # NAVEGACIÓN HORIZONTAL
     # ==========================
-    pages = ["Panel", "Proyectos", "Buscar", "Dashboard"]
-    if "page" not in st.session_state:
-        st.session_state["page"] = "Panel"
+    cols = st.columns(len(PAGES))
 
-    current = st.session_state["page"]
+    for (page_key, (label, _)), col in zip(PAGES.items(), cols):
+        with col:
+            is_active = st.session_state["page"] == page_key
+            button_label = label
+            if is_active:
+                button_label = f"● {label}"
+            if st.button(
+                button_label,
+                use_container_width=True,
+                key=f"nav_{page_key}",
+            ):
+                st.session_state["page"] = page_key
+                st.rerun()
 
-    # ==========================
-    # BARRA DE BOTONES
-    # ==========================
-    toolbar = st.container()
-    with toolbar:
-        st.markdown('<div class="toolbar-row">', unsafe_allow_html=True)
-        cols = st.columns(len(pages))
-        for i, name in enumerate(pages):
-            with cols[i]:
-                btn_class = "toolbar-active" if current == name else ""
-                st.markdown(f'<div class="{btn_class}">', unsafe_allow_html=True)
-                if st.button(name, key=f"nav_{name}"):
-                    st.session_state["page"] = name
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.write("")
+    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 
     # ==========================
-    # ROUTING
+    # RENDER PÁGINA ACTUAL
     # ==========================
-    page = st.session_state["page"]
+    current_page_key = st.session_state.get("page", "panel")
+    label, renderer = PAGES.get(current_page_key, PAGES["panel"])
 
-    if page == "Panel":
-        render_panel()
-    elif page == "Proyectos":
-        render_proyectos()
-    elif page == "Buscar":
-        render_buscar()
-    elif page == "Dashboard":
-        render_dashboard()
+    renderer()
 
 
 if __name__ == "__main__":
