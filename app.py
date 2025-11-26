@@ -14,31 +14,23 @@ except Exception:
 
 def app():
     # ==========================
-    # CONFIG BÁSICA + TEMA LIGHT
+    # CONFIG BÁSICA (solo args soportados)
     # ==========================
     st.set_page_config(
         page_title="CRM Prescripción 2N",
         layout="wide",
         page_icon="🏗️",
         initial_sidebar_state="collapsed",
-        theme={
-            "base": "light",
-            "primaryColor": "#0170D2",
-            "backgroundColor": "#f4f6f9",
-            "secondaryBackgroundColor": "#ffffff",
-            "textColor": "#16325c",
-        },
     )
 
     inject_apple_style()
 
     # ==========================
-    # ESTILO GLOBAL CLARO + BOTONES
+    # ESTILO GLOBAL CLARO + BOTONES SUPERIORES
     # ==========================
     st.markdown(
         """
         <style>
-        /* Fondo general claro tipo Salesforce */
         .stApp {
             background-color: #f4f6f9 !important;
         }
@@ -128,7 +120,7 @@ def app():
     current = st.session_state["page"]
 
     # ==========================
-    # BARRA DE HERRAMIENTAS (BOTONES)
+    # BARRA DE BOTONES
     # ==========================
     toolbar = st.container()
     with toolbar:
@@ -144,7 +136,7 @@ def app():
                 st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.write("")  # pequeño espacio
+    st.write("")
 
     # ==========================
     # ROUTING
