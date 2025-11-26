@@ -42,37 +42,98 @@ def app():
         unsafe_allow_html=True,
     )
 
+    # ======= CSS extra: diseño compacto + habilitar copiar/pegar =======
+    st.markdown(
+        """
+        <style>
+        /* Habilitar seleccionar texto / copiar-pegar en toda la app */
+        html, body, [class*="css"], * {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+        }
+
+        /* Cabecera compacta del app */
+        .crm-app-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 4px 4px 6px 4px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #d8dde6;
+        }
+        .crm-app-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .crm-app-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #032D60;
+            margin: 0;
+        }
+        .crm-app-subtitle {
+            font-size: 11px;
+            color: #5A6872;
+            margin: 0;
+        }
+        .crm-app-breadcrumbs {
+            font-size: 11px;
+            color: #5A6872;
+            margin-top: 2px;
+        }
+
+        /* Botones de navegación más compactos */
+        .stButton > button {
+            border-radius: 8px;
+            padding: 6px 12px;
+            min-height: 0px;
+            height: 36px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     inject_apple_style()
 
     if "page" not in st.session_state:
         st.session_state["page"] = "panel"
 
     # ==========================
-    # ENCABEZADO TIPO SALESFORCE
+    # CABECERA COMPACTA GLOBAL
     # ==========================
     st.markdown(
         """
-        <div class="apple-card" style="margin-bottom:12px;">
-            <div style="font-size:13px;color:#5A6872;margin-bottom:2px;">
+        <div class="crm-app-header">
+            <div class="crm-app-header-left">
+                <div class="crm-app-title">CRM Prescripción 2N</div>
+                <div class="crm-app-subtitle">
+                    Herramienta interna para seguimiento de prescripción y pipeline de obras.
+                </div>
+            </div>
+            <div class="crm-app-breadcrumbs">
                 Panel · Proyectos · Scouting · Dashboard
             </div>
-            <h2 style="margin:0;color:#032D60;">CRM Prescripción 2N</h2>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     # ==========================
-    # NAVEGACIÓN HORIZONTAL
+    # NAVEGACIÓN HORIZONTAL COMPACTA
     # ==========================
     cols = st.columns(len(PAGES))
 
     for (page_key, (label, _)), col in zip(PAGES.items(), cols):
         with col:
             is_active = st.session_state["page"] == page_key
-            button_label = label
-            if is_active:
-                button_label = f"● {label}"
+            # Activo: punto + mismo color de fondo que ya tenías, pero más compacto
+            button_label = f"● {label}" if is_active else label
             if st.button(
                 button_label,
                 use_container_width=True,
@@ -81,14 +142,13 @@ def app():
                 st.session_state["page"] = page_key
                 st.rerun()
 
-    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom:6px;'></div>", unsafe_allow_html=True)
 
     # ==========================
     # RENDER PÁGINA ACTUAL
     # ==========================
     current_page_key = st.session_state.get("page", "panel")
-    label, renderer = PAGES.get(current_page_key, PAGES["panel"])
-
+    _, renderer = PAGES.get(current_page_key, PAGES["panel"])
     renderer()
 
 
