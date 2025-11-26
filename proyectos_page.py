@@ -178,8 +178,8 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
     else:
         st.markdown("---")
         st.markdown(
-            "<div class='apple-card-light'><div class='section-badge'>Edición rápida</div>"
-            "<h3 style='margin-top:8px; margin-bottom:4px;'>✏️ Editar proyecto seleccionado</h3>",
+            "<div class='apple-card-light'><div class='badge'>Edición rápida</div>"
+            "<h3 style='margin-top:4px; margin-bottom:4px;'>✏️ Editar proyecto seleccionado</h3>",
             unsafe_allow_html=True,
         )
         _render_edit_form(row_data, proy_id)
@@ -264,7 +264,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 
 
 def _vista_tabla(df_filtrado: pd.DataFrame):
-    st.markdown("#### 🧪 Pipeline (conteo por estado)")
+    st.markdown("##### Pipeline (conteo por estado)")
 
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
@@ -311,17 +311,13 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
     ]
     cols = [c for c in cols_basicas if c in df_ui.columns]
 
-    st.markdown(
-        "<p style='font-size:0.82rem; color:#9CA3AF;'>Selecciona una obra y usa los "
-        "botones inferiores para editarla o borrarla.</p>",
-        unsafe_allow_html=True,
-    )
+    st.caption("Selecciona una obra y usa los botones para editarla o borrarla:")
 
     edited_df = st.data_editor(
         df_ui[cols],
         column_config={
             "seleccionar": st.column_config.CheckboxColumn(
-                "Seleccionar",
+                "Sel.",
                 help="Selecciona una obra para acciones rápidas",
                 default=False,
             ),
@@ -374,7 +370,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
 
 
 def _vista_seguimientos(df_filtrado: pd.DataFrame):
-    st.markdown("#### 🧭 Seguimientos por fecha")
+    st.markdown("##### Seguimientos por fecha")
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -417,7 +413,7 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
     col1, col2 = st.columns(2)
     with col1:
         seleccion = st.selectbox(
-            "Selecciona un proyecto para actualizar su seguimiento",
+            "Selecciona un proyecto para posponer el seguimiento",
             ["(ninguno)"] + list(opciones.keys()),
         )
 
@@ -435,7 +431,7 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
 
 
 def _vista_tareas(df_filtrado: pd.DataFrame):
-    st.markdown("#### ✅ Tareas abiertas por proyecto")
+    st.markdown("##### Tareas abiertas por proyecto")
 
     registros = []
 
@@ -474,7 +470,7 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("### 📁 Vista general de proyectos", unsafe_allow_html=True)
+    st.markdown("#### Proyectos (vista general)", unsafe_allow_html=True)
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista_general")
 
@@ -505,7 +501,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 def _render_dashboard(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("### 📊 Vista analítica (obras importantes)", unsafe_allow_html=True)
+    st.markdown("#### Obras importantes (analítica)", unsafe_allow_html=True)
 
     if df_proy.empty:
         st.info("No hay proyectos para mostrar en el dashboard.")
@@ -541,7 +537,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("Número de obras")
+        st.caption("Número de obras por grupo")
         chart_count = (
             alt.Chart(df_group)
             .mark_bar()
@@ -550,12 +546,12 @@ def _render_dashboard(df_proy: pd.DataFrame):
                 y=alt.Y("num_obras:Q", title="Número de obras"),
                 tooltip=[group_col, "num_obras", "potencial_total"],
             )
-            .properties(height=350)
+            .properties(height=320)
         )
         st.altair_chart(chart_count, use_container_width=True)
 
     with col2:
-        st.subheader("Potencial económico")
+        st.caption("Potencial total por grupo (€)")
         chart_potencial = (
             alt.Chart(df_group)
             .mark_bar()
@@ -564,7 +560,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
                 y=alt.Y("potencial_total:Q", title="Potencial total (€)"),
                 tooltip=[group_col, "num_obras", "potencial_total"],
             )
-            .properties(height=350)
+            .properties(height=320)
         )
         st.altair_chart(chart_potencial, use_container_width=True)
 
@@ -578,7 +574,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
 def _render_duplicados(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("🧬 Revisión de posibles proyectos duplicados")
+    st.markdown("#### Posibles proyectos duplicados", unsafe_allow_html=True)
 
     df_tmp = df_proy.copy()
     key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
@@ -598,7 +594,7 @@ def _render_duplicados(df_proy: pd.DataFrame):
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    st.info("Se han detectado posibles duplicados. Revisa las filas agrupadas:")
+    st.caption("Revisa los grupos de proyectos que parecen duplicados:")
 
     for key, group in df_dups.groupby("dup_key"):
         st.markdown(f"**Grupo:** {key}")
@@ -613,7 +609,7 @@ def _render_duplicados(df_proy: pd.DataFrame):
             with col1:
                 st.write(f"- {row.get('nombre_obra', 'Sin nombre')} ({row.get('id')})")
             with col2:
-                if st.button("🗑️ Borrar este proyecto", key=f"del_dup_{row['id']}"):
+                if st.button("🗑️ Borrar", key=f"del_dup_{row['id']}"):
                     delete_proyecto(row["id"])
                     invalidate_proyectos_cache()
                     st.success("Proyecto borrado.")
@@ -629,7 +625,7 @@ def _render_duplicados(df_proy: pd.DataFrame):
 
 def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = None):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("📤 Exportar / 📥 Importar")
+    st.markdown("#### Importar / Exportar", unsafe_allow_html=True)
 
     if not df_proy_empty and df_proy is not None:
         st.markdown("##### Exportar obras importantes a Excel")
@@ -663,7 +659,7 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
             st.write("Vista previa de los datos a importar:")
             st.dataframe(df_preview.head(), use_container_width=True)
 
-            if st.button("🚀 Importar estos proyectos al CRM"):
+            if st.button("🚀 Importar proyectos"):
                 creados = importar_proyectos_desde_excel(uploaded_file)
                 invalidate_proyectos_cache()
                 st.success(f"Importación completada. Proyectos creados: {creados}")
@@ -683,7 +679,7 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
 
 def _render_alta_manual():
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.subheader("➕ Alta manual de proyecto")
+    st.markdown("#### Alta manual de proyecto", unsafe_allow_html=True)
 
     df_clientes = load_clientes()
     nombres_clientes = ["(sin asignar)"]
@@ -766,12 +762,12 @@ def render_proyectos():
     st.markdown(
         """
         <div class="apple-card">
-            <div class="section-badge">Proyectos</div>
-            <h1 style="margin-top:4px; margin-bottom:4px;">Pipeline de prescripción</h1>
-            <p style="color:#9CA3AF; margin-bottom:0; font-size:0.9rem;">
+            <div class="badge">Proyectos</div>
+            <h3 style="margin-top:2px; margin-bottom:2px;">Pipeline de prescripción</h3>
+            <p>
                 Gestiona obras, estados de seguimiento y tareas vinculadas. 
-                Usa la vista analítica para ver dónde está el valor y la vista de tareas
-                para no dejar ningún proyecto enfriarse.
+                Usa el dashboard para ver dónde está el valor y la sección de duplicados
+                para mantener limpio el CRM.
             </p>
         </div>
         """,
