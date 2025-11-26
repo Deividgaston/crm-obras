@@ -10,247 +10,93 @@ except Exception:
         pass
 
 
-# =====================================================
-# UTILIDADES
-# =====================================================
-ESTADOS_PIPELINE = [
-    "Detectado",
-    "Seguimiento",
-    "En Prescripción",
-    "Oferta Enviada",
-    "Negociación",
-    "Ganado",
-    "Perdido",
-    "Paralizado",
-]
-
-
-def _contar_por_estado(df: pd.DataFrame) -> dict:
-    if "estado" not in df.columns:
-        return {e: 0 for e in ESTADOS_PIPELINE}
-    conteo = df["estado"].value_counts().to_dict()
-    return {e: int(conteo.get(e, 0)) for e in ESTADOS_PIPELINE}
-
-
-# =====================================================
-# PÁGINA DE PROYECTOS
-# =====================================================
 def render_proyectos():
     inject_apple_style()
 
-    # ===== ESTILOS COMPACTOS =====
+    # ====================
+    # CABECERA (diseño original restaurado)
+    # ====================
     st.markdown(
         """
-        <style>
-        .crm-compact-header {
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            padding:0 0 6px 0;
-            margin:0 0 6px 0;
-            border-bottom:1px solid #d8dde6;
-        }
-
-        .crm-compact-title {
-            font-size:16px;
-            font-weight:600;
-            color:#032D60;
-            margin:0;
-            padding:0;
-            line-height:16px;
-        }
-
-        .crm-compact-subtitle {
-            font-size:11px;
-            color:#5A6872;
-            margin:0;
-            padding:0;
-            line-height:12px;
-        }
-
-        .crm-tag-big {
-            font-size:13px;
-            font-weight:500;
-            padding:4px 12px;
-            border-radius:14px;
-            background:#e5f2ff;
-            border:1px solid #b7d4f5;
-            color:#032D60;
-            display:flex;
-            align-items:center;
-            height:28px;
-            white-space:nowrap;
-        }
-
-        .crm-small-metric .stMetric {
-            padding-top:0 !important;
-            padding-bottom:0 !important;
-            margin-top:-4px;
-        }
-
-        /* Dataframe más integrado con el fondo claro */
-        .stDataFrame div[data-testid="stGrid"] {
-            border-radius:6px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ===== CABECERA =====
-    st.markdown(
-        """
-        <div class="crm-compact-header">
-            <div>
-                <div class="crm-compact-title">Proyectos</div>
-                <div class="crm-compact-subtitle">
-                    Vista general del pipeline de obras y filtros por ciudad, estado y prioridad.
-                </div>
+        <div style="margin-bottom:10px;">
+            <h2 style="margin-bottom:0;color:#032D60;">Proyectos</h2>
+            <div style="font-size:12px;color:#5A6872;margin-top:-6px;">
+                Vista general del pipeline de obras y filtros de búsqueda
             </div>
-            <div class="crm-tag-big">Vista · General</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ===== CARGA DE DATOS =====
+    # Cargar datos
     df = load_proyectos()
 
     if df is None or df.empty:
         st.info("Todavía no hay proyectos en la base de datos.")
         return
 
-    # ===== FILTROS SUPERIORES =====
-    st.markdown(
-        "<div style='font-size:11px;color:#5A6872;margin-bottom:2px;'>Filtros rápidos</div>",
-        unsafe_allow_html=True,
-    )
+    # ====================
+    # FILTROS
+    # ====================
+    col1, col2, col3, col4 = st.columns(4)
 
-    col_ciudad, col_estado, col_tipo, col_prioridad = st.columns(4)
+    ciudades = ["Todas"] + sorted(df["ciudad"].dropna().unique())
+    estados = ["Todos"] + sorted(df["estado"].dropna().unique())
+    tipos = ["Todos"] + sorted(df["tipo_proyecto"].dropna().unique())
+    prioridades = ["Todas"] + sorted(df["prioridad"].dropna().unique())
 
-    # Valores únicos seguros
-    ciudades = sorted([c for c in df.get("ciudad", pd.Series()).dropna().unique()])
-    estados = sorted([c for c in df.get("estado", pd.Series()).dropna().unique()])
-    tipos = sorted([c for c in df.get("tipo_proyecto", pd.Series()).dropna().unique()])
-    prioridades = sorted([c for c in df.get("prioridad", pd.Series()).dropna().unique()])
+    with col1:
+        sel_ciudad = st.selectbox("Ciudad", ciudades)
 
-    with col_ciudad:
-        ciudad_sel = st.selectbox(
-            "Ciudad",
-            options=["Todas"] + ciudades,
-            index=0,
-        )
+    with col2:
+        sel_estado = st.selectbox("Estado", estados)
 
-    with col_estado:
-        estado_sel = st.selectbox(
-            "Estado / Seguimiento",
-            options=["Todos"] + estados,
-            index=0,
-        )
+    with col3:
+        sel_tipo = st.selectbox("Tipo de proyecto", tipos)
 
-    with col_tipo:
-        tipo_sel = st.selectbox(
-            "Tipo de proyecto",
-            options=["Todos"] + tipos,
-            index=0,
-        )
+    with col4:
+        sel_prio = st.selectbox("Prioridad", prioridades)
 
-    with col_prioridad:
-        prioridad_sel = st.selectbox(
-            "Prioridad",
-            options=["Todas"] + prioridades,
-            index=0,
-        )
-
-    # Aplicar filtros
     df_filtrado = df.copy()
 
-    if ciudad_sel != "Todas" and "ciudad" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["ciudad"] == ciudad_sel]
+    if sel_ciudad != "Todas":
+        df_filtrado = df_filtrado[df_filtrado["ciudad"] == sel_ciudad]
 
-    if estado_sel != "Todos" and "estado" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["estado"] == estado_sel]
+    if sel_estado != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["estado"] == sel_estado]
 
-    if tipo_sel != "Todos" and "tipo_proyecto" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["tipo_proyecto"] == tipo_sel]
+    if sel_tipo != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["tipo_proyecto"] == sel_tipo]
 
-    if prioridad_sel != "Todas" and "prioridad" in df_filtrado.columns:
-        df_filtrado = df_filtrado[df_filtrado["prioridad"] == prioridad_sel]
+    if sel_prio != "Todas":
+        df_filtrado = df_filtrado[df_filtrado["prioridad"] == sel_prio]
 
-    # ===== MODO DE VISTA (DE MOMENTO SOLO TABLA FUNCIONAL) =====
-    st.markdown(
-        "<div style='font-size:11px;color:#5A6872;margin-top:6px;'>Modo de vista</div>",
-        unsafe_allow_html=True,
+    # ====================
+    # MÉTRICAS PIPELINE
+    # ====================
+    colA, colB, colC, colD = st.columns(4)
+
+    estados_contados = df_filtrado["estado"].value_counts()
+
+    colA.metric("Detectado", int(estados_contados.get("Detectado", 0)))
+    colB.metric("Seguimiento", int(estados_contados.get("Seguimiento", 0)))
+    colC.metric("En Prescripción", int(estados_contados.get("En Prescripción", 0)))
+    colD.metric("Oferta Enviada", int(estados_contados.get("Oferta Enviada", 0)))
+
+    colE, colF, colG, colH = st.columns(4)
+
+    colE.metric("Negociación", int(estados_contados.get("Negociación", 0)))
+    colF.metric("Ganado", int(estados_contados.get("Ganado", 0)))
+    colG.metric("Perdido", int(estados_contados.get("Perdido", 0)))
+    colH.metric("Paralizado", int(estados_contados.get("Paralizado", 0)))
+
+    # ====================
+    # TABLA
+    # ====================
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.dataframe(
+        df_filtrado,
+        use_container_width=True,
+        hide_index=True,
     )
-    modo = st.radio(
-        "",
-        options=["Tabla", "Seguimientos", "Tareas", "Kanban"],
-        horizontal=True,
-        index=0,
-        label_visibility="collapsed",
-    )
-
-    # ===== METRICAS PIPELINE =====
-    conteo_estados = _contar_por_estado(df_filtrado)
-
-    st.markdown('<div class="apple-card-light crm-small-metric">', unsafe_allow_html=True)
-    (
-        c1,
-        c2,
-        c3,
-        c4,
-        c5,
-        c6,
-        c7,
-        c8,
-    ) = st.columns(8)
-
-    c1.metric("Detectado", conteo_estados["Detectado"])
-    c2.metric("Seguimiento", conteo_estados["Seguimiento"])
-    c3.metric("En Prescripción", conteo_estados["En Prescripción"])
-    c4.metric("Oferta Enviada", conteo_estados["Oferta Enviada"])
-    c5.metric("Negociación", conteo_estados["Negociación"])
-    c6.metric("Ganado", conteo_estados["Ganado"])
-    c7.metric("Perdido", conteo_estados["Perdido"])
-    c8.metric("Paralizado", conteo_estados["Paralizado"])
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ===== CONTENIDO SEGÚN MODO =====
-    if modo == "Tabla":
-        st.markdown(
-            "<div style='font-size:11px;color:#5A6872;margin-top:6px;margin-bottom:2px;'>Vista general de proyectos</div>",
-            unsafe_allow_html=True,
-        )
-
-        # Ordenar columnas importantes al principio si existen
-        cols_preferidas = [
-            "nombre_obra",
-            "cliente_principal",
-            "ciudad",
-            "provincia",
-            "estado",
-            "prioridad",
-            "tipo_proyecto",
-            "potencial_eur",
-        ]
-        cols_existentes = [c for c in cols_preferidas if c in df_filtrado.columns]
-        otras = [c for c in df_filtrado.columns if c not in cols_existentes]
-
-        df_mostrado = df_filtrado[cols_existentes + otras]
-
-        st.dataframe(
-            df_mostrado,
-            use_container_width=True,
-            hide_index=True,
-            height=420,
-        )
-
-    elif modo == "Seguimientos":
-        st.info("La vista de Seguimientos se apoyará en los mismos datos, pero aún no está afinada. Usa de momento la vista Tabla.")
-
-    elif modo == "Tareas":
-        st.info("La vista de Tareas se implementará a partir de los datos de tareas de cada proyecto. De momento, utiliza la vista Tabla.")
-
-    elif modo == "Kanban":
-        st.info("La vista Kanban se integrará más adelante. Por ahora la vista Tabla te muestra toda la información necesaria.")
