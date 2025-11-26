@@ -1,8 +1,11 @@
 import streamlit as st
 import pandas as pd
 from datetime import date, datetime, timedelta
+from typing import List, Dict, Any
 
-from crm_utils import get_proyectos
+from crm_utils import (
+    get_proyectos,
+)
 
 try:
     from style_injector import inject_apple_style
@@ -11,61 +14,159 @@ except Exception:
         pass
 
 
-# ==========================
-# CARGA DATOS (cache)
-# ==========================
+# =====================================================
+# CARGA CACHÉ FIREBASE
+# =====================================================
 
 @st.cache_data(show_spinner=False)
-def load_proyectos() -> pd.DataFrame | None:
+def load_proyectos_panel() -> pd.DataFrame | None:
+    """Carga de proyectos para el panel (cacheado)."""
     return get_proyectos()
 
 
-# ==========================
-# HELPERS
-# ==========================
-
-def _parse_fecha_iso(valor):
-    if not valor:
+def _parse_fecha(value) -> date | None:
+    if not value:
         return None
-    if isinstance(valor, date) and not isinstance(valor, datetime):
-        return valor
-    if isinstance(valor, datetime):
-        return valor.date()
-    if isinstance(valor, str):
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
         try:
-            return datetime.fromisoformat(valor).date()
+            return datetime.fromisoformat(value).date()
         except Exception:
             return None
     return None
 
 
-def _relativo(fecha: date, hoy: date) -> str:
-    delta = (fecha - hoy).days
-    if delta == 0:
-        return "Hoy"
-    if delta == -1:
-        return "Ayer"
-    if delta == 1:
-        return "Mañana"
-    if delta < -1:
-        return f"Hace {abs(delta)} días"
-    return f"En {delta} días"
+# =====================================================
+# CONSTRUCCIÓN DE AGENDA
+# =====================================================
+
+def _extraer_acciones(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """
+    Devuelve una lista de acciones:
+    - Seguimientos (por fecha_seguimiento)
+    - Tareas con fecha_límite y no completadas
+    """
+    acciones: List[Dict[str, Any]] = []
+    hoy = date.today()
+
+    for _, row in df.iterrows():
+        nombre = row.get("nombre_obra", "Sin nombre")
+        cliente = row.get("cliente_principal", "—")
+        ciudad = row.get("ciudad", "—")
+        estado = row.get("estado", "Detectado")
+        proy_id = row.get("id")
+
+        # Seguimiento
+        fecha_seg = _parse_fecha(row.get("fecha_seguimiento"))
+        if fecha_seg:
+            acciones.append(
+                {
+                    "tipo": "Seguimiento",
+                    "fecha": fecha_seg,
+                    "proyecto": nombre,
+                    "cliente": cliente,
+                    "ciudad": ciudad,
+                    "estado": estado,
+                    "id": proy_id,
+                    "descripcion": row.get("notas_seguimiento", "") or "",
+                }
+            )
+
+        # Tareas
+        tareas = row.get("tareas") or []
+        for t in tareas:
+            if not isinstance(t, dict):
+                continue
+            if t.get("completado"):
+                continue
+            fecha_lim = _parse_fecha(t.get("fecha_limite"))
+            if not fecha_lim:
+                continue
+            acciones.append(
+                {
+                    "tipo": t.get("tipo", "Tarea"),
+                    "fecha": fecha_lim,
+                    "proyecto": nombre,
+                    "cliente": cliente,
+                    "ciudad": ciudad,
+                    "estado": estado,
+                    "id": proy_id,
+                    "descripcion": t.get("titulo", "") or "",
+                }
+            )
+
+    # Ordenamos por fecha
+    acciones = sorted(acciones, key=lambda x: x["fecha"])
+    return acciones
 
 
-# ==========================
+def _particionar_acciones(acciones: List[Dict[str, Any]]):
+    hoy = date.today()
+    en_7 = hoy + timedelta(days=7)
+
+    atrasadas = []
+    hoy_list = []
+    prox7 = []
+
+    for acc in acciones:
+        f = acc["fecha"]
+        if f < hoy:
+            atrasadas.append(acc)
+        elif f == hoy:
+            hoy_list.append(acc)
+        elif hoy < f <= en_7:
+            prox7.append(acc)
+
+    return atrasadas, hoy_list, prox7
+
+
+def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
+    st.markdown(
+        f'<h5 style="color:#032D60;margin:6px 0 4px 0;">{titulo}</h5>',
+        unsafe_allow_html=True,
+    )
+
+    if not acciones:
+        st.caption("Sin acciones.")
+        return
+
+    for acc in acciones:
+        fecha_txt = acc["fecha"].strftime("%d/%m/%Y")
+        st.markdown(
+            f"""
+            <div class="apple-card-light" style="margin-bottom:8px;">
+                <div style="font-size:12px;color:#5A6872;">
+                    {fecha_txt} · <strong>{acc['tipo']}</strong>
+                </div>
+                <div style="font-size:13px;font-weight:600;color:#032D60;">
+                    {acc['proyecto']}
+                </div>
+                <div style="font-size:12px;color:#5A6872;">
+                    {acc['cliente']} · {acc['ciudad']} · Estado: {acc['estado']}
+                </div>
+                {"<div style='font-size:12px;margin-top:3px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# =====================================================
 # PANEL PRINCIPAL
-# ==========================
+# =====================================================
 
 def render_panel():
     inject_apple_style()
 
-    # CABECERA
     st.markdown(
         """
         <div class="apple-card">
             <div class="badge">Agenda</div>
-            <h3 style="margin-top:4px; margin-bottom:4px;">Agenda de acciones</h3>
-            <p style="margin-bottom:0;">
+            <h3 style="margin-top:2px; margin-bottom:2px;">Agenda de acciones</h3>
+            <p>
                 Seguimientos y tareas pendientes ordenadas por urgencia. Vista rápida para saber
                 qué hacer hoy, qué está retrasado y qué viene en la semana.
             </p>
@@ -74,165 +175,50 @@ def render_panel():
         unsafe_allow_html=True,
     )
 
-    df = load_proyectos()
+    df = load_proyectos_panel()
 
     if df is None or df.empty:
-        st.info("Todavía no hay proyectos en el CRM para generar la agenda.")
+        st.info("Todavía no hay proyectos en la base de datos.")
         return
 
-    hoy = date.today()
+    # Construimos agenda
+    acciones = _extraer_acciones(df)
+    atrasadas, hoy_list, prox7 = _particionar_acciones(acciones)
 
-    acciones = []
-    for _, row in df.iterrows():
-        fecha_seg = _parse_fecha_iso(row.get("fecha_seguimiento"))
-        if not fecha_seg:
-            continue
+    total_acc = len(acciones)
+    total_atrasadas = len(atrasadas)
+    total_hoy = len(hoy_list)
+    total_prox7 = len(prox7)
 
-        acciones.append(
-            {
-                "fecha": fecha_seg,
-                "proyecto": row.get("nombre_obra", "Sin nombre"),
-                "cliente": row.get("cliente_principal", "—"),
-                "ciudad": row.get("ciudad", "—"),
-                "provincia": row.get("provincia", "—"),
-                "tipo": "Seguimiento",
-            }
-        )
-
-    if not acciones:
-        st.info("No hay acciones de seguimiento planificadas.")
-        return
-
-    df_acc = pd.DataFrame(acciones)
-
-    atrasadas = df_acc[df_acc["fecha"] < hoy].sort_values("fecha")
-    hoy_df = df_acc[df_acc["fecha"] == hoy].sort_values("fecha")
-    prox7 = df_acc[(df_acc["fecha"] > hoy) & (df_acc["fecha"] <= hoy + timedelta(days=7))].sort_values("fecha")
-
-    total_acciones = len(df_acc)
-    num_retrasadas = len(atrasadas)
-    num_hoy = len(hoy_df)
-    num_prox7 = len(prox7)
-
-    # =====================================
-    # KPIs
-    # =====================================
-    c1, c2, c3, c4 = st.columns(4)
-
-    c1.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-title">Total acciones</div>
-            <div class="metric-value">{total_acciones}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    c2.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-title">Retrasadas</div>
-            <div class="metric-value">{num_retrasadas}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    c3.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-title">Hoy</div>
-            <div class="metric-value">{num_hoy}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    c4.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-title">Próx. 7 días</div>
-            <div class="metric-value">{num_prox7}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("---")
-
-    # =====================================
-    # LISTAS POR COLUMNA
-    # =====================================
-    col_r, col_h, col_p = st.columns(3)
-
-    # --- Retrasadas ---
-    with col_r:
-        st.markdown(
-            """
-            <div style="font-size:13px; font-weight:600; color:#C23934; margin-bottom:4px;">
-                🔁 Retrasadas
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if atrasadas.empty:
-            st.caption("Sin acciones.")
-        else:
-            for _, a in atrasadas.iterrows():
-                _render_action_card(a, hoy)
-
-    # --- Hoy ---
-    with col_h:
-        st.markdown(
-            """
-            <div style="font-size:13px; font-weight:600; color:#032D60; margin-bottom:4px;">
-                📍 Hoy
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if hoy_df.empty:
-            st.caption("Sin acciones.")
-        else:
-            for _, a in hoy_df.iterrows():
-                _render_action_card(a, hoy)
-
-    # --- Próximos 7 días ---
-    with col_p:
-        st.markdown(
-            """
-            <div style="font-size:13px; font-weight:600; color:#032D60; margin-bottom:4px;">
-                📅 Próximos 7 días
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if prox7.empty:
-            st.caption("Sin acciones.")
-        else:
-            for _, a in prox7.iterrows():
-                _render_action_card(a, hoy)
-
-
-def _render_action_card(a: pd.Series, hoy: date):
-    fecha = a["fecha"]
-    proyecto = a["proyecto"]
-    cliente = a["cliente"]
-    ciudad = a["ciudad"]
-    provincia = a["provincia"]
-    relativo = _relativo(fecha, hoy)
-
+    # Métricas compactas en estilo Salesforce
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown(
-        f"""
-        <div class="apple-card-light" style="margin-bottom:8px;">
-            <div style="font-size:12px; font-weight:600; color:#032D60;">
-                {relativo} · Seguimiento
-            </div>
-            <div style="font-size:12px; margin-top:2px;">
-                {proyecto}
-            </div>
-            <div style="font-size:11.5px; color:#5A6872; margin-top:2px;">
-                {cliente} — {ciudad} ({provincia})
-            </div>
-        </div>
-        """,
+        '<h4 style="color:#032D60;margin:0 0 6px 0;">Resumen rápido</h4>',
         unsafe_allow_html=True,
     )
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total acciones", total_acc)
+    with col2:
+        st.metric("Retrasadas", total_atrasadas)
+    with col3:
+        st.metric("Hoy", total_hoy)
+    with col4:
+        st.metric("Próx. 7 días", total_prox7)
+
+    st.markdown("<hr style='margin:8px 0 10px 0;border-color:#d8dde6;'>", unsafe_allow_html=True)
+
+    # Listas de acciones
+    col_a, col_b, col_c = st.columns([1.2, 1, 1])
+
+    with col_a:
+        _render_lista_acciones("📌 Retrasadas", atrasadas)
+
+    with col_b:
+        _render_lista_acciones("📅 Hoy", hoy_list)
+
+    with col_c:
+        _render_lista_acciones("🔜 Próximos 7 días", prox7)
+
+    st.markdown("</div>", unsafe_allow_html=True)
