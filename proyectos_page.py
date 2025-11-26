@@ -293,7 +293,7 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
         st.info("No hay proyectos con los filtros actuales.")
         return
 
-    # Tabla en claro (solo lectura)
+    # -------- Tabla propia HTML (crm-table) --------
     columnas = [
         "nombre_obra",
         "cliente_principal",
@@ -305,13 +305,28 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
     ]
     columnas = [c for c in columnas if c in df_filtrado.columns]
 
-    st.dataframe(
-        df_filtrado[columnas],
-        hide_index=True,
-        use_container_width=True,
+    df_tabla = df_filtrado[columnas].copy()
+    df_tabla = df_tabla.rename(
+        columns={
+            "nombre_obra": "Proyecto",
+            "cliente_principal": "Cliente principal",
+            "ciudad": "Ciudad",
+            "provincia": "Provincia",
+            "estado": "Estado",
+            "prioridad": "Prioridad",
+            "potencial_eur": "Potencial (€)",
+        }
     )
 
-    # Selector de proyecto para acciones
+    html_tabla = df_tabla.to_html(
+        index=False,
+        classes="crm-table",
+        border=0,
+        justify="left",
+    )
+    st.markdown(html_tabla, unsafe_allow_html=True)
+
+    # -------- Selector para acciones --------
     opciones = {}
     for _, row in df_filtrado.iterrows():
         etiqueta = f"{row.get('nombre_obra', 'Sin nombre')} — {row.get('ciudad', '—')} ({row.get('cliente_principal', '—')})"
@@ -407,7 +422,7 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
         )
 
     with col2:
-        if st.button("⏰ Posponer 1 semana") and seleccion != "(ninguno)":
+        if st.button("⏰ Posponer 1 semana") and seleccion != "(ninguna)":
             proy_id = opciones[seleccion]
             nueva_fecha = (hoy + timedelta(days=7)).isoformat()
             try:
@@ -554,7 +569,7 @@ def _vista_kanban(df_filtrado: pd.DataFrame):
 
 
 # =====================================================
-# VISTA GENERAL (Pestaña)
+# VISTA GENERAL
 # =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
@@ -594,8 +609,7 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 
 # =====================================================
-# DASHBOARD OBRAS IMPORTANTES / DUPLICADOS / IMPORT / ALTA
-# (SIN CAMBIOS RESPECTO A LA VERSIÓN ANTERIOR)
+# RESTO DE PESTAÑAS (igual que antes)
 # =====================================================
 
 def _render_dashboard(df_proy: pd.DataFrame):
