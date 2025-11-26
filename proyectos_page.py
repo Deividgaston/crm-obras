@@ -1,6 +1,5 @@
 import streamlit as st
-from datetime import date, datetime, timedelta
-from typing import List, Dict, Any
+import pandas as pd
 
 from data_cache import load_proyectos
 
@@ -12,124 +11,34 @@ except Exception:
 
 
 # =====================================================
-# UTILIDADES FECHAS
+# UTILIDADES
 # =====================================================
-def _parse_fecha(value) -> date | None:
-    if not value:
-        return None
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return value
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value).date()
-        except Exception:
-            return None
-    return None
+ESTADOS_PIPELINE = [
+    "Detectado",
+    "Seguimiento",
+    "En Prescripción",
+    "Oferta Enviada",
+    "Negociación",
+    "Ganado",
+    "Perdido",
+    "Paralizado",
+]
 
 
-# =====================================================
-# EXTRACCIÓN DE ACCIONES
-# =====================================================
-def _extraer_acciones(df) -> List[Dict[str, Any]]:
-    acciones: List[Dict[str, Any]] = []
-
-    for _, row in df.iterrows():
-        nombre = row.get("nombre_obra", "Sin nombre")
-        cliente = row.get("cliente_principal", "—")
-        ciudad = row.get("ciudad", "—")
-        estado = row.get("estado", "Detectado")
-        proy_id = row.get("id")
-
-        # Seguimiento
-        fecha_seg = _parse_fecha(row.get("fecha_seguimiento"))
-        if fecha_seg:
-            acciones.append(
-                {
-                    "tipo": "Seguimiento",
-                    "fecha": fecha_seg,
-                    "proyecto": nombre,
-                    "cliente": cliente,
-                    "ciudad": ciudad,
-                    "estado": estado,
-                    "id": proy_id,
-                    "descripcion": row.get("notas_seguimiento", "") or "",
-                }
-            )
-
-        # Tareas
-        tareas = row.get("tareas") or []
-        for t in tareas:
-            if not isinstance(t, dict) or t.get("completado"):
-                continue
-            fecha_lim = _parse_fecha(t.get("fecha_limite"))
-            if fecha_lim:
-                acciones.append(
-                    {
-                        "tipo": t.get("tipo", "Tarea"),
-                        "fecha": fecha_lim,
-                        "proyecto": nombre,
-                        "cliente": cliente,
-                        "ciudad": ciudad,
-                        "estado": estado,
-                        "id": proy_id,
-                        "descripcion": t.get("titulo", "") or "",
-                    }
-                )
-
-    acciones.sort(key=lambda x: x["fecha"])
-    return acciones
-
-
-def _particionar_acciones(acciones: List[Dict[str, Any]]):
-    hoy = date.today()
-    en_7 = hoy + timedelta(days=7)
-
-    atrasadas = [x for x in acciones if x["fecha"] < hoy]
-    hoy_list = [x for x in acciones if x["fecha"] == hoy]
-    prox7 = [x for x in acciones if hoy < x["fecha"] <= en_7]
-    return atrasadas, hoy_list, prox7
-
-
-def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
-    st.markdown(
-        f'<div style="font-size:12px;font-weight:600;color:#032D60;margin-bottom:2px;">{titulo}</div>',
-        unsafe_allow_html=True,
-    )
-
-    if not acciones:
-        st.caption("Sin acciones.")
-        return
-
-    for acc in acciones:
-        fecha = acc["fecha"].strftime("%d/%m/%Y")
-        st.markdown(
-            f"""
-            <div class="apple-card-light" style="margin-bottom:4px;padding:5px 7px;">
-                <div style="font-size:10px;color:#5A6872;">
-                    {fecha} · <strong>{acc['tipo']}</strong>
-                </div>
-                <div style="font-size:12px;font-weight:600;color:#032D60;margin:0;">
-                    {acc['proyecto']}
-                </div>
-                <div style="font-size:10.5px;color:#5A6872;">
-                    {acc['cliente']} · {acc['ciudad']} · {acc['estado']}
-                </div>
-                {"<div style='font-size:10px;margin-top:2px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+def _contar_por_estado(df: pd.DataFrame) -> dict:
+    if "estado" not in df.columns:
+        return {e: 0 for e in ESTADOS_PIPELINE}
+    conteo = df["estado"].value_counts().to_dict()
+    return {e: int(conteo.get(e, 0)) for e in ESTADOS_PIPELINE}
 
 
 # =====================================================
-# PANEL (COMPACTO + TAG GRANDE)
+# PÁGINA DE PROYECTOS
 # =====================================================
-def render_panel():
+def render_proyectos():
     inject_apple_style()
 
-    # ===== ESTILOS PANEL =====
+    # ===== ESTILOS COMPACTOS =====
     st.markdown(
         """
         <style>
@@ -159,7 +68,6 @@ def render_panel():
             line-height:12px;
         }
 
-        /* TAG GRANDE */
         .crm-tag-big {
             font-size:13px;
             font-weight:500;
@@ -179,51 +87,170 @@ def render_panel():
             padding-bottom:0 !important;
             margin-top:-4px;
         }
+
+        /* Dataframe más integrado con el fondo claro */
+        .stDataFrame div[data-testid="stGrid"] {
+            border-radius:6px;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # ===== CABECERA (sin prints de texto crudo) =====
+    # ===== CABECERA =====
     st.markdown(
         """
         <div class="crm-compact-header">
             <div>
-                <div class="crm-compact-title">Panel</div>
+                <div class="crm-compact-title">Proyectos</div>
                 <div class="crm-compact-subtitle">
-                    Agenda de seguimientos y tareas del día
+                    Vista general del pipeline de obras y filtros por ciudad, estado y prioridad.
                 </div>
             </div>
-            <div class="crm-tag-big">Vista · Agenda</div>
+            <div class="crm-tag-big">Vista · General</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ===== DATOS =====
+    # ===== CARGA DE DATOS =====
     df = load_proyectos()
 
     if df is None or df.empty:
-        st.info("Todavía no hay proyectos.")
+        st.info("Todavía no hay proyectos en la base de datos.")
         return
 
-    acciones = _extraer_acciones(df)
-    atrasadas, hoy_list, prox7 = _particionar_acciones(acciones)
+    # ===== FILTROS SUPERIORES =====
+    st.markdown(
+        "<div style='font-size:11px;color:#5A6872;margin-bottom:2px;'>Filtros rápidos</div>",
+        unsafe_allow_html=True,
+    )
 
-    # ===== MÉTRICAS =====
+    col_ciudad, col_estado, col_tipo, col_prioridad = st.columns(4)
+
+    # Valores únicos seguros
+    ciudades = sorted([c for c in df.get("ciudad", pd.Series()).dropna().unique()])
+    estados = sorted([c for c in df.get("estado", pd.Series()).dropna().unique()])
+    tipos = sorted([c for c in df.get("tipo_proyecto", pd.Series()).dropna().unique()])
+    prioridades = sorted([c for c in df.get("prioridad", pd.Series()).dropna().unique()])
+
+    with col_ciudad:
+        ciudad_sel = st.selectbox(
+            "Ciudad",
+            options=["Todas"] + ciudades,
+            index=0,
+        )
+
+    with col_estado:
+        estado_sel = st.selectbox(
+            "Estado / Seguimiento",
+            options=["Todos"] + estados,
+            index=0,
+        )
+
+    with col_tipo:
+        tipo_sel = st.selectbox(
+            "Tipo de proyecto",
+            options=["Todos"] + tipos,
+            index=0,
+        )
+
+    with col_prioridad:
+        prioridad_sel = st.selectbox(
+            "Prioridad",
+            options=["Todas"] + prioridades,
+            index=0,
+        )
+
+    # Aplicar filtros
+    df_filtrado = df.copy()
+
+    if ciudad_sel != "Todas" and "ciudad" in df_filtrado.columns:
+        df_filtrado = df_filtrado[df_filtrado["ciudad"] == ciudad_sel]
+
+    if estado_sel != "Todos" and "estado" in df_filtrado.columns:
+        df_filtrado = df_filtrado[df_filtrado["estado"] == estado_sel]
+
+    if tipo_sel != "Todos" and "tipo_proyecto" in df_filtrado.columns:
+        df_filtrado = df_filtrado[df_filtrado["tipo_proyecto"] == tipo_sel]
+
+    if prioridad_sel != "Todas" and "prioridad" in df_filtrado.columns:
+        df_filtrado = df_filtrado[df_filtrado["prioridad"] == prioridad_sel]
+
+    # ===== MODO DE VISTA (DE MOMENTO SOLO TABLA FUNCIONAL) =====
+    st.markdown(
+        "<div style='font-size:11px;color:#5A6872;margin-top:6px;'>Modo de vista</div>",
+        unsafe_allow_html=True,
+    )
+    modo = st.radio(
+        "",
+        options=["Tabla", "Seguimientos", "Tareas", "Kanban"],
+        horizontal=True,
+        index=0,
+        label_visibility="collapsed",
+    )
+
+    # ===== METRICAS PIPELINE =====
+    conteo_estados = _contar_por_estado(df_filtrado)
+
     st.markdown('<div class="apple-card-light crm-small-metric">', unsafe_allow_html=True)
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Acciones", len(acciones))
-    col2.metric("Retrasadas", len(atrasadas))
-    col3.metric("Hoy", len(hoy_list))
-    col4.metric("Próx. 7 días", len(prox7))
+    (
+        c1,
+        c2,
+        c3,
+        c4,
+        c5,
+        c6,
+        c7,
+        c8,
+    ) = st.columns(8)
+
+    c1.metric("Detectado", conteo_estados["Detectado"])
+    c2.metric("Seguimiento", conteo_estados["Seguimiento"])
+    c3.metric("En Prescripción", conteo_estados["En Prescripción"])
+    c4.metric("Oferta Enviada", conteo_estados["Oferta Enviada"])
+    c5.metric("Negociación", conteo_estados["Negociación"])
+    c6.metric("Ganado", conteo_estados["Ganado"])
+    c7.metric("Perdido", conteo_estados["Perdido"])
+    c8.metric("Paralizado", conteo_estados["Paralizado"])
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ===== LISTAS =====
-    colA, colB, colC = st.columns([1.1, 1, 1])
-    with colA:
-        _render_lista_acciones("📌 Retrasadas", atrasadas)
-    with colB:
-        _render_lista_acciones("📅 Hoy", hoy_list)
-    with colC:
-        _render_lista_acciones("🔜 Próx. 7 días", prox7)
+    # ===== CONTENIDO SEGÚN MODO =====
+    if modo == "Tabla":
+        st.markdown(
+            "<div style='font-size:11px;color:#5A6872;margin-top:6px;margin-bottom:2px;'>Vista general de proyectos</div>",
+            unsafe_allow_html=True,
+        )
+
+        # Ordenar columnas importantes al principio si existen
+        cols_preferidas = [
+            "nombre_obra",
+            "cliente_principal",
+            "ciudad",
+            "provincia",
+            "estado",
+            "prioridad",
+            "tipo_proyecto",
+            "potencial_eur",
+        ]
+        cols_existentes = [c for c in cols_preferidas if c in df_filtrado.columns]
+        otras = [c for c in df_filtrado.columns if c not in cols_existentes]
+
+        df_mostrado = df_filtrado[cols_existentes + otras]
+
+        st.dataframe(
+            df_mostrado,
+            use_container_width=True,
+            hide_index=True,
+            height=420,
+        )
+
+    elif modo == "Seguimientos":
+        st.info("La vista de Seguimientos se apoyará en los mismos datos, pero aún no está afinada. Usa de momento la vista Tabla.")
+
+    elif modo == "Tareas":
+        st.info("La vista de Tareas se implementará a partir de los datos de tareas de cada proyecto. De momento, utiliza la vista Tabla.")
+
+    elif modo == "Kanban":
+        st.info("La vista Kanban se integrará más adelante. Por ahora la vista Tabla te muestra toda la información necesaria.")
