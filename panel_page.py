@@ -14,7 +14,6 @@ except Exception:
 # =====================================================
 # UTILIDADES FECHAS
 # =====================================================
-
 def _parse_fecha(value) -> date | None:
     if not value:
         return None
@@ -31,11 +30,10 @@ def _parse_fecha(value) -> date | None:
 
 
 # =====================================================
-# CONSTRUCCIÓN DE AGENDA
+# EXTRACCIÓN DE ACCIONES
 # =====================================================
-
 def _extraer_acciones(df) -> List[Dict[str, Any]]:
-    acciones: List[Dict[str, Any]] = []
+    acciones = []
 
     for _, row in df.iterrows():
         nombre = row.get("nombre_obra", "Sin nombre")
@@ -44,7 +42,6 @@ def _extraer_acciones(df) -> List[Dict[str, Any]]:
         estado = row.get("estado", "Detectado")
         proy_id = row.get("id")
 
-        # Seguimiento
         fecha_seg = _parse_fecha(row.get("fecha_seguimiento"))
         if fecha_seg:
             acciones.append(
@@ -60,30 +57,26 @@ def _extraer_acciones(df) -> List[Dict[str, Any]]:
                 }
             )
 
-        # Tareas
         tareas = row.get("tareas") or []
         for t in tareas:
-            if not isinstance(t, dict):
-                continue
-            if t.get("completado"):
+            if not isinstance(t, dict) or t.get("completado"):
                 continue
             fecha_lim = _parse_fecha(t.get("fecha_limite"))
-            if not fecha_lim:
-                continue
-            acciones.append(
-                {
-                    "tipo": t.get("tipo", "Tarea"),
-                    "fecha": fecha_lim,
-                    "proyecto": nombre,
-                    "cliente": cliente,
-                    "ciudad": ciudad,
-                    "estado": estado,
-                    "id": proy_id,
-                    "descripcion": t.get("titulo", "") or "",
-                }
-            )
+            if fecha_lim:
+                acciones.append(
+                    {
+                        "tipo": t.get("tipo", "Tarea"),
+                        "fecha": fecha_lim,
+                        "proyecto": nombre,
+                        "cliente": cliente,
+                        "ciudad": ciudad,
+                        "estado": estado,
+                        "id": proy_id,
+                        "descripcion": t.get("titulo", "") or "",
+                    }
+                )
 
-    acciones = sorted(acciones, key=lambda x: x["fecha"])
+    acciones.sort(key=lambda x: x["fecha"])
     return acciones
 
 
@@ -91,23 +84,15 @@ def _particionar_acciones(acciones: List[Dict[str, Any]]):
     hoy = date.today()
     en_7 = hoy + timedelta(days=7)
 
-    atrasadas, hoy_list, prox7 = [], [], []
-
-    for acc in acciones:
-        f = acc["fecha"]
-        if f < hoy:
-            atrasadas.append(acc)
-        elif f == hoy:
-            hoy_list.append(acc)
-        elif hoy < f <= en_7:
-            prox7.append(acc)
-
+    atrasadas = [x for x in acciones if x["fecha"] < hoy]
+    hoy_list = [x for x in acciones if x["fecha"] == hoy]
+    prox7 = [x for x in acciones if hoy < x["fecha"] <= en_7]
     return atrasadas, hoy_list, prox7
 
 
 def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
     st.markdown(
-        f'<div style="font-size:13px;font-weight:600;color:#032D60;margin:4px 0 2px 0;">{titulo}</div>',
+        f'<div style="font-size:12px;font-weight:600;color:#032D60;margin-bottom:2px;">{titulo}</div>',
         unsafe_allow_html=True,
     )
 
@@ -116,20 +101,20 @@ def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
         return
 
     for acc in acciones:
-        fecha_txt = acc["fecha"].strftime("%d/%m/%Y")
+        fecha = acc["fecha"].strftime("%d/%m/%Y")
         st.markdown(
             f"""
-            <div class="apple-card-light" style="margin-bottom:6px;padding:6px 8px;">
-                <div style="font-size:11px;color:#5A6872;">
-                    {fecha_txt} · <strong>{acc['tipo']}</strong>
+            <div class="apple-card-light" style="margin-bottom:4px;padding:5px 7px;">
+                <div style="font-size:10px;color:#5A6872;">
+                    {fecha} · <strong>{acc['tipo']}</strong>
                 </div>
-                <div style="font-size:12.5px;font-weight:600;color:#032D60;">
+                <div style="font-size:12px;font-weight:600;color:#032D60;margin:0;">
                     {acc['proyecto']}
                 </div>
-                <div style="font-size:11px;color:#5A6872;">
-                    {acc['cliente']} · {acc['ciudad']} · Estado: {acc['estado']}
+                <div style="font-size:10.5px;color:#5A6872;">
+                    {acc['cliente']} · {acc['ciudad']} · {acc['estado']}
                 </div>
-                {"<div style='font-size:11px;margin-top:2px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
+                {"<div style='font-size:10px;margin-top:2px;'>" + acc["descripcion"] + "</div>" if acc["descripcion"] else ""}
             </div>
             """,
             unsafe_allow_html=True,
@@ -137,13 +122,12 @@ def _render_lista_acciones(titulo: str, acciones: List[Dict[str, Any]]):
 
 
 # =====================================================
-# PANEL (DISEÑO COMPACTO BASE PARA TODAS LAS PÁGINAS)
+# PANEL (DISEÑO ULTRA COMPACTO)
 # =====================================================
-
 def render_panel():
     inject_apple_style()
 
-    # ===== Estilos extra para diseño compacto reutilizable =====
+    # ===== Estilo reducido al mínimo =====
     st.markdown(
         """
         <style>
@@ -151,57 +135,54 @@ def render_panel():
             display:flex;
             align-items:center;
             justify-content:space-between;
-            padding:4px 0 6px 0;
+            padding:2px 0 4px 0;
+            margin-bottom:4px;
             border-bottom:1px solid #d8dde6;
-            margin-bottom:6px;
-        }
-        .crm-compact-header-left {
-            display:flex;
-            flex-direction:column;
-            gap:0;
         }
         .crm-compact-title {
-            font-size:18px;
+            font-size:15px;
             font-weight:600;
             color:#032D60;
             margin:0;
             padding:0;
+            line-height:15px;
         }
         .crm-compact-subtitle {
-            font-size:11px;
+            font-size:10px;
             color:#5A6872;
             margin:0;
-            padding:0;
+            line-height:12px;
         }
         .crm-compact-tag {
-            font-size:11px;
-            padding:2px 8px;
-            border-radius:999px;
+            font-size:10px;
+            padding:1px 6px;
+            border-radius:8px;
             background:#e5f2ff;
-            color:#032D60;
             border:1px solid #c5dcf5;
-            white-space:nowrap;
+            color:#032D60;
+            height:16px;
+            display:flex;
+            align-items:center;
         }
-        .crm-compact-metrics {
-            margin-bottom:4px;
-        }
-        .crm-compact-metrics .stMetric {
-            padding-top:0;
-            padding-bottom:0;
+
+        .crm-small-metric .stMetric {
+            padding-top:0 !important;
+            padding-bottom:0 !important;
+            margin-top:-4px;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # ===== CABECERA COMPACTA =====
+    # ===== Cabecera súper compacta =====
     st.markdown(
         """
         <div class="crm-compact-header">
-            <div class="crm-compact-header-left">
+            <div>
                 <div class="crm-compact-title">Panel</div>
                 <div class="crm-compact-subtitle">
-                    Agenda de seguimientos y tareas · vista rápida de qué hacer hoy.
+                    Agenda: seguimientos y tareas del día.
                 </div>
             </div>
             <div class="crm-compact-tag">Vista · Agenda</div>
@@ -213,41 +194,26 @@ def render_panel():
     df = load_proyectos()
 
     if df is None or df.empty:
-        st.info("Todavía no hay proyectos en la base de datos.")
+        st.info("Todavía no hay proyectos.")
         return
 
     acciones = _extraer_acciones(df)
     atrasadas, hoy_list, prox7 = _particionar_acciones(acciones)
 
-    total_acc = len(acciones)
-    total_atrasadas = len(atrasadas)
-    total_hoy = len(hoy_list)
-    total_prox7 = len(prox7)
-
-    # ===== MÉTRICAS MUY COMPACTAS =====
-    st.markdown('<div class="apple-card-light crm-compact-metrics">', unsafe_allow_html=True)
+    # === Métricas muy compactas ===
+    st.markdown('<div class="apple-card-light crm-small-metric">', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Acciones", total_acc)
-    col2.metric("Retrasadas", total_atrasadas)
-    col3.metric("Hoy", total_hoy)
-    col4.metric("Próx. 7 días", total_prox7)
+    col1.metric("Acciones", len(acciones))
+    col2.metric("Retrasadas", len(atrasadas))
+    col3.metric("Hoy", len(hoy_list))
+    col4.metric("Próx. 7 días", len(prox7))
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ===== LISTAS EN TRES COLUMNAS (COMPACTO) =====
-    st.markdown(
-        "<div style='margin-top:4px;'>",
-        unsafe_allow_html=True,
-    )
-
-    col_a, col_b, col_c = st.columns([1.1, 1, 1])
-
-    with col_a:
+    # === Listas compactas ===
+    colA, colB, colC = st.columns([1.1, 1, 1])
+    with colA:
         _render_lista_acciones("📌 Retrasadas", atrasadas)
-
-    with col_b:
+    with colB:
         _render_lista_acciones("📅 Hoy", hoy_list)
-
-    with col_c:
-        _render_lista_acciones("🔜 Próximos 7 días", prox7)
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    with colC:
+        _render_lista_acciones("🔜 Próx. 7 días", prox7)
