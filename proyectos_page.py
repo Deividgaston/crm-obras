@@ -257,7 +257,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 
 
 # =====================================================
-# VISTAS: TABLA / SEGUIMIENTOS / TAREAS
+# VISTAS: TABLA / SEGUIMIENTOS / TAREAS / KANBAN
 # =====================================================
 
 def _vista_tabla(df_filtrado: pd.DataFrame):
@@ -465,10 +465,6 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
     )
 
 
-# =====================================================
-# KANBAN PIPELINE
-# =====================================================
-
 ESTADOS_PIPELINE = [
     "Detectado",
     "Seguimiento",
@@ -540,7 +536,7 @@ def _vista_kanban(df_filtrado: pd.DataFrame):
                         <div style="font-size:12.5px; font-weight:600;">
                             {nombre}
                         </div>
-                            <div style="font-size:12px; color:#5A6872;">
+                        <div style="font-size:12px; color:#5A6872;">
                             {cliente} — {ciudad}
                         </div>
                         <div style="font-size:11.5px; margin-top:3px;">
@@ -554,10 +550,6 @@ def _vista_kanban(df_filtrado: pd.DataFrame):
                     unsafe_allow_html=True,
                 )
 
-
-# =====================================================
-# VISTA GENERAL (Pestaña)
-# =====================================================
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -597,4 +589,300 @@ def _render_dashboard(df_proy: pd.DataFrame):
     if df_proy.empty:
         st.info("No hay proyectos para mostrar en el dashboard.")
         st.markdown("</div>", unsafe_allow_html=True)
-   
+        return
+
+    df_imp = filtrar_obras_importantes(df_proy)
+    if df_imp.empty:
+        st.info("No hay obras importantes según el criterio definido.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    group_col = st.selectbox(
+        "Agrupar por",
+        ["provincia", "ciudad", "tipo_proyecto"],
+        index=0,
+    )
+
+    if group_col not in df_imp.columns:
+        st.warning(f"No existe la columna '{group_col}' en los datos.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    df_group = (
+        df_imp.groupby(group_col)
+        .agg(
+            num_obras=("id", "count"),
+            potencial_total=("potencial_eur", "sum"),
+        )
+        .reset_index()
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.caption("Número de obras por grupo")
+        chart_count = (
+            alt.Chart(df_group)
+            .mark_bar()
+            .encode(
+                x=alt.X(f"{group_col}:N", sort="-y", title=group_col.capitalize()),
+                y=alt.Y("num_obras:Q", title="Número de obras"),
+                tooltip=[group_col, "num_obras", "potencial_total"],
+            )
+            .properties(height=320)
+        )
+        st.altair_chart(chart_count, use_container_width=True)
+
+    with col2:
+        st.caption("Potencial total por grupo (€)")
+        chart_potencial = (
+            alt.Chart(df_group)
+            .mark_bar()
+            .encode(
+                x=alt.X(f"{group_col}:N", sort="-y", title=group_col.capitalize()),
+                y=alt.Y("potencial_total:Q", title="Potencial total (€)"),
+                tooltip=[group_col, "num_obras", "potencial_total"],
+            )
+            .properties(height=320)
+        )
+        st.altair_chart(chart_potencial, use_container_width=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =====================================================
+# DUPLICADOS
+# =====================================================
+
+def _render_duplicados(df_proy: pd.DataFrame):
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("#### Posibles proyectos duplicados", unsafe_allow_html=True)
+
+    df_tmp = df_proy.copy()
+    key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
+    key_cols = [c for c in key_cols_all if c in df_tmp.columns]
+
+    if not key_cols:
+        st.info("No hay suficientes campos para detectar duplicados automáticamente.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    df_tmp["dup_key"] = df_tmp[key_cols].astype(str).agg(" | ".join, axis=1)
+    duplicated_mask = df_tmp["dup_key"].duplicated(keep=False)
+    df_dups = df_tmp[duplicated_mask].copy()
+
+    if df_dups.empty:
+        st.success("No se han detectado proyectos duplicados.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    st.caption("Revisa los grupos de proyectos que parecen duplicados:")
+
+    for key, group in df_dups.groupby("dup_key"):
+        st.markdown(f"**Grupo:** {key}")
+        st.dataframe(
+            group.drop(columns=["dup_key"]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        for _, row in group.iterrows():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"- {row.get('nombre_obra', 'Sin nombre')} ({row.get('id')})")
+            with col2:
+                if st.button("🗑️ Borrar", key=f"del_dup_{row['id']}"):
+                    delete_proyecto(row["id"])
+                    invalidate_proyectos_cache()
+                    st.success("Proyecto borrado.")
+                    st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =====================================================
+# IMPORTAR / EXPORTAR
+# =====================================================
+
+def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = None):
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("#### Importar / Exportar proyectos", unsafe_allow_html=True)
+
+    if not df_proy_empty and df_proy is not None:
+        st.markdown("##### Exportar obras importantes a Excel")
+        if st.button("⬇️ Descargar Excel de obras importantes"):
+            try:
+                excel_bytes = generar_excel_obras_importantes(df_proy)
+                st.download_button(
+                    "Descargar Excel",
+                    data=excel_bytes,
+                    file_name="obras_importantes.xlsx",
+                    mime=(
+                        "application/vnd.openxmlformats-officedocument."
+                        "spreadsheetml.sheet"
+                    ),
+                )
+            except Exception as e:
+                st.error(f"No se pudo generar el Excel: {e}")
+
+    st.markdown("---")
+    st.markdown("##### Importar proyectos desde Excel")
+
+    uploaded_file = st.file_uploader(
+        "Sube aquí el archivo .xlsx con los proyectos",
+        type=["xlsx"],
+        key="uploader_import",
+    )
+
+    if uploaded_file is not None:
+        try:
+            df_preview = pd.read_excel(uploaded_file)
+            st.write("Vista previa de los datos a importar:")
+            st.dataframe(df_preview.head(), use_container_width=True)
+
+            if st.button("🚀 Importar proyectos"):
+                creados = importar_proyectos_desde_excel(uploaded_file)
+                invalidate_proyectos_cache()
+                st.success(f"Importación completada. Proyectos creados: {creados}")
+                st.rerun()
+        except Exception as e:
+            st.error(f"Error leyendo el Excel: {e}")
+    else:
+        st.info("Sube un Excel para poder importarlo.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =====================================================
+# ALTA MANUAL
+# =====================================================
+
+def _render_alta_manual():
+    st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
+    st.markdown("#### Alta manual de proyecto", unsafe_allow_html=True)
+
+    df_clientes = load_clientes()
+    nombres_clientes = ["(sin asignar)"]
+    if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
+        nombres_clientes += sorted(df_clientes["empresa"].dropna().unique().tolist())
+
+    with st.form("form_proyecto_alta"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre_obra = st.text_input("Nombre del proyecto / obra")
+            cliente_principal = st.selectbox(
+                "Cliente principal (promotor)",
+                nombres_clientes,
+            )
+            tipo_proyecto = st.selectbox(
+                "Tipo de proyecto",
+                ["Residencial lujo", "Residencial", "Oficinas", "Hotel", "BTR", "Otro"],
+            )
+            ciudad = st.text_input("Ciudad")
+            provincia = st.text_input("Provincia")
+
+        with col2:
+            arquitectura = st.text_input("Arquitectura (opcional)")
+            ingenieria = st.text_input("Ingeniería (opcional)")
+            prioridad = st.selectbox("Prioridad", ["Alta", "Media", "Baja"], index=1)
+            potencial_eur = st.number_input(
+                "Potencial estimado 2N (€)",
+                min_value=0.0,
+                step=10_000.0,
+                value=50_000.0,
+            )
+            fecha_seg = st.date_input(
+                "Primera fecha de seguimiento", value=date.today()
+            )
+
+        notas = st.text_area("Notas iniciales (fuente del proyecto, link, etc.)")
+
+        guardar_proy = st.form_submit_button("Guardar proyecto")
+
+    if guardar_proy:
+        if not nombre_obra:
+            st.warning("El nombre del proyecto es obligatorio.")
+        else:
+            promotor_nombre = (
+                None if cliente_principal == "(sin asignar)" else cliente_principal
+            )
+            add_proyecto(
+                {
+                    "nombre_obra": nombre_obra,
+                    "cliente_principal": promotor_nombre,
+                    "promotora": promotor_nombre,
+                    "tipo_proyecto": tipo_proyecto,
+                    "ciudad": ciudad,
+                    "provincia": provincia,
+                    "arquitectura": arquitectura or None,
+                    "ingenieria": ingenieria or None,
+                    "prioridad": prioridad,
+                    "potencial_eur": float(potencial_eur),
+                    "estado": "Detectado",
+                    "fecha_seguimiento": fecha_seg.isoformat(),
+                    "notas_seguimiento": notas,
+                    "notas_historial": [],
+                    "tareas": default_pasos_seguimiento() if callable(default_pasos_seguimiento) else [],
+                }
+            )
+            invalidate_proyectos_cache()
+            st.success("Proyecto creado correctamente.")
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =====================================================
+# PÁGINA PRINCIPAL
+# =====================================================
+
+def render_proyectos():
+    inject_apple_style()
+
+    st.markdown(
+        """
+        <div class="apple-card">
+            <div class="badge">Proyectos</div>
+            <h3 style="margin-top:2px; margin-bottom:2px;">Pipeline de prescripción</h3>
+            <p>
+                Gestiona el ciclo completo de las obras: estados, seguimientos, tareas y análisis
+                de potencial. Usa las pestañas para navegar por la vista general, el dashboard,
+                la limpieza de duplicados y la importación de datos.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    df_proy = load_proyectos()
+
+    if df_proy is None or df_proy.empty:
+        st.info("Todavía no hay proyectos guardados en Firestore.")
+        _render_import_export(df_proy_empty=True)
+        _render_alta_manual()
+        return
+
+    tab_vista, tab_dash, tab_duplicados, tab_import, tab_alta = st.tabs(
+        [
+            "📁 Vista general",
+            "📊 Dashboard",
+            "🧬 Duplicados",
+            "📤/📥 Importar / Exportar",
+            "➕ Alta manual",
+        ]
+    )
+
+    with tab_vista:
+        _render_vista_general(df_proy)
+
+    with tab_dash:
+        _render_dashboard(df_proy)
+
+    with tab_duplicados:
+        _render_duplicados(df_proy)
+
+    with tab_import:
+        _render_import_export(df_proy_empty=False, df_proy=df_proy)
+
+    with tab_alta:
+        _render_alta_manual()
