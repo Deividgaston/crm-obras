@@ -261,7 +261,10 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 # =====================================================
 
 def _vista_tabla(df_filtrado: pd.DataFrame):
-    st.markdown("##### Pipeline por estado", unsafe_allow_html=True)
+    st.markdown(
+        '<h5 style="color:#032D60;margin-bottom:4px;">Pipeline por estado</h5>',
+        unsafe_allow_html=True,
+    )
 
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
@@ -281,7 +284,10 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
                 valor = int(counts.get(estado, 0))
                 st.metric(label=estado, value=valor)
 
-    st.markdown("<hr style='margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<hr style='margin-top:8px;margin-bottom:8px;border-color:#d8dde6;'>",
+        unsafe_allow_html=True,
+    )
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -371,7 +377,10 @@ def _vista_tabla(df_filtrado: pd.DataFrame):
 
 
 def _vista_seguimientos(df_filtrado: pd.DataFrame):
-    st.markdown("##### Seguimientos por fecha", unsafe_allow_html=True)
+    st.markdown(
+        '<h5 style="color:#032D60;margin-bottom:4px;">Seguimientos por fecha</h5>',
+        unsafe_allow_html=True,
+    )
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -432,7 +441,10 @@ def _vista_seguimientos(df_filtrado: pd.DataFrame):
 
 
 def _vista_tareas(df_filtrado: pd.DataFrame):
-    st.markdown("##### Tareas abiertas por proyecto", unsafe_allow_html=True)
+    st.markdown(
+        '<h5 style="color:#032D60;margin-bottom:4px;">Tareas abiertas por proyecto</h5>',
+        unsafe_allow_html=True,
+    )
 
     registros = []
 
@@ -486,7 +498,10 @@ ESTADOS_PIPELINE = [
 
 
 def _vista_kanban(df_filtrado: pd.DataFrame):
-    st.markdown("##### Kanban del pipeline", unsafe_allow_html=True)
+    st.markdown(
+        '<h5 style="color:#032D60;margin-bottom:4px;">Kanban del pipeline</h5>',
+        unsafe_allow_html=True,
+    )
 
     if df_filtrado.empty:
         st.info("No hay proyectos con los filtros actuales.")
@@ -565,17 +580,26 @@ def _vista_kanban(df_filtrado: pd.DataFrame):
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Vista general de proyectos", unsafe_allow_html=True)
+    st.markdown(
+        '<h4 style="color:#032D60;margin:0 0 4px 0;">Vista general de proyectos</h4>',
+        unsafe_allow_html=True,
+    )
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista_general")
 
-    st.markdown("---")
+    st.markdown("<hr style='margin:8px 0 6px 0;border-color:#d8dde6;'>", unsafe_allow_html=True)
+
+    st.markdown(
+        '<div style="font-size:12px;color:#5A6872;margin-bottom:4px;">Modo de vista</div>',
+        unsafe_allow_html=True,
+    )
 
     vista = st.radio(
-        "Modo de vista",
+        "",
         ["Tabla", "Seguimientos", "Tareas", "Kanban"],
         horizontal=True,
         key="vista_general_radio",
+        label_visibility="collapsed",
     )
 
     if vista == "Tabla":
@@ -596,7 +620,10 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 def _render_dashboard(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Obras importantes (dashboard)", unsafe_allow_html=True)
+    st.markdown(
+        '<h4 style="color:#032D60;margin:0 0 4px 0;">Obras importantes (dashboard)</h4>',
+        unsafe_allow_html=True,
+    )
 
     if df_proy.empty:
         st.info("No hay proyectos para mostrar en el dashboard.")
@@ -668,7 +695,10 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
 def _render_duplicados(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Posibles proyectos duplicados", unsafe_allow_html=True)
+    st.markdown(
+        '<h4 style="color:#032D60;margin:0 0 4px 0;">Posibles proyectos duplicados</h4>',
+        unsafe_allow_html=True,
+    )
 
     df_tmp = df_proy.copy()
     key_cols_all = ["nombre_obra", "cliente_principal", "ciudad", "provincia"]
@@ -718,7 +748,10 @@ def _render_duplicados(df_proy: pd.DataFrame):
 
 def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = None):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Importar / Exportar proyectos", unsafe_allow_html=True)
+    st.markdown(
+        '<h4 style="color:#032D60;margin:0 0 4px 0;">Importar / Exportar proyectos</h4>',
+        unsafe_allow_html=True,
+    )
 
     if not df_proy_empty and df_proy is not None:
         st.markdown("##### Exportar obras importantes a Excel")
@@ -770,7 +803,10 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
 
 def _render_alta_manual():
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Alta manual de proyecto", unsafe_allow_html=True)
+    st.markdown(
+        '<h4 style="color:#032D60;margin:0 0 4px 0;">Alta manual de proyecto</h4>',
+        unsafe_allow_html=True,
+    )
 
     df_clientes = load_clientes()
     nombres_clientes = ["(sin asignar)"]
@@ -849,6 +885,29 @@ def _render_alta_manual():
 
 def render_proyectos():
     inject_apple_style()
+
+    # Estilo extra específico para tablas (texto y bordes claros)
+    st.markdown(
+        """
+        <style>
+        [data-testid="stDataFrame"] table,
+        [data-testid="stDataEditor"] table {
+            color:#16325c !important;
+        }
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td,
+        [data-testid="stDataEditor"] th,
+        [data-testid="stDataEditor"] td {
+            border-color:#d8dde6 !important;
+        }
+        [data-testid="stDataFrame"] thead,
+        [data-testid="stDataEditor"] thead {
+            background-color:#f4f6f9 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown(
         """
