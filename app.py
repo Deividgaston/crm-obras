@@ -21,102 +21,65 @@ PAGES = {
 
 
 def app():
-    # ==========================
-    # CONFIGURACIÓN GENERAL
-    # ==========================
+
     st.set_page_config(
         page_title="CRM Prescripción 2N",
         layout="wide",
         page_icon="🏗️",
     )
 
-    # Ocultar cabecera, menú y footer de Streamlit
-    st.markdown(
-        """
+    # Ocultar cabecera, menú y footer Streamlit
+    st.markdown("""
         <style>
             #MainMenu {visibility: hidden;}
             header {visibility: hidden;}
             footer {visibility: hidden;}
+
+            html, body, [class*="css"], * {
+                -webkit-user-select: text !important;
+                user-select: text !important;
+            }
+
+            /* Botones compactos */
+            .stButton > button {
+                border-radius: 8px;
+                padding: 4px 10px !important;
+                min-height: 0px !important;
+                height: 34px !important;
+                font-size: 14px !important;
+                margin-bottom: 0px !important;
+            }
+
+            /* Eliminar espacio automático entre secciones */
+            .block-container {
+                padding-top: 6px !important;
+            }
+
+            /* Quitar espacio debajo de los botones */
+            .nav-spacer {
+                margin: 0;
+                padding: 0;
+                height: 4px;
+            }
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ======= CSS extra: diseño compacto + habilitar copiar/pegar =======
-    st.markdown(
-        """
-        <style>
-        /* Habilitar seleccionar texto / copiar-pegar en toda la app */
-        html, body, [class*="css"], * {
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
-            user-select: text !important;
-        }
-
-        /* Cabecera compacta del app */
-        .crm-app-header {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            padding: 4px 4px 6px 4px;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #d8dde6;
-        }
-        .crm-app-header-left {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
-        .crm-app-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #032D60;
-            margin: 0;
-        }
-        .crm-app-subtitle {
-            font-size: 11px;
-            color: #5A6872;
-            margin: 0;
-        }
-        .crm-app-breadcrumbs {
-            font-size: 11px;
-            color: #5A6872;
-            margin-top: 2px;
-        }
-
-        /* Botones de navegación más compactos */
-        .stButton > button {
-            border-radius: 8px;
-            padding: 6px 12px;
-            min-height: 0px;
-            height: 36px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
     inject_apple_style()
 
     if "page" not in st.session_state:
         st.session_state["page"] = "panel"
 
-    # ==========================
-    # CABECERA COMPACTA GLOBAL
-    # ==========================
+    # ========================== CABECERA GLOBAL ==========================
     st.markdown(
         """
-        <div class="crm-app-header">
-            <div class="crm-app-header-left">
-                <div class="crm-app-title">CRM Prescripción 2N</div>
-                <div class="crm-app-subtitle">
-                    Herramienta interna para seguimiento de prescripción y pipeline de obras.
-                </div>
+        <div style="display:flex;justify-content:space-between;
+                    padding:0px 0px 4px 0px;margin-bottom:4px;
+                    border-bottom:1px solid #d8dde6;">
+            <div style="font-size:12px;color:#5A6872;">
+                Herramienta interna para seguimiento de prescripción y pipeline de obras.
             </div>
-            <div class="crm-app-breadcrumbs">
+
+            <div style="font-size:12px;color:#5A6872;">
                 Panel · Proyectos · Scouting · Dashboard
             </div>
         </div>
@@ -124,31 +87,23 @@ def app():
         unsafe_allow_html=True,
     )
 
-    # ==========================
-    # NAVEGACIÓN HORIZONTAL COMPACTA
-    # ==========================
+    # ========================== BOTONES NAV ==========================
     cols = st.columns(len(PAGES))
 
-    for (page_key, (label, _)), col in zip(PAGES.items(), cols):
+    for (key, (label, _)), col in zip(PAGES.items(), cols):
         with col:
-            is_active = st.session_state["page"] == page_key
-            # Activo: punto + mismo color de fondo que ya tenías, pero más compacto
-            button_label = f"● {label}" if is_active else label
-            if st.button(
-                button_label,
-                use_container_width=True,
-                key=f"nav_{page_key}",
-            ):
-                st.session_state["page"] = page_key
+            active = st.session_state["page"] == key
+            text = f"● {label}" if active else label
+            if st.button(text, use_container_width=True, key=f"nav_{key}"):
+                st.session_state["page"] = key
                 st.rerun()
 
-    st.markdown("<div style='margin-bottom:6px;'></div>", unsafe_allow_html=True)
+    # Spacer super compacto
+    st.markdown("<div class='nav-spacer'></div>", unsafe_allow_html=True)
 
-    # ==========================
-    # RENDER PÁGINA ACTUAL
-    # ==========================
-    current_page_key = st.session_state.get("page", "panel")
-    _, renderer = PAGES.get(current_page_key, PAGES["panel"])
+    # ========================== CONTENIDO ==========================
+    current = st.session_state["page"]
+    _, renderer = PAGES.get(current, PAGES["panel"])
     renderer()
 
 
