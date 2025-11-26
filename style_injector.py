@@ -6,7 +6,7 @@ def inject_apple_style():
     Tema tipo Salesforce Lightning para todo el CRM:
     - Modo claro
     - Texto oscuro
-    - Tablas legibles
+    - Tablas CRM propias (crm-table) legibles
     """
     st.markdown(
         """
@@ -125,35 +125,6 @@ def inject_apple_style():
         }
 
         /* =============================
-           TABLAS / DATAFRAME / DATAEDITOR
-        ============================= */
-        [data-testid="stDataFrame"],
-        [data-testid="stDataEditor"] {
-            background:#ffffff !important;
-            border-radius: 0.6rem;
-            border: 1px solid #d8dde6 !important;
-        }
-
-        /* Solo tocamos tabla y cabecera, no usamos "*" */
-        [data-testid="stDataFrame"] table,
-        [data-testid="stDataEditor"] table {
-            color:#16325c !important;
-            background:#ffffff !important;
-        }
-
-        [data-testid="stDataFrame"] thead,
-        [data-testid="stDataEditor"] thead {
-            background-color:#f4f6f9 !important;
-        }
-
-        [data-testid="stDataFrame"] th,
-        [data-testid="stDataFrame"] td,
-        [data-testid="stDataEditor"] th,
-        [data-testid="stDataEditor"] td {
-            border-color:#d8dde6 !important;
-        }
-
-        /* =============================
            MÉTRICAS (Pipeline por estado)
         ============================= */
         [data-testid="stMetricValue"] {
@@ -173,6 +144,31 @@ def inject_apple_style():
         }
         button[role="tab"][aria-selected="true"] {
             border-bottom:2px solid #0170D2 !important;
+        }
+
+        /* =============================
+           TABLA CRM PROPIA (sin usar st.dataframe)
+        ============================= */
+        table.crm-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 13px;
+        }
+        table.crm-table th {
+            background: #f4f6f9;
+            color: #032D60;
+            border: 1px solid #d8dde6;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        table.crm-table td {
+            background: #ffffff;
+            color: #16325c;
+            border: 1px solid #d8dde6;
+            padding: 5px 8px;
+        }
+        table.crm-table tr:nth-child(even) td {
+            background: #f9fafb;
         }
 
         </style>
