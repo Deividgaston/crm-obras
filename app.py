@@ -34,12 +34,10 @@ def app():
             #MainMenu, header, footer {visibility: hidden;}
             html, body, * { user-select:text !important; }
 
-            /* Padding general moderado (ni enorme ni 0) */
             .block-container {
                 padding-top: 0.7rem !important;
             }
 
-            /* Botones navegación */
             .stButton > button {
                 border-radius: 8px;
                 height: 34px !important;
@@ -57,7 +55,7 @@ def app():
     if "page" not in st.session_state:
         st.session_state["page"] = "panel"
 
-    # Título DGO Insight
+    # Título DGO Insight (texto, cuando tengamos el logo lo cambiamos)
     st.markdown(
         """
         <div style="font-size:22px;font-weight:700;color:#032D60;margin-bottom:2px;">
