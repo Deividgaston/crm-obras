@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
-from crm_utils import get_proyectos, filtrar_obras_importantes
+from crm_utils import filtrar_obras_importantes
+from data_cache import load_proyectos
 
 try:
     from style_injector import inject_apple_style
@@ -10,19 +11,6 @@ except Exception:
     def inject_apple_style():
         pass
 
-
-# ============================================================================
-# CARGA CACHÉ
-# ============================================================================
-
-@st.cache_data(show_spinner=False)
-def load_proyectos_dashboard() -> pd.DataFrame | None:
-    return get_proyectos()
-
-
-# ============================================================================
-# TABLA CRM (HTML)
-# ============================================================================
 
 def _tabla_crm(df: pd.DataFrame):
     if df.empty:
@@ -32,12 +20,7 @@ def _tabla_crm(df: pd.DataFrame):
     st.markdown(html, unsafe_allow_html=True)
 
 
-# ============================================================================
-# TEMA GRÁFICOS (CLARO + LETRAS GRANDES)
-# ============================================================================
-
 def _tema_grafico(chart: alt.Chart) -> alt.Chart:
-    """Tema Salesforce: fondo blanco y letras muy visibles."""
     return (
         chart
         .configure_view(stroke=None, fill="white")
@@ -63,10 +46,6 @@ def _tema_grafico(chart: alt.Chart) -> alt.Chart:
         )
     )
 
-
-# ============================================================================
-# GRÁFICOS
-# ============================================================================
 
 COLOR_AZUL = "#0170D2"
 COLOR_AZUL_CLARO = "#5AB0F5"
@@ -144,10 +123,6 @@ def _bar_chart_sum(df: pd.DataFrame, group_col: str, sum_col: str):
     st.altair_chart(_tema_grafico(base), use_container_width=True)
 
 
-# ============================================================================
-# DASHBOARD
-# ============================================================================
-
 def render_dashboard():
     inject_apple_style()
 
@@ -162,14 +137,11 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    df = load_proyectos_dashboard()
+    df = load_proyectos()
     if df is None or df.empty:
         st.info("No hay proyectos todavía.")
         return
 
-    # ==========================
-    # MÉTRICAS
-    # ==========================
     total = len(df)
     total_potencial = df["potencial_eur"].fillna(0).sum()
     ciudades = df["ciudad"].dropna().nunique()
@@ -185,9 +157,6 @@ def render_dashboard():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ==========================
-    # PIE CHARTS
-    # ==========================
     colA, colB = st.columns(2)
     with colA:
         st.markdown('<div class="apple-card-light"><h4>Por estado</h4>', unsafe_allow_html=True)
@@ -201,9 +170,6 @@ def render_dashboard():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ==========================
-    # BAR CHARTS
-    # ==========================
     col1, col2 = st.columns(2)
     with col1:
         st.markdown('<div class="apple-card-light"><h4>Clientes con más obras</h4>', unsafe_allow_html=True)
@@ -223,9 +189,6 @@ def render_dashboard():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ==========================
-    # OBRAS IMPORTANTES
-    # ==========================
     st.markdown('<div class="apple-card-light"><h4>🏆 Obras importantes</h4>', unsafe_allow_html=True)
     df_imp = filtrar_obras_importantes(df)
     _tabla_crm(df_imp)
