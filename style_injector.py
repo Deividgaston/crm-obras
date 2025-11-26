@@ -3,20 +3,31 @@ import streamlit as st
 
 def inject_apple_style():
     """
-    Inyecta estilos globales tipo Salesforce Lightning
-    para todo el CRM (panel, proyectos, buscar, dashboard).
+    Tema único tipo Salesforce Lightning para todo el CRM.
+    Fuerza modo claro, texto oscuro y tablas legibles.
     """
     st.markdown(
         """
         <style>
-        /* =============================
-           BASE GENERAL
-        ============================= */
-        .stApp {
+        /* =========================================
+           RESET GLOBAL A MODO CLARO
+        ========================================= */
+        :root {
+            color-scheme: light !important;
+        }
+
+        body,
+        .stApp,
+        [data-testid="stAppViewContainer"] {
             background-color: #f4f6f9 !important;
             color: #16325c !important;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
                          sans-serif;
+        }
+
+        /* TODO lo que cuelga del contenedor principal usa texto oscuro */
+        [data-testid="stAppViewContainer"] * {
+            color: #16325c !important;
         }
 
         .block-container {
@@ -25,16 +36,9 @@ def inject_apple_style():
             max-width: 1300px;
         }
 
-        /* Quita bordes/zoom raros de imágenes y markdown */
-        img {
-            max-width: 100%;
-        }
-
-        /* =============================
-           CARDS PRINCIPALES
-        ============================= */
-
-        /* Card grande de cabecera (Panel, Proyectos, Buscar...) */
+        /* =========================================
+           CARDS
+        ========================================= */
         .apple-card {
             background: #ffffff;
             border-radius: 0.75rem;
@@ -46,12 +50,12 @@ def inject_apple_style():
         .apple-card h3 {
             font-size: 18px;
             font-weight: 600;
-            color: #032D60;
+            color: #032D60 !important;
             margin: 0 0 2px 0;
         }
         .apple-card p {
             font-size: 13px;
-            color: #5A6872;
+            color: #5A6872 !important;
             margin: 0;
         }
         .apple-card .badge {
@@ -60,14 +64,13 @@ def inject_apple_style():
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: #0170D2;
+            color: #0170D2 !important;
             background: #e5f1fb;
             padding: 2px 8px;
             border-radius: 999px;
             margin-bottom: 4px;
         }
 
-        /* Card ligera reutilizada en panel/proyectos/buscar */
         .apple-card-light {
             background: #ffffff;
             border-radius: 0.75rem;
@@ -77,47 +80,22 @@ def inject_apple_style():
             margin-bottom: 12px;
         }
 
-        /* =============================
-           METRICS / KPI CARDS
-        ============================= */
-        .metric-card {
-            background: #ffffff;
-            border-radius: 0.6rem;
-            padding: 10px 14px;
-            border: 1px solid #d8dde6;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            margin-top: 8px;
-            margin-bottom: 8px;
-        }
-        .metric-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #5A6872;
-            margin-bottom: 4px;
-        }
-        .metric-value {
-            font-size: 20px;
-            font-weight: 600;
-            color: #032D60;
-        }
-
-        /* =============================
-           TITULOS / TEXTOS GENERALES
-        ============================= */
+        /* =========================================
+           TITULOS / TEXTOS
+        ========================================= */
         h1, h2, h3, h4, h5, h6 {
-            color: #032D60;
+            color: #032D60 !important;
         }
         .stMarkdown p {
-            color: #16325c;
+            color: #16325c !important;
         }
 
-        /* =============================
-           BOTONES GENERALES STREAMLIT
-        ============================= */
+        /* =========================================
+           BOTONES GENERALES
+        ========================================= */
         .stButton>button {
             background: #0170D2;
-            color: #ffffff;
+            color: #ffffff !important;
             border-radius: 4px;
             border: 1px solid #0170D2;
             padding: 6px 16px;
@@ -127,23 +105,20 @@ def inject_apple_style():
         .stButton>button:hover {
             background: #0b84f5;
             border-color: #0b84f5;
-            color: #ffffff;
+            color: #ffffff !important;
         }
 
-        /* Los botones de la barra superior se sobreescriben
-           en app.py con selectores más específicos. */
+        /* La barra superior se estiliza aparte en app.py.
+           Esto solo afecta al resto de botones. */
 
-        /* =============================
-           SELECTS / INPUTS
-        ============================= */
-
-        /* Fondo blanco para selects sobre fondo gris */
+        /* =========================================
+           INPUTS / SELECTS
+        ========================================= */
         div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             border-radius: 4px;
         }
 
-        /* Inputs de texto también en blanco */
         .stTextInput>div>div>input,
         .stNumberInput input,
         .stTextArea textarea {
@@ -151,25 +126,47 @@ def inject_apple_style():
             border-radius: 4px !important;
         }
 
-        /* Radio horizontal (usado en Proyectos) */
         div[data-baseweb="radio"]>div {
             gap: 12px;
         }
 
-        /* =============================
-           TABLAS / DATAFRAMES
-        ============================= */
-        .stDataFrame {
+        /* =========================================
+           TABLAS / DATAFRAME / DATAEDITOR
+        ========================================= */
+        [data-testid="stDataFrame"],
+        [data-testid="stDataEditor"] {
+            background:#ffffff !important;
             border-radius: 0.6rem;
-            border: 1px solid #d8dde6;
-            background: #ffffff;
+            border: 1px solid #d8dde6 !important;
         }
 
-        /* =============================
-           TABS (Vista general / Dashboard / ...)
-        ============================= */
+        [data-testid="stDataFrame"] table,
+        [data-testid="stDataEditor"] table {
+            background:#ffffff !important;
+            color:#16325c !important;
+        }
+
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td,
+        [data-testid="stDataEditor"] th,
+        [data-testid="stDataEditor"] td {
+            border-color:#d8dde6 !important;
+        }
+
+        [data-testid="stDataFrame"] thead,
+        [data-testid="stDataEditor"] thead {
+            background-color:#f4f6f9 !important;
+        }
+
+        /* =========================================
+           TABS
+        ========================================= */
         button[role="tab"] {
-            font-size: 13px;
+            font-size: 13px !important;
+            color:#032D60 !important;
+        }
+        button[role="tab"][aria-selected="true"] {
+            border-bottom:2px solid #0170D2 !important;
         }
 
         </style>
