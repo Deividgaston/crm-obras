@@ -68,7 +68,7 @@ def app():
             background:#ffffff;
             border:1px solid #d8dde6;
             border-radius:4px;
-            padding:4px 14px;
+            padding:6px 18px;
             font-size:13px;
             font-weight:500;
             color:#032D60;
@@ -79,14 +79,14 @@ def app():
             border-color:#1b96ff;
         }
 
-        /* Botón activo: lo simulamos con una clase en un contenedor */
+        /* Botón activo */
         .toolbar-active>button {
-            background:#e5f1fb !important;
-            border-color:#1b96ff !important;
-            color:#032D60 !important;
+            background:#0170D2 !important;
+            border-color:#0170D2 !important;
+            color:#ffffff !important;
         }
 
-        /* Opcional: inputs algo más claros sobre fondo gris */
+        /* Selects sobre fondo blanco */
         div[data-baseweb="select"] > div {
             background-color:#ffffff !important;
         }
@@ -128,12 +128,11 @@ def app():
         cols = st.columns(len(pages))
         for i, name in enumerate(pages):
             with cols[i]:
-                # decidimos si este botón es el activo
                 btn_class = "toolbar-active" if current == name else ""
                 st.markdown(f'<div class="{btn_class}">', unsafe_allow_html=True)
                 if st.button(name, key=f"nav_{name}"):
                     st.session_state["page"] = name
-                    st.experimental_rerun()
+                    st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
