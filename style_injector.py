@@ -1,9 +1,9 @@
 import streamlit as st
 
-
 def inject_apple_style():
     """
-    Estilo tipo Salesforce forzando modo CLARO aunque el usuario tenga dark mode.
+    Estilo Salesforce Lightning forzado (modo claro, tonos azulados,
+    texto visible, interfaz densa y profesional).
     """
     if st.session_state.get("crm_style_injected"):
         return
@@ -13,145 +13,170 @@ def inject_apple_style():
     style = """
     <style>
 
-    /* ======================================================
-       🔥 FORCE LIGHT MODE — Ignora el modo oscuro de Streamlit
-       ====================================================== */
-    html, body, [class*="css"], .stApp, .stAppViewContainer {
-        background-color: #f5f7ff !important;
-        color: #1e293b !important;
-        filter: invert(0%) !important;
-    }
-
-    /* Bloques interiores */
-    .block-container, .main, .stDataFrame, .stMarkdown, .stColumn {
-        background-color: #f5f7ff !important;
-        color: #1e293b !important;
-    }
-
-    /* ======================================================
-       TIPOGRAFÍA Y BASE DE ESTILO
-       ====================================================== */
-    html, body, [class*="css"] {
-        font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-        font-size: 13px !important;
+    /* ======================================
+       🔵 BASE GLOBAL — Salesforce Lightning
+    ====================================== */
+    html, body, .stApp, [class*="css"] {
+        background-color: #F3F6FB !important;   /* Fondo SF Lightning */
+        color: #032D60 !important;              /* Azul oscuro texto */
+        font-family: 'Segoe UI', sans-serif !important;
+        font-size: 14px !important;
     }
 
     .block-container {
-        padding-top: 0.6rem;
-        padding-bottom: 1.5rem;
-        max-width: 1200px;
+        max-width: 1280px;
+        padding-top: 0.5rem;
         margin: 0 auto;
     }
 
-    /* ======================================================
-       TOPBAR COMPACTA TIPO SALESFORCE
-       ====================================================== */
+    /* ======================================
+       🔵 TOP BAR — Estilo Salesforce Header
+    ====================================== */
     .crm-topbar {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        padding: 6px 2px;
-        border-bottom: 1px solid #c7d2fe;
+        justify-content: space-between;
         background: #ffffff !important;
+        border-bottom: 1px solid #D8E6FF;
+        padding: 8px 4px;
+        margin-bottom: 0.7rem;
     }
 
     .crm-topbar-title {
-        font-size: 0.95rem;
+        font-size: 17px;
         font-weight: 600;
-        color: #1d4ed8 !important;
+        color: #0170FE;      /* Azul Salesforce */
     }
 
     .crm-topbar-subtitle {
-        font-size: 0.75rem;
-        color: #64748b !important;
+        font-size: 12.5px;
+        color: #4A5F7D;
     }
 
-    /* NAV PILL */
-    .crm-nav-pill {
-        padding: 3px 12px;
-        border-radius: 999px;
-        font-size: 0.78rem;
-        background: #e0ecff;
-        border: 1px solid #c7d2fe;
-        color: #1e3a8a !important;
-        cursor: pointer;
+    /* ======================================
+       🔵 BOTONES SALESFORCE RECTANGULARES
+    ====================================== */
+    button, .stButton>button {
+        background: #0170FE !important;
+        border-radius: 4px !important;
+        padding: 6px 16px !important;
+        color: white !important;
+        font-size: 13px !important;
+        border: none !important;
     }
 
-    .crm-nav-pill-active {
-        background: #2563eb !important;
-        border-color: #1d4ed8 !important;
-        color: #ffffff !important;
+    button:hover {
+        background: #005FDF !important;
     }
 
-    /* ======================================================
-       CARDS
-       ====================================================== */
+    /* Botones secundarios */
+    .sf-btn-secondary {
+        background: #E5ECF6 !important;
+        color: #032D60 !important;
+        border: 1px solid #A8C1EA !important;
+        border-radius: 4px !important;
+        padding: 5px 14px !important;
+        font-size: 13px !important;
+    }
+
+    /* ======================================
+       🔵 CARDS — estilo Salesforce Lightning
+    ====================================== */
     .apple-card,
     .apple-card-light {
         background: #ffffff !important;
-        border-radius: 6px;
-        padding: 8px 10px;
-        border: 1px solid #dbe3ff;
-        color: #1e293b !important;
-        margin-bottom: 8px;
+        border: 1px solid #D8E6FF !important;
+        padding: 12px 14px !important;
+        border-radius: 6px !important;
+        margin-bottom: 10px !important;
+        color: #032D60 !important;
     }
 
     .badge {
-        background: #e0ecff !important;
-        color: #1d4ed8 !important;
+        background: #E0EDFF !important;
+        color: #0170FE !important;
         padding: 2px 8px;
-        font-size: 0.68rem;
         border-radius: 999px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
     }
 
-    /* ======================================================
-       MÉTRICAS COMPACTAS
-       ====================================================== */
+    .apple-card h1, .apple-card h2, .apple-card h3,
+    .apple-card-light h1, .apple-card-light h2, .apple-card-light h3 {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin-bottom: 4px !important;
+        color: #032D60 !important;
+    }
+
+    .apple-card p {
+        font-size: 13px !important;
+        color: #4A5F7D !important;
+        margin: 0;
+    }
+
+    /* ======================================
+       🔵 MÉTRICAS DENSAS
+    ====================================== */
     .metric-card {
-        background: #ffffff !important;
-        border: 1px solid #c7d2fe !important;
-        padding: 6px 10px;
+        background: #ffffff;
+        border: 1px solid #CFE0FF;
+        padding: 10px 12px;
         border-radius: 6px;
+        min-width: 120px;
     }
 
     .metric-title {
-        font-size: 0.7rem;
-        color: #64748b !important;
+        color: #516B8E;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 3px;
     }
 
     .metric-value {
-        font-size: 1.15rem;
+        color: #032D60;
+        font-size: 18px;
         font-weight: 600;
-        color: #1e293b !important;
+        line-height: 1.1;
     }
 
-    /* ======================================================
-       LISTAS / ITEMS
-       ====================================================== */
+    /* ======================================
+       🔵 LIST ITEMS (Agenda)
+    ====================================== */
     .next-item {
         background: #ffffff !important;
-        padding: 6px 8px;
-        border-radius: 4px;
-        border: 1px solid #e5edff !important;
+        border: 1px solid #D6E2FF !important;
+        padding: 8px 10px;
+        border-radius: 6px;
         margin-bottom: 6px;
-        color: #1e293b !important;
+    }
+
+    .next-item strong {
+        font-size: 13px;
+        color: #032D60 !important;
     }
 
     .next-item small {
-        color: #64748b !important;
-        font-size: 0.75rem;
+        font-size: 12px;
+        color: #576C89 !important;
     }
 
-    /* ======================================================
-       TABLAS
-       ====================================================== */
+    /* ======================================
+       🔵 TABLAS
+    ====================================== */
     .stDataFrame table,
-    .stDataFrame tbody,
     .stDataFrame th,
     .stDataFrame td {
         background: #ffffff !important;
-        color: #1e293b !important;
-        font-size: 0.78rem !important;
+        color: #032D60 !important;
+        font-size: 13px !important;
+    }
+
+    .stDataFrame tbody tr:nth-child(even) {
+        background: #F3F6FF !important;
     }
 
     </style>
