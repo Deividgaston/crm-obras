@@ -1,9 +1,11 @@
 import streamlit as st
 
+
 def inject_apple_style():
     """
     Estilo Salesforce Lightning forzado (modo claro, tonos azulados,
-    texto visible, interfaz densa y profesional).
+    texto visible, interfaz densa y profesional) + pantalla limpia
+    sin menús propios de Streamlit.
     """
     if st.session_state.get("crm_style_injected"):
         return
@@ -26,6 +28,7 @@ def inject_apple_style():
     .block-container {
         max-width: 1280px;
         padding-top: 0.5rem;
+        padding-bottom: 1.5rem;
         margin: 0 auto;
     }
 
@@ -65,11 +68,11 @@ def inject_apple_style():
         border: none !important;
     }
 
-    button:hover {
+    button:hover, .stButton>button:hover {
         background: #005FDF !important;
     }
 
-    /* Botones secundarios */
+    /* Botones secundarios manuales (si los usas con class="sf-btn-secondary") */
     .sf-btn-secondary {
         background: #E5ECF6 !important;
         color: #032D60 !important;
@@ -112,7 +115,8 @@ def inject_apple_style():
         color: #032D60 !important;
     }
 
-    .apple-card p {
+    .apple-card p,
+    .apple-card-light p {
         font-size: 13px !important;
         color: #4A5F7D !important;
         margin: 0;
@@ -178,6 +182,16 @@ def inject_apple_style():
     .stDataFrame tbody tr:nth-child(even) {
         background: #F3F6FF !important;
     }
+
+    /* ======================================
+       🔥 LIMPIAR UI DE STREAMLIT
+       Ocultar menú, footer, header, barra deploy, etc.
+    ====================================== */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+    .stDeployButton {display: none !important;}
+    .stStatusWidget {display: none !important;}
 
     </style>
     """
