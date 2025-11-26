@@ -15,20 +15,26 @@ from crm_utils import (
     generar_excel_obras_importantes,
 )
 
+try:
+    from style_injector import inject_apple_style
+except Exception:
+    def inject_apple_style():
+        pass
+
+
 # =====================================================
 # CACHÉ PARA REDUCIR LLAMADAS A FIREBASE
 # =====================================================
 
-
 @st.cache_data(show_spinner=False)
 def load_proyectos() -> pd.DataFrame | None:
-    """Carga proyectos desde Firebase con caché."""
+    """Carga proyectos desde Firestore con caché."""
     return get_proyectos()
 
 
 @st.cache_data(show_spinner=False)
 def load_clientes() -> pd.DataFrame | None:
-    """Carga clientes desde Firebase con caché."""
+    """Carga clientes desde Firestore con caché."""
     return get_clientes()
 
 
@@ -43,7 +49,6 @@ def invalidate_clientes_cache():
 # =====================================================
 # UTILIDADES
 # =====================================================
-
 
 def _parse_fecha_iso(valor):
     if not valor:
@@ -61,12 +66,11 @@ def _parse_fecha_iso(valor):
 
 
 # =====================================================
-# EDICIÓN DE PROYECTOS
+# FORMULARIO DE EDICIÓN
 # =====================================================
 
-
 def _render_edit_form(row_data: dict, proy_id: str):
-    """Formulario de edición reutilizable."""
+    """Formulario de edición de proyecto (Lightning style)."""
     df_clientes = load_clientes()
     nombres_clientes = ["(sin asignar)"]
     if df_clientes is not None and not df_clientes.empty and "empresa" in df_clientes.columns:
@@ -167,19 +171,21 @@ def _render_edit_form(row_data: dict, proy_id: str):
 
 
 def _open_edit_dialog(row_data: dict, proy_id: str):
-    """Abre un cuadro flotante de edición (o inline si no hay dialog)."""
+    """Abre un diálogo (o bloque inline) de edición."""
     if hasattr(st, "dialog"):
         @st.dialog("✏️ Editar proyecto")
         def _dlg():
-            st.caption("Modifica los datos y guarda para actualizar el proyecto.")
+            st.caption("Modifica los datos del proyecto y guarda los cambios.")
             _render_edit_form(row_data, proy_id)
 
         _dlg()
     else:
-        st.markdown("---")
         st.markdown(
-            "<div class='apple-card-light'><div class='badge'>Edición rápida</div>"
-            "<h3 style='margin-top:4px; margin-bottom:4px;'>✏️ Editar proyecto seleccionado</h3>",
+            """
+            <div class="apple-card-light">
+                <div class="badge">Edición</div>
+                <h3>✏️ Editar proyecto seleccionado</h3>
+            """,
             unsafe_allow_html=True,
         )
         _render_edit_form(row_data, proy_id)
@@ -187,9 +193,8 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 
 
 # =====================================================
-# FILTROS BÁSICOS
+# FILTROS
 # =====================================================
-
 
 def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
     df = df.copy()
@@ -245,13 +250,10 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 
     if ciudad_sel != "Todas":
         df = df[df["ciudad"] == ciudad_sel]
-
     if estado_sel != "Todos" and "estado" in df.columns:
         df = df[df["estado"] == estado_sel]
-
     if tipo_sel != "Todos" and "tipo_proyecto" in df.columns:
         df = df[df["tipo_proyecto"] == tipo_sel]
-
     if prioridad_sel != "Todas" and "prioridad" in df.columns:
         df = df[df["prioridad"] == prioridad_sel]
 
@@ -262,9 +264,8 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 # VISTA GENERAL: TABLA, SEGUIMIENTOS, TAREAS
 # =====================================================
 
-
 def _vista_tabla(df_filtrado: pd.DataFrame):
-    st.markdown("##### Pipeline (conteo por estado)")
+    st.markdown("##### Pipeline por estado")
 
     if not df_filtrado.empty and "estado" in df_filtrado.columns:
         estados = [
@@ -470,13 +471,13 @@ def _vista_tareas(df_filtrado: pd.DataFrame):
 
 def _render_vista_general(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Proyectos (vista general)", unsafe_allow_html=True)
+    st.markdown("#### Vista general de proyectos", unsafe_allow_html=True)
 
     df_filtrado = _aplicar_filtros_basicos(df_proy, key_prefix="vista_general")
 
     st.markdown("---")
 
-    col_v1, col_v2, col_v3 = st.columns(3)
+    col_v1, _, _ = st.columns([1, 1, 1])
     with col_v1:
         vista = st.radio(
             "Modo de vista",
@@ -495,13 +496,12 @@ def _render_vista_general(df_proy: pd.DataFrame):
 
 
 # =====================================================
-# DASHBOARD (OBRAS IMPORTANTES)
+# DASHBOARD OBRAS IMPORTANTES
 # =====================================================
-
 
 def _render_dashboard(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Obras importantes (analítica)", unsafe_allow_html=True)
+    st.markdown("#### Obras importantes (dashboard)", unsafe_allow_html=True)
 
     if df_proy.empty:
         st.info("No hay proyectos para mostrar en el dashboard.")
@@ -510,7 +510,7 @@ def _render_dashboard(df_proy: pd.DataFrame):
 
     df_imp = filtrar_obras_importantes(df_proy)
     if df_imp.empty:
-        st.info("No hay obras importantes según los filtros definidos.")
+        st.info("No hay obras importantes según el criterio definido.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
@@ -571,7 +571,6 @@ def _render_dashboard(df_proy: pd.DataFrame):
 # DUPLICADOS
 # =====================================================
 
-
 def _render_duplicados(df_proy: pd.DataFrame):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
     st.markdown("#### Posibles proyectos duplicados", unsafe_allow_html=True)
@@ -622,10 +621,9 @@ def _render_duplicados(df_proy: pd.DataFrame):
 # IMPORTAR / EXPORTAR
 # =====================================================
 
-
 def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = None):
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
-    st.markdown("#### Importar / Exportar", unsafe_allow_html=True)
+    st.markdown("#### Importar / Exportar proyectos", unsafe_allow_html=True)
 
     if not df_proy_empty and df_proy is not None:
         st.markdown("##### Exportar obras importantes a Excel")
@@ -675,7 +673,6 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
 # =====================================================
 # ALTA MANUAL
 # =====================================================
-
 
 def _render_alta_manual():
     st.markdown('<div class="apple-card-light">', unsafe_allow_html=True)
@@ -728,7 +725,6 @@ def _render_alta_manual():
             )
             add_proyecto(
                 {
-                    # Datos principales del proyecto
                     "nombre_obra": nombre_obra,
                     "cliente_principal": promotor_nombre,
                     "promotora": promotor_nombre,
@@ -757,17 +753,18 @@ def _render_alta_manual():
 # PÁGINA PRINCIPAL DE PROYECTOS
 # =====================================================
 
-
 def render_proyectos():
+    inject_apple_style()
+
     st.markdown(
         """
         <div class="apple-card">
             <div class="badge">Proyectos</div>
             <h3 style="margin-top:2px; margin-bottom:2px;">Pipeline de prescripción</h3>
             <p>
-                Gestiona obras, estados de seguimiento y tareas vinculadas. 
-                Usa el dashboard para ver dónde está el valor y la sección de duplicados
-                para mantener limpio el CRM.
+                Gestiona el ciclo completo de las obras: estados, seguimientos, tareas y análisis
+                de potencial. Usa las pestañas para navegar por la vista general, el dashboard,
+                la limpieza de duplicados y la importación de datos.
             </p>
         </div>
         """,
