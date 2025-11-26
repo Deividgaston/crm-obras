@@ -21,32 +21,25 @@ PAGES = {
 
 
 def app():
-
     st.set_page_config(
         page_title="CRM Prescripción 2N",
         layout="wide",
         page_icon="🏗️",
     )
 
-    # === Estilo global ultra-compacto ===
+    # Estilo global compacto pero estable
     st.markdown(
         """
         <style>
             #MainMenu, header, footer {visibility: hidden;}
-
             html, body, * { user-select:text !important; }
 
-            /* Quitar casi todo el padding superior del contenido */
+            /* Padding general moderado (ni enorme ni 0) */
             .block-container {
-                padding-top: 0.2rem !important;
+                padding-top: 0.7rem !important;
             }
 
-            /* Reducir separación vertical entre bloques de Streamlit */
-            div[data-testid="stVerticalBlock"] {
-                row-gap: 0.15rem !important;
-            }
-
-            /* Botones navegación compactos */
+            /* Botones navegación */
             .stButton > button {
                 border-radius: 8px;
                 height: 34px !important;
@@ -64,20 +57,20 @@ def app():
     if "page" not in st.session_state:
         st.session_state["page"] = "panel"
 
-    # === Título DGO Insight ===
+    # Título DGO Insight
     st.markdown(
         """
         <div style="font-size:22px;font-weight:700;color:#032D60;margin-bottom:2px;">
             DGO Insight
         </div>
-        <div style="font-size:12px;color:#5A6872;margin-bottom:4px;">
+        <div style="font-size:12px;color:#5A6872;margin-bottom:6px;">
             Herramienta interna para seguimiento de prescripción y pipeline de obras.
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # === Botones de navegación ===
+    # Botones de navegación
     cols = st.columns(len(PAGES))
     for (key, (label, _)), col in zip(PAGES.items(), cols):
         with col:
@@ -87,7 +80,7 @@ def app():
                 st.session_state["page"] = key
                 st.rerun()
 
-    # (sin nav-gap: pegamos directamente el contenido)
+    # Contenido de la página
     _, renderer = PAGES[st.session_state["page"]]
     renderer()
 
