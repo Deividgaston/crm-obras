@@ -325,7 +325,7 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 # =====================================================
 
 def _vista_general_tabla(df_proy: pd.DataFrame):
-    # Solo forzamos que se pueda copiar/pegar texto
+    # Permitir copiar/pegar texto
     st.markdown(
         """
         <style>
@@ -425,11 +425,21 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         }
     )
 
+    # <<< CAMBIO IMPORTANTE: forzamos colores de la tabla >>>
+    styled = df_tabla.style.set_properties(
+        **{
+            "color": "#111827",              # texto gris oscuro
+            "background-color": "white",     # fondo blanco
+            "border-color": "#e5e7eb",       # rejilla gris clarita
+        }
+    )
+
     st.dataframe(
-        df_tabla,
+        styled,
         use_container_width=True,
         hide_index=True,
     )
+    # <<< FIN CAMBIO >>>
 
     # -------- Acciones: seleccionar + editar / borrar ----------
     st.markdown("<br>", unsafe_allow_html=True)
