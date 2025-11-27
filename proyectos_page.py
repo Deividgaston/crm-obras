@@ -62,7 +62,6 @@ def _parse_fecha_iso(valor):
     return None
 
 
-# Estados pipeline compartidos con Kanban / seguimiento
 ESTADOS_PIPELINE = [
     "Detectado",
     "Seguimiento",
@@ -185,7 +184,22 @@ def _render_edit_form(row_data: dict, proy_id: str):
                 value=date.today() + timedelta(days=7),
             )
 
-        guardar = st.form_submit_button("💾 Guardar cambios", use_container_width=True)
+        colg, cold = st.columns(2)
+        with colg:
+            guardar = st.form_submit_button("💾 Guardar cambios", use_container_width=True)
+        with cold:
+            borrar = st.form_submit_button("🗑️ Borrar proyecto", use_container_width=True)
+
+    # ---- LÓGICA GUARDAR / BORRAR ----
+    if borrar:
+        try:
+            delete_proyecto(proy_id)
+            invalidate_proyectos_cache()
+            st.success("Proyecto borrado correctamente.")
+            st.rerun()
+        except Exception as e:
+            st.error(f"No se pudo borrar el proyecto: {e}")
+        return
 
     if guardar:
         if not nombre_obra:
@@ -238,7 +252,6 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 
         _dlg()
     else:
-        # Fallback sin modal flotante (versión antigua de Streamlit)
         st.markdown(
             """
             <div class="apple-card-light">
@@ -323,8 +336,15 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         <style>
         * { user-select: text !important; }
         div[data-testid="stDataFrame"] table {
-            background-color: white !important;
+            background-color: #ffffff !important;
             color: #111827 !important;
+        }
+        div[data-testid="stDataFrame"] table thead tr th {
+            background-color: #f3f4f6 !important;
+            color: #111827 !important;
+        }
+        div[data-testid="stDataFrame"] tbody tr td {
+            border-bottom: 1px solid #e5e7eb !important;
         }
         </style>
         """,
@@ -391,7 +411,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
 
     st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
 
-    # Tabla principal
+    # Tabla principal (data_editor para poder seleccionar filas)
     columnas = [
         "nombre_obra",
         "cliente_principal",
@@ -405,7 +425,10 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
     ]
     columnas = [c for c in columnas if c in df_filtrado.columns]
 
-    df_tabla = df_filtrado[columnas].copy()
+    # Reset index para que la selección de filas sea consistente
+    df_f = df_filtrado.reset_index(drop=True)
+
+    df_tabla = df_f[columnas].copy()
     df_tabla = df_tabla.rename(
         columns={
             "nombre_obra": "Proyecto",
@@ -420,18 +443,35 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         }
     )
 
-    st.dataframe(
+    st.caption("Haz clic en una fila para editarla (se abrirá el cuadro flotante).")
+    st.data_editor(
         df_tabla,
+        key="tabla_proyectos",
         use_container_width=True,
         hide_index=True,
+        disabled=True,
+        num_rows="fixed",
     )
 
-    # Selector de proyecto + iconos de acciones
+    # --- Apertura automática del diálogo al seleccionar fila ---
+    tabla_state = st.session_state.get("tabla_proyectos", {})
+    sel_rows = tabla_state.get("selection", {}).get("rows", []) if isinstance(tabla_state, dict) else []
+
+    if sel_rows:
+        row_idx = sel_rows[0]
+        last_idx = st.session_state.get("last_selected_row")
+        if last_idx != row_idx and 0 <= row_idx < len(df_f):
+            st.session_state["last_selected_row"] = row_idx
+            proy_id = df_f.iloc[row_idx]["id"]
+            row_data = df_f.iloc[row_idx].to_dict()
+            _open_edit_dialog(row_data, proy_id)
+
+    # Selector + iconos explícitos (por si prefieres usarlos)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("Selecciona una obra del listado para editarla o borrarla:")
+    st.caption("También puedes seleccionar desde esta lista y usar los iconos de acción:")
 
     opciones = {}
-    for _, row in df_filtrado.iterrows():
+    for idx, row in df_f.iterrows():
         etiqueta = f"{row.get('nombre_obra', 'Sin nombre')} — {row.get('ciudad', '—')} ({row.get('cliente_principal', '—')})"
         opciones[etiqueta] = row["id"]
 
@@ -452,7 +492,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
                 st.warning("Primero selecciona una obra.")
             else:
                 proy_id = opciones[seleccion]
-                row_data = df_filtrado[df_filtrado["id"] == proy_id].iloc[0].to_dict()
+                row_data = df_f[df_f["id"] == proy_id].iloc[0].to_dict()
                 _open_edit_dialog(row_data, proy_id)
 
     with col_del:
@@ -460,7 +500,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
             if seleccion == "(ninguna)":
                 st.warning("Primero selecciona una obra.")
             else:
-                proy_id = opciones[seleccion]
+                proy_id = opciones[se seleccion]
                 try:
                     delete_proyecto(proy_id)
                     invalidate_proyectos_cache()
