@@ -319,16 +319,23 @@
 
   <!-- Config Firebase (rellena con tus datos reales) -->
   <script>
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_AUTH_DOMAIN",
-      projectId: "TU_PROJECT_ID",
-      storageBucket: "TU_STORAGE_BUCKET",
-      messagingSenderId: "TU_SENDER_ID",
-      appId: "TU_APP_ID",
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB51403DF43zxqq4K3Ex65i5-Sqm-EkiTY",
+  authDomain: "crm-obras-2n.firebaseapp.com",
+  projectId: "crm-obras-2n",
+  storageBucket: "crm-obras-2n.firebasestorage.app",
+  messagingSenderId: "545667121262",
+  appId: "1:545667121262:web:9dd55a09bc7a7bb3e9a67f"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
   </script>
 
   <script src="app.js"></script>
