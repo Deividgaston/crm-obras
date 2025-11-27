@@ -173,7 +173,7 @@ function renderProyectosTabla() {
   });
 }
 
-// Panel (KPIs + últimos + acciones)
+// Panel (KPIs + últimos + acciones + segmentos)
 function actualizarPanel() {
   const total = proyectos.length;
   const seguimiento = proyectos.filter(
@@ -237,6 +237,7 @@ function actualizarPanel() {
   const acciones = buildAccionesFromProyectos(proyectos);
   const { atras, hoyArr, prox } = particionarAcciones(acciones);
   renderAccionesPanel(acciones, atras, hoyArr, prox);
+  renderSegmentoDistribucion(proyectos); // NUEVO: gráfico por segmentos
 }
 
 // Acciones próximas desde seguimiento + tarea
@@ -379,6 +380,76 @@ function renderAccionesPanel(acciones, atras, hoyArr, prox) {
         <div style="font-size:0.78rem;font-weight:600;color:#032d60;margin-bottom:0.2rem;">🔜 Próx. 7 días</div>
         ${renderLista(prox)}
       </div>
+    </div>
+  `;
+}
+
+// NUEVO: gráfico de distribución por Segmento (barras horizontales)
+function renderSegmentoDistribucion(lista) {
+  const panelSection = document.getElementById("section-panel");
+  if (!panelSection) return;
+
+  const conteo = {};
+  lista.forEach((p) => {
+    const seg = p.Segmento || "Sin segmento";
+    conteo[seg] = (conteo[seg] || 0) + 1;
+  });
+
+  const segmentos = Object.entries(conteo)
+    .sort((a, b) => b[1] - a[1]); // más proyectos arriba
+
+  let card = document.getElementById("panel-segmento-card");
+  if (!card) {
+    card = document.createElement("div");
+    card.id = "panel-segmento-card";
+    card.className = "card";
+    const actionsCard = document.getElementById("panel-actions-card");
+    if (actionsCard) {
+      panelSection.insertBefore(card, actionsCard);
+    } else {
+      panelSection.appendChild(card);
+    }
+  }
+
+  if (!segmentos.length) {
+    card.innerHTML = `
+      <div class="card-header">
+        <h2>Distribución por segmento</h2>
+      </div>
+      <div class="muted" style="font-size:0.75rem;margin-top:0.2rem;">
+        Sin proyectos para mostrar.
+      </div>
+    `;
+    return;
+  }
+
+  const maxVal = Math.max(...segmentos.map(([, v]) => v)) || 1;
+
+  const filas = segmentos
+    .map(([seg, val]) => {
+      const pct = Math.max(8, (val / maxVal) * 100); // mínimo 8% para que se vea
+      return `
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:4px;">
+          <div style="width:120px;font-size:0.78rem;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${seg}
+          </div>
+          <div style="flex:1;background:#e5edff;border-radius:999px;overflow:hidden;">
+            <div style="width:${pct}%;height:8px;background:#0176d3;"></div>
+          </div>
+          <div style="width:32px;text-align:right;font-size:0.75rem;color:#4b5563;">
+            ${val}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  card.innerHTML = `
+    <div class="card-header">
+      <h2>Distribución por segmento</h2>
+    </div>
+    <div style="margin-top:0.2rem;">
+      ${filas}
     </div>
   `;
 }
