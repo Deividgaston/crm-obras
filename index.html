@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>CRM Obras - DGO Insight</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand">
+          <span class="brand-mark">DGO</span>
+          <span class="brand-text">Insight · CRM Obras</span>
+        </div>
+      </div>
+      <nav class="topbar-nav">
+        <button class="nav-btn active" data-section="panel">Panel</button>
+        <button class="nav-btn" data-section="proyectos">Proyectos</button>
+      </nav>
+    </header>
+
+    <!-- CONTENIDO -->
+    <main class="main">
+      <!-- PANEL -->
+      <section id="section-panel" class="section active">
+        <div class="section-header">
+          <h1>Panel</h1>
+          <p>Resumen rápido de tus obras y oportunidades.</p>
+        </div>
+
+        <div class="cards-grid">
+          <div class="card kpi-card">
+            <div class="kpi-label">Total proyectos</div>
+            <div class="kpi-value" id="kpi-total">0</div>
+            <div class="kpi-sub" id="kpi-total-sub">—</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-label">En seguimiento</div>
+            <div class="kpi-value" id="kpi-seguimiento">0</div>
+            <div class="kpi-sub">Estados ≠ "Detectado"</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-label">Ganados</div>
+            <div class="kpi-value" id="kpi-ganados">0</div>
+            <div class="kpi-sub">Estado = "Ganado"</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-label">Potencial 2N (€)</div>
+            <div class="kpi-value" id="kpi-potencial">0</div>
+            <div class="kpi-sub">Suma del campo “potencial_eur”</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Últimos proyectos</h2>
+          </div>
+          <div class="table-wrapper small">
+            <table>
+              <thead>
+                <tr>
+                  <th>Proyecto</th>
+                  <th>Cliente</th>
+                  <th>Ciudad</th>
+                  <th>Estado</th>
+                  <th>Potencial (€)</th>
+                </tr>
+              </thead>
+              <tbody id="panel-last-projects-body">
+                <tr><td colspan="5" class="muted">Sin datos</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROYECTOS -->
+      <section id="section-proyectos" class="section">
+        <div class="section-header">
+          <h1>Proyectos</h1>
+          <p>Listado de obras, filtros, edición y tareas.</p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-bar">
+          <div class="filter-group">
+            <label for="filter-search">Buscar</label>
+            <input
+              type="text"
+              id="filter-search"
+              placeholder="Proyecto, cliente, ciudad..."
+            />
+          </div>
+          <div class="filter-group">
+            <label for="filter-estado">Estado</label>
+            <select id="filter-estado">
+              <option value="">Todos</option>
+              <option value="Detectado">Detectado</option>
+              <option value="Seguimiento">Seguimiento</option>
+              <option value="En Prescripción">En Prescripción</option>
+              <option value="Oferta Enviada">Oferta Enviada</option>
+              <option value="Negociación">Negociación</option>
+              <option value="Ganado">Ganado</option>
+              <option value="Perdido">Perdido</option>
+              <option value="Paralizado">Paralizado</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filter-prioridad">Prioridad</label>
+            <select id="filter-prioridad">
+              <option value="">Todas</option>
+              <option value="Alta">Alta</option>
+              <option value="Media">Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>&nbsp;</label>
+            <button id="btn-add-project" class="primary-btn">
+              + Nueva obra
+            </button>
+          </div>
+        </div>
+
+        <!-- Acciones tabla -->
+        <div class="table-actions">
+          <div class="left">
+            <button id="btn-edit-selected" class="icon-btn" title="Editar">
+              ✏️
+            </button>
+            <button id="btn-delete-selected" class="icon-btn" title="Borrar">
+              🗑️
+            </button>
+          </div>
+          <div class="right">
+            <span class="muted" id="projects-count-label">0 proyectos</span>
+          </div>
+        </div>
+
+        <!-- Tabla proyectos -->
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th class="checkbox-col">
+                    <input type="checkbox" id="select-all-projects" />
+                  </th>
+                  <th>Proyecto</th>
+                  <th>Cliente</th>
+                  <th>Ciudad</th>
+                  <th>Provincia</th>
+                  <th>Estado</th>
+                  <th>Prioridad</th>
+                  <th>Tipo</th>
+                  <th class="numeric">Potencial (€)</th>
+                  <th>Próx. seguimiento</th>
+                </tr>
+              </thead>
+              <tbody id="projects-table-body">
+                <tr><td colspan="10" class="muted">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL PROYECTO -->
+  <div id="project-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="project-modal-title">Proyecto</h2>
+        <button class="modal-close-btn" id="project-modal-close">✕</button>
+      </div>
+      <form id="project-form" class="modal-body">
+        <input type="hidden" id="project-id" />
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="field-nombre_obra">Nombre del proyecto / obra *</label>
+            <input type="text" id="field-nombre_obra" required />
+          </div>
+          <div class="form-group">
+            <label for="field-cliente_principal">Cliente principal</label>
+            <input type="text" id="field-cliente_principal" />
+          </div>
+          <div class="form-group">
+            <label for="field-ciudad">Ciudad</label>
+            <input type="text" id="field-ciudad" />
+          </div>
+          <div class="form-group">
+            <label for="field-provincia">Provincia</label>
+            <input type="text" id="field-provincia" />
+          </div>
+          <div class="form-group">
+            <label for="field-tipo">Tipo de proyecto</label>
+            <select id="field-tipo">
+              <option value="Residencial lujo">Residencial lujo</option>
+              <option value="Residencial">Residencial</option>
+              <option value="Oficinas">Oficinas</option>
+              <option value="Hotel">Hotel</option>
+              <option value="BTR">BTR</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-estado">Estado / Seguimiento</label>
+            <select id="field-estado">
+              <option value="Detectado">Detectado</option>
+              <option value="Seguimiento">Seguimiento</option>
+              <option value="En Prescripción">En Prescripción</option>
+              <option value="Oferta Enviada">Oferta Enviada</option>
+              <option value="Negociación">Negociación</option>
+              <option value="Ganado">Ganado</option>
+              <option value="Perdido">Perdido</option>
+              <option value="Paralizado">Paralizado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-prioridad">Prioridad</label>
+            <select id="field-prioridad">
+              <option value="Alta">Alta</option>
+              <option value="Media" selected>Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-potencial_eur">Potencial 2N (€)</label>
+            <input type="number" id="field-potencial_eur" min="0" step="10000" />
+          </div>
+          <div class="form-group">
+            <label for="field-fecha_seguimiento">Próx. fecha seguimiento</label>
+            <input type="date" id="field-fecha_seguimiento" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="field-notas_seguimiento">Comentario de seguimiento</label>
+          <textarea id="field-notas_seguimiento" rows="3"></textarea>
+        </div>
+
+        <div class="form-grid two-cols">
+          <div class="form-group">
+            <label for="field-tarea_fecha">Fecha tarea</label>
+            <input type="date" id="field-tarea_fecha" />
+          </div>
+          <div class="form-group">
+            <label for="field-tarea_comentario">Comentario tarea</label>
+            <textarea id="field-tarea_comentario" rows="2"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="secondary-btn" id="project-modal-cancel">
+            Cancelar
+          </button>
+          <button type="submit" class="primary-btn">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- Tu config de Firebase -->
+  <script>
+    // 🔧 RELLENA ESTO CON TU CONFIG REAL
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_AUTH_DOMAIN",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_STORAGE_BUCKET",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+
+  <script src="app.js"></script>
+</body>
+</html>
