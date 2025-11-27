@@ -500,7 +500,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
             if seleccion == "(ninguna)":
                 st.warning("Primero selecciona una obra.")
             else:
-                proy_id = opciones[se seleccion]
+                proy_id = opciones[seleccion]
                 try:
                     delete_proyecto(proy_id)
                     invalidate_proyectos_cache()
