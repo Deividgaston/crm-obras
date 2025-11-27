@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGO Insight · Proyectos</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="firebase.js"></script>
+</head>
+
+<body>
+
+  <!-- HEADER SALESFORCE -->
+  <header class="crm-header">
+    <div class="crm-logo">DGO Insight · CRM Obras</div>
+    <nav class="crm-nav">
+      <button onclick="window.location='index.html'">Panel</button>
+      <button class="crm-nav-active">Proyectos</button>
+    </nav>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main id="app">
+
+    <h1 class="crm-page-title">Pipeline de Proyectos</h1>
+    <p class="crm-page-subtitle">
+      Gestión completa de obras y oportunidades 2N.
+    </p>
+
+    <!-- FILTROS -->
+    <section class="crm-card" style="margin-bottom:16px;">
+      <div class="crm-row">
+        <div class="crm-col-4">
+          <div class="crm-field-group">
+            <label class="crm-label">Buscar</label>
+            <input id="filtroTexto" class="crm-input" placeholder="Proyecto, promotora, ciudad...">
+          </div>
+        </div>
+
+        <div class="crm-col-4">
+          <div class="crm-field-group">
+            <label class="crm-label">Fase</label>
+            <select id="filtroFase" class="crm-select">
+              <option value="">Todas</option>
+              <option>Detectado</option>
+              <option>Conceptual</option>
+              <option>Anteproyecto</option>
+              <option>Básico</option>
+              <option>Ejecución</option>
+              <option>Licitación</option>
+              <option>Construcción</option>
+              <option>Entregado</option>
+              <option>Paralizado</option>
+              <option>Cancelado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="crm-col-4">
+          <div class="crm-field-group">
+            <label class="crm-label">Segmento</label>
+            <select id="filtroSegmento" class="crm-select">
+              <option value="">Todos</option>
+              <option>Lujo</option>
+              <option>Estándar</option>
+              <option>BTR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button id="btnNuevo" class="crm-btn-primary">+ Nuevo proyecto</button>
+        <button id="btnEditar" class="crm-btn" disabled>✏️ Editar</button>
+        <button id="btnBorrar" class="crm-btn" disabled>🗑️ Borrar</button>
+      </div>
+    </section>
+
+    <!-- TABLA -->
+    <div class="crm-table-wrapper">
+      <table class="crm-table">
+        <thead>
+          <tr>
+            <th class="crm-col-checkbox"></th>
+            <th>Proyecto</th>
+            <th>Ciudad</th>
+            <th>Segmento</th>
+            <th>Fase</th>
+            <th>Inicio Estimado</th>
+            <th>Potencial 2N €</th>
+            <th>Promotora</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-proyectos"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div id="modal-proyecto" class="crm-modal-backdrop" style="display:none;">
+    <div class="crm-modal">
+      <div class="crm-modal-header">
+        <h3 class="crm-modal-title" id="modal-titulo">Nuevo proyecto</h3>
+        <button class="crm-modal-close" onclick="cerrarModal()">×</button>
+      </div>
+
+      <div id="modalContenido"></div>
+
+      <div class="crm-modal-footer">
+        <button class="crm-btn" onclick="cerrarModal()">Cancelar</button>
+        <button id="btnGuardar" class="crm-btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"
+        style="position:fixed;right:16px;bottom:16px;padding:8px 10px;
+          border-radius:6px;font-size:13px;background:#c23934;color:#fff;
+          opacity:0;transition:opacity .3s;z-index:100;">
+  </div>
+
+  <script src="proyectos.js"></script>
+</body>
+</html>
