@@ -1,0 +1,489 @@
+/* ============================
+   RESET SUAVE
+============================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f3f2f2; /* fondo Salesforce */
+  color: #181818;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* ============================
+   LAYOUT GENERAL
+============================ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ============================
+   TOPBAR (AL ESTILO SALESFORCE)
+============================ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 1rem;
+  background: linear-gradient(90deg, #032d60 0%, #0176d3 100%);
+  color: #f9fafb;
+  border-bottom: 1px solid #021a3a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: #f4f6fb;
+  color: #032d60;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.brand-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Nav tipo pestañas Salesforce */
+.topbar-nav {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.nav-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  background: transparent;
+  color: #dbeafe;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn.active {
+  background: #f4f6fb;
+  color: #032d60;
+  font-weight: 600;
+}
+
+/* ============================
+   CONTENIDO PRINCIPAL
+============================ */
+.main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.75rem 0.75rem 1.5rem;
+}
+
+/* Secciones */
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.section-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #16325c;
+}
+
+.section-header p {
+  margin: 0.15rem 0 0.55rem;
+  font-size: 0.8rem;
+  color: #62748c;
+}
+
+/* ============================
+   TARJETAS / CARDS (LIGHTNING)
+============================ */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid #dddbda;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.03);
+}
+
+.card-header {
+  margin-bottom: 0.25rem;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #16325c;
+}
+
+/* KPIs */
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: #62748c;
+}
+
+.kpi-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #080707;
+}
+
+.kpi-sub {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+/* ============================
+   TABLAS
+============================ */
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 0.3rem;
+}
+
+.table-wrapper.small {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  background: #ffffff;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f3f2f2;
+  color: #080707;
+  text-align: left;
+  padding: 0.32rem 0.45rem;
+  border-bottom: 1px solid #cacaca;
+  font-weight: 600;
+}
+
+tbody td {
+  padding: 0.28rem 0.45rem;
+  border-bottom: 1px solid #f4f6f9;
+}
+
+tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+tbody tr:hover {
+  background: #eaf5ff;
+}
+
+.checkbox-col {
+  width: 34px;
+  text-align: center;
+}
+
+.numeric {
+  text-align: right;
+}
+
+.muted {
+  color: #9ca3af;
+  text-align: center;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+/* ============================
+   FILTROS Y ACCIONES
+============================ */
+.filters-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  align-items: flex-end;
+}
+
+.filter-group label {
+  display: block;
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin-bottom: 0.12rem;
+}
+
+.filter-group input,
+.filter-group select {
+  width: 100%;
+  padding: 0.32rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid #dddbda;
+  font-size: 0.8rem;
+  background: #ffffff;
+  outline: none;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  border-color: #0176d3;
+  box-shadow: 0 0 0 1px rgba(1, 118, 211, 0.35);
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+
+.icon-btn {
+  border: none;
+  background: #f3f2f2;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-right: 0.2rem;
+  color: #032d60;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: #e0e5f2;
+}
+
+/* Botones Salesforce-like */
+.primary-btn {
+  border: none;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  background: #0176d3;
+  color: #f9fafb;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.primary-btn:hover {
+  background: #0b5cab;
+}
+
+.secondary-btn {
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  background: #f3f2f2;
+  color: #080707;
+  border: 1px solid #dddbda;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: #e5e5e5;
+}
+
+/* ============================
+   MODAL
+============================ */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 50;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal:not(.hidden) {
+  display: block;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(1, 22, 56, 0.45);
+}
+
+.modal-content {
+  position: relative;
+  max-width: 720px;
+  width: 94%;
+  max-height: 90vh;
+  margin: 5vh auto 0;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid #dddbda;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid #dddbda;
+  background: #f3f2f2;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #16325c;
+}
+
+.modal-close-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.modal-body {
+  padding: 0.6rem 0.8rem 0.4rem;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem 0.6rem;
+  border-top: 1px solid #dddbda;
+  background: #f9f9f9;
+}
+
+/* ============================
+   FORMULARIO
+============================ */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.form-grid.two-cols {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .form-grid,
+  .form-grid.two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.form-group label {
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  border-radius: 0.35rem;
+  border: 1px solid #dddbda;
+  padding: 0.32rem 0.45rem;
+  font-size: 0.8rem;
+  background: #ffffff;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #0176d3;
+  box-shadow: 0 0 0 1px rgba(1, 118, 211, 0.35);
+  outline: none;
+}
+
+/* ============================
+   RESPONSIVE
+============================ */
+.muted {
+  font-size: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .topbar-nav {
+    width: 100%;
+  }
+
+  .nav-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .main {
+    padding: 0.6rem;
+  }
+}
