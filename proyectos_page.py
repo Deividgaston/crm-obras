@@ -321,33 +321,15 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 
 
 # =====================================================
-# VISTA GENERAL (TABLA + SELECCIÓN)
+# VISTA GENERAL (TABLA + ACCIONES)
 # =====================================================
 
 def _vista_general_tabla(df_proy: pd.DataFrame):
-    # Fondo blanco agresivo dentro del grid
+    # Solo forzamos que se pueda copiar/pegar texto
     st.markdown(
         """
         <style>
         * { user-select: text !important; }
-
-        /* Fuerza fondo blanco y texto oscuro en las tablas de Streamlit */
-        div[data-testid="stDataFrame"] * ,
-        div[data-testid="stDataEditor"] * {
-            background-color: #ffffff !important;
-            color: #111827 !important;
-        }
-
-        div[data-testid="stDataFrame"] thead tr th,
-        div[data-testid="stDataEditor"] thead tr th {
-            background-color: #f3f4f6 !important;
-            color: #111827 !important;
-        }
-
-        div[data-testid="stDataFrame"] tbody tr td,
-        div[data-testid="stDataEditor"] tbody tr td {
-            border-bottom: 1px solid #e5e7eb !important;
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -443,46 +425,15 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         }
     )
 
-    column_config = {c: st.column_config.Column(disabled=True) for c in df_tabla.columns}
-
-    st.caption("Haz clic en una fila para abrir el cuadro flotante de edición.")
-
-    st.data_editor(
+    st.dataframe(
         df_tabla,
-        key="tabla_proyectos",
         use_container_width=True,
         hide_index=True,
-        disabled=False,        # permite seleccionar
-        num_rows="fixed",
-        column_config=column_config,
     )
 
-    # --- Abrir diálogo cuando haya fila seleccionada ---
-    tabla_state = st.session_state.get("tabla_proyectos")
-    sel_rows = []
-
-    if isinstance(tabla_state, dict):
-        sel = tabla_state.get("selection", {}).get("rows", {})
-        # puede ser dict {0: True, 1: True} o lista
-        if isinstance(sel, dict):
-            indices = [int(i) for i, selected in sel.items() if selected]
-            if indices:
-                sel_rows = sorted(indices)
-        elif isinstance(sel, list):
-            sel_rows = sel
-
-    if sel_rows:
-        row_idx = sel_rows[0]
-        last_idx = st.session_state.get("last_selected_row")
-        if last_idx != row_idx and 0 <= row_idx < len(df_f):
-            st.session_state["last_selected_row"] = row_idx
-            proy_id = df_f.iloc[row_idx]["id"]
-            row_data = df_f.iloc[row_idx].to_dict()
-            _open_edit_dialog(row_data, proy_id)
-
-    # Selector + botones explícitos
+    # -------- Acciones: seleccionar + editar / borrar ----------
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("También puedes seleccionar desde esta lista y usar los botones de acción:")
+    st.caption("Selecciona una obra y usa los iconos para editar o borrar:")
 
     opciones = {}
     for idx, row in df_f.iterrows():
