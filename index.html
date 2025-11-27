@@ -1,343 +1,53 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>DGO Insight · CRM Obras</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DGO Insight CRM</title>
+
+    <!-- Estilos base -->
+    <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-  <div class="app-shell">
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <div class="brand">
-          <span class="brand-mark">DGO</span>
-          <span class="brand-text">Insight · CRM Obras</span>
-        </div>
-      </div>
-      <nav class="topbar-nav">
-        <button class="nav-btn active" data-section="panel">Panel</button>
-        <button class="nav-btn" data-section="proyectos">Proyectos</button>
-      </nav>
+
+    <!-- Barra superior estilo Salesforce -->
+    <header class="crm-header">
+        <div class="crm-logo">DGO Insight CRM</div>
+        <nav class="crm-nav">
+            <button onclick="goPanel()">Panel</button>
+            <button onclick="goProyectos()">Proyectos</button>
+        </nav>
     </header>
 
-    <!-- CONTENIDO -->
-    <main class="main">
-      <!-- PANEL -->
-      <section id="section-panel" class="section active">
-        <div class="section-header">
-          <h1>Panel</h1>
-          <p>Resumen rápido de tus proyectos y pipeline.</p>
-        </div>
+    <!-- Contenido dinámico -->
+    <main id="app"></main>
 
-        <div class="cards-grid">
-          <div class="card kpi-card">
-            <div class="kpi-label">Total proyectos</div>
-            <div class="kpi-value" id="kpi-total">0</div>
-            <div class="kpi-sub" id="kpi-total-sub">—</div>
-          </div>
-          <div class="card kpi-card">
-            <div class="kpi-label">En seguimiento</div>
-            <div class="kpi-value" id="kpi-seguimiento">0</div>
-            <div class="kpi-sub">Fase ≠ Detectado</div>
-          </div>
-          <div class="card kpi-card">
-            <div class="kpi-label">Avanzados</div>
-            <div class="kpi-value" id="kpi-ganados">0</div>
-            <div class="kpi-sub">Construcción / Entregado</div>
-          </div>
-          <div class="card kpi-card">
-            <div class="kpi-label">Potencial 2N (€)</div>
-            <div class="kpi-value" id="kpi-potencial">0</div>
-            <div class="kpi-sub">Suma Potencial_2N</div>
-          </div>
-        </div>
+    <!-- SDK Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        <div class="card">
-          <div class="card-header">
-            <h2>Últimos proyectos</h2>
-          </div>
-          <div class="table-wrapper small">
-            <table>
-              <thead>
-                <tr>
-                  <th>Proyecto</th>
-                  <th>Ciudad</th>
-                  <th>Segmento</th>
-                  <th>Fase</th>
-                  <th>Potencial (€)</th>
-                </tr>
-              </thead>
-              <tbody id="panel-last-projects-body">
-                <tr><td colspan="5" class="muted">Sin datos</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <!-- La card de acciones próximas se inyecta por JS como #panel-actions-card -->
-      </section>
+        // --- TU CONFIG REAL ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyB51403DF43zxqq4K3Ex65i5-Sqm-EkiTY",
+            authDomain: "crm-obras-2n.firebaseapp.com",
+            projectId: "crm-obras-2n",
+            storageBucket: "crm-obras-2n.firebasestorage.app",
+            messagingSenderId: "545667121262",
+            appId: "1:545667121262:web:9dd55a09bc7a7bb3e9a67f"
+        };
 
-      <!-- PROYECTOS -->
-      <section id="section-proyectos" class="section">
-        <div class="section-header">
-          <h1>Pipeline de Proyectos</h1>
-          <p>Vista estructurada de obras, fases y potencial 2N.</p>
-        </div>
+        // Init Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-        <!-- Filtros -->
-        <div class="filters-bar">
-          <div class="filter-group">
-            <label for="filter-search">Buscar</label>
-            <input
-              type="text"
-              id="filter-search"
-              placeholder="Proyecto, ciudad, promotora..."
-            />
-          </div>
-          <div class="filter-group">
-            <label for="filter-fase">Fase</label>
-            <select id="filter-fase">
-              <option value="">Todas</option>
-              <option value="Detectado">Detectado</option>
-              <option value="Conceptual">Conceptual</option>
-              <option value="Anteproyecto">Anteproyecto</option>
-              <option value="Básico">Básico</option>
-              <option value="Ejecución">Ejecución</option>
-              <option value="Licitación">Licitación</option>
-              <option value="Construcción">Construcción</option>
-              <option value="Entregado">Entregado</option>
-              <option value="Paralizado">Paralizado</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="filter-segmento">Segmento</label>
-            <select id="filter-segmento">
-              <option value="">Todos</option>
-              <option value="Lujo">Lujo</option>
-              <option value="Estándar">Estándar</option>
-              <option value="BTR">BTR</option>
-              <option value="Coliving">Coliving</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>&nbsp;</label>
-            <button id="btn-add-project" class="primary-btn">
-              + Nuevo proyecto
-            </button>
-          </div>
-        </div>
+        // Exportar para app.js
+        window.db = db;
+    </script>
 
-        <!-- Acciones tabla -->
-        <div class="table-actions">
-          <div class="left">
-            <button id="btn-edit-selected" class="icon-btn" title="Editar">
-              ✏️
-            </button>
-            <button id="btn-delete-selected" class="icon-btn" title="Borrar">
-              🗑️
-            </button>
-          </div>
-          <div class="right">
-            <span class="muted" id="projects-count-label">0 proyectos</span>
-          </div>
-        </div>
+    <!-- Tu lógica -->
+    <script src="app.js"></script>
 
-        <!-- Tabla proyectos -->
-        <div class="card">
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th class="checkbox-col">
-                    <input type="checkbox" id="select-all-projects" />
-                  </th>
-                  <th>Proyecto</th>
-                  <th>Ciudad</th>
-                  <th>Segmento</th>
-                  <th>Fase</th>
-                  <th>Promotora / Fondo</th>
-                  <th>Inicio est.</th>
-                  <th class="numeric">Potencial 2N (€)</th>
-                </tr>
-              </thead>
-              <tbody id="projects-table-body">
-                <tr><td colspan="8" class="muted">Cargando...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- MODAL PROYECTO -->
-  <div id="project-modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="project-modal-title">Proyecto</h2>
-        <button class="modal-close-btn" id="project-modal-close">✕</button>
-      </div>
-      <form id="project-form" class="modal-body">
-        <input type="hidden" id="project-id" />
-
-        <!-- Datos básicos -->
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="field-Proyecto">Nombre del proyecto *</label>
-            <input type="text" id="field-Proyecto" required />
-          </div>
-          <div class="form-group">
-            <label for="field-Ciudad">Ciudad</label>
-            <input type="text" id="field-Ciudad" />
-          </div>
-          <div class="form-group">
-            <label for="field-Provincia">Provincia</label>
-            <input type="text" id="field-Provincia" />
-          </div>
-          <div class="form-group">
-            <label for="field-Tipo_Proyecto">Tipo de proyecto</label>
-            <input type="text" id="field-Tipo_Proyecto" placeholder="Residencial, terciario, mixto..." />
-          </div>
-          <div class="form-group">
-            <label for="field-Segmento">Segmento</label>
-            <select id="field-Segmento">
-              <option value="">—</option>
-              <option value="Lujo">Lujo</option>
-              <option value="Estándar">Estándar</option>
-              <option value="BTR">BTR</option>
-              <option value="Coliving">Coliving</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="field-Num_viviendas_aprox">Nº viviendas aprox.</label>
-            <input type="number" id="field-Num_viviendas_aprox" min="0" step="1" />
-          </div>
-        </div>
-
-        <!-- Agentes y fases -->
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="field-Promotora_Fondo">Promotora / Fondo</label>
-            <input type="text" id="field-Promotora_Fondo" />
-          </div>
-          <div class="form-group">
-            <label for="field-Arquitectura">Arquitectura</label>
-            <input type="text" id="field-Arquitectura" />
-          </div>
-          <div class="form-group">
-            <label for="field-Ingenieria">Ingeniería</label>
-            <input type="text" id="field-Ingenieria" />
-          </div>
-          <div class="form-group">
-            <label for="field-Fase_proyecto">Fase del proyecto</label>
-            <select id="field-Fase_proyecto">
-              <option value="Detectado">Detectado</option>
-              <option value="Conceptual">Conceptual</option>
-              <option value="Anteproyecto">Anteproyecto</option>
-              <option value="Básico">Básico</option>
-              <option value="Ejecución">Ejecución</option>
-              <option value="Licitación">Licitación</option>
-              <option value="Construcción">Construcción</option>
-              <option value="Entregado">Entregado</option>
-              <option value="Paralizado">Paralizado</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="field-Fecha_Inicio_Estimada">Fecha inicio estimada</label>
-            <input type="date" id="field-Fecha_Inicio_Estimada" />
-          </div>
-          <div class="form-group">
-            <label for="field-Fecha_Entrega_Estimada">Fecha entrega estimada</label>
-            <input type="date" id="field-Fecha_Entrega_Estimada" />
-          </div>
-        </div>
-
-        <!-- Negocio y fuente -->
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="field-Potencial_2N">Potencial 2N (€)</label>
-            <input type="number" id="field-Potencial_2N" min="0" step="10000" />
-          </div>
-          <div class="form-group">
-            <label for="field-potencial_eur">Potencial (campo histórico €)</label>
-            <input type="number" id="field-potencial_eur" min="0" step="10000" />
-          </div>
-          <div class="form-group">
-            <label for="field-Fuente_URL">Fuente / enlace</label>
-            <input type="url" id="field-Fuente_URL" placeholder="https://..." />
-          </div>
-          <div class="form-group">
-            <label for="field-Notas">Notas generales</label>
-            <textarea id="field-Notas" rows="2"></textarea>
-          </div>
-        </div>
-
-        <!-- Seguimiento y tareas -->
-        <div class="form-grid two-cols">
-          <div class="form-group">
-            <label for="field-seguimiento_fecha">Fecha seguimiento</label>
-            <input type="date" id="field-seguimiento_fecha" />
-          </div>
-          <div class="form-group">
-            <label for="field-seguimiento_comentario">Comentario seguimiento</label>
-            <textarea id="field-seguimiento_comentario" rows="2"></textarea>
-          </div>
-        </div>
-
-        <div class="form-grid two-cols">
-          <div class="form-group">
-            <label for="field-tarea_fecha">Fecha tarea</label>
-            <input type="date" id="field-tarea_fecha" />
-          </div>
-          <div class="form-group">
-            <label for="field-tarea_comentario">Comentario tarea</label>
-            <textarea id="field-tarea_comentario" rows="2"></textarea>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="secondary-btn" id="project-modal-cancel">
-            Cancelar
-          </button>
-          <button type="submit" class="primary-btn">
-            Guardar
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Firebase (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- Config Firebase (rellena con tus datos reales) -->
-  <script>
-    // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyB51403DF43zxqq4K3Ex65i5-Sqm-EkiTY",
-  authDomain: "crm-obras-2n.firebaseapp.com",
-  projectId: "crm-obras-2n",
-  storageBucket: "crm-obras-2n.firebasestorage.app",
-  messagingSenderId: "545667121262",
-  appId: "1:545667121262:web:9dd55a09bc7a7bb3e9a67f"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-  </script>
-
-  <script src="app.js"></script>
 </body>
 </html>
