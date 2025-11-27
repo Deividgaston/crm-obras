@@ -325,21 +325,25 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 # =====================================================
 
 def _vista_general_tabla(df_proy: pd.DataFrame):
-    # Fondo blanco y texto oscuro en el grid (dataframe y data_editor)
+    # Fondo blanco agresivo dentro del grid
     st.markdown(
         """
         <style>
         * { user-select: text !important; }
-        div[data-testid="stDataFrame"] table,
-        div[data-testid="stDataEditor"] table {
+
+        /* Fuerza fondo blanco y texto oscuro en las tablas de Streamlit */
+        div[data-testid="stDataFrame"] * ,
+        div[data-testid="stDataEditor"] * {
             background-color: #ffffff !important;
             color: #111827 !important;
         }
-        div[data-testid="stDataFrame"] table thead tr th,
-        div[data-testid="stDataEditor"] table thead tr th {
+
+        div[data-testid="stDataFrame"] thead tr th,
+        div[data-testid="stDataEditor"] thead tr th {
             background-color: #f3f4f6 !important;
             color: #111827 !important;
         }
+
         div[data-testid="stDataFrame"] tbody tr td,
         div[data-testid="stDataEditor"] tbody tr td {
             border-bottom: 1px solid #e5e7eb !important;
@@ -439,23 +443,22 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         }
     )
 
-    # Configuramos columnas como no editables, pero permitimos seleccionar filas
-    column_config = {
-        c: st.column_config.Column(disabled=True) for c in df_tabla.columns
-    }
+    column_config = {c: st.column_config.Column(disabled=True) for c in df_tabla.columns}
 
     st.caption("Haz clic en una fila para abrir el cuadro flotante de edición.")
+
     st.data_editor(
         df_tabla,
         key="tabla_proyectos",
         use_container_width=True,
         hide_index=True,
-        disabled=False,               # <-- selección y clicks habilitados
+        disabled=False,        # permite seleccionar
         num_rows="fixed",
         column_config=column_config,
+        on_select="rerun",     # <-- clave para que la selección dispare actualización
     )
 
-    # --- Apertura automática del diálogo al seleccionar fila ---
+    # --- Abrir diálogo cuando haya fila seleccionada ---
     tabla_state = st.session_state.get("tabla_proyectos", {})
     sel_rows = tabla_state.get("selection", {}).get("rows", []) if isinstance(tabla_state, dict) else []
 
@@ -468,7 +471,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
             row_data = df_f.iloc[row_idx].to_dict()
             _open_edit_dialog(row_data, proy_id)
 
-    # Selector + botones explícitos (por si prefieres usarlos)
+    # Selector + botones explícitos
     st.markdown("<br>", unsafe_allow_html=True)
     st.caption("También puedes seleccionar desde esta lista y usar los botones de acción:")
 
