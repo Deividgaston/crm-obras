@@ -1,53 +1,142 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DGO Insight CRM</title>
-
-    <!-- Estilos base -->
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGO Insight · Panel</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-    <!-- Barra superior estilo Salesforce -->
-    <header class="crm-header">
-        <div class="crm-logo">DGO Insight CRM</div>
-        <nav class="crm-nav">
-            <button onclick="goPanel()">Panel</button>
-            <button onclick="goProyectos()">Proyectos</button>
-        </nav>
-    </header>
+  <!-- HEADER ESTILO SALESFORCE -->
+  <header class="crm-header">
+    <div class="crm-logo">DGO Insight · CRM Obras</div>
+    <nav class="crm-nav">
+      <!-- De momento solo Panel. Más adelante Proyectos/Buscar -->
+      <button type="button">Panel</button>
+    </nav>
+  </header>
 
-    <!-- Contenido dinámico -->
-    <main id="app"></main>
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="app">
+    <h1 class="crm-page-title">Panel</h1>
+    <p class="crm-page-subtitle">
+      Resumen de tareas y seguimientos de tus proyectos.
+    </p>
 
-    <!-- SDK Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    <!-- Loader simple (controlado por app.js con #panel-loading) -->
+    <div id="panel-loading" style="display:none; margin-bottom:8px;">
+      Cargando datos...
+    </div>
 
-        // --- TU CONFIG REAL ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyB51403DF43zxqq4K3Ex65i5-Sqm-EkiTY",
-            authDomain: "crm-obras-2n.firebaseapp.com",
-            projectId: "crm-obras-2n",
-            storageBucket: "crm-obras-2n.firebasestorage.app",
-            messagingSenderId: "545667121262",
-            appId: "1:545667121262:web:9dd55a09bc7a7bb3e9a67f"
-        };
+    <!-- FILA DE TARJETAS RESUMEN -->
+    <section class="crm-row" style="margin-bottom:12px;">
+      <div class="crm-col-3">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Total acciones</div>
+          </div>
+          <div style="font-size:22px;font-weight:700;" id="stat-total">0</div>
+        </div>
+      </div>
+      <div class="crm-col-3">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Retrasadas</div>
+          </div>
+          <div style="font-size:22px;font-weight:700;color:#c23934;" id="stat-retrasadas">0</div>
+        </div>
+      </div>
+      <div class="crm-col-3">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Hoy</div>
+          </div>
+          <div style="font-size:22px;font-weight:700;color:#0e9f6e;" id="stat-hoy">0</div>
+        </div>
+      </div>
+      <div class="crm-col-3">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Próx. 7 días</div>
+          </div>
+          <div style="font-size:22px;font-weight:700;color:#0176d3;" id="stat-prox7">0</div>
+        </div>
+      </div>
+    </section>
 
-        // Init Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    <!-- FILA DE LISTAS: RETRASADAS / HOY / PROX 7 DÍAS -->
+    <section class="crm-row" style="margin-bottom:16px;">
+      <div class="crm-col-4">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Retrasadas</div>
+          </div>
+          <div id="list-retrasadas"></div>
+        </div>
+      </div>
 
-        // Exportar para app.js
-        window.db = db;
-    </script>
+      <div class="crm-col-4">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Hoy</div>
+          </div>
+          <div id="list-hoy"></div>
+        </div>
+      </div>
 
-    <!-- Tu lógica -->
-    <script src="app.js"></script>
+      <div class="crm-col-4">
+        <div class="crm-card">
+          <div class="crm-card-header">
+            <div class="crm-card-title">Próx. 7 días</div>
+          </div>
+          <div id="list-prox7"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLA PRINCIPAL DEL PANEL -->
+    <section class="crm-card">
+      <div class="crm-card-header">
+        <div class="crm-card-title">Listado de acciones por proyecto</div>
+        <button id="btn-panel-refresh" type="button" class="crm-btn">
+          🔄 Refrescar
+        </button>
+      </div>
+      <div class="crm-table-wrapper">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Proyecto</th>
+              <th>Ciudad</th>
+              <th>Provincia</th>
+              <th>Fase</th>
+              <th>Fecha tarea</th>
+              <th>Comentario tarea</th>
+              <th>Fecha seguimiento</th>
+              <th>Comentario seguimiento</th>
+            </tr>
+          </thead>
+          <tbody id="panel-table-body">
+            <!-- Rellenado por app.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- TOAST SIMPLE PARA MENSAJES (USADO POR app.js: #toast) -->
+  <div id="toast"
+       style="position:fixed;right:16px;bottom:16px;padding:8px 10px;border-radius:6px;font-size:13px;
+              background:#c23934;color:#fff;opacity:0;transition:opacity 0.3s;z-index:200;">
+  </div>
+
+  <!-- SDKs Firebase COMPAT (coinciden con app.js) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- LÓGICA DEL PANEL -->
+  <script src="app.js"></script>
 
 </body>
 </html>
