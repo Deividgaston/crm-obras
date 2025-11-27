@@ -455,12 +455,21 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         disabled=False,        # permite seleccionar
         num_rows="fixed",
         column_config=column_config,
-        on_select="rerun",     # <-- clave para que la selección dispare actualización
     )
 
     # --- Abrir diálogo cuando haya fila seleccionada ---
-    tabla_state = st.session_state.get("tabla_proyectos", {})
-    sel_rows = tabla_state.get("selection", {}).get("rows", []) if isinstance(tabla_state, dict) else []
+    tabla_state = st.session_state.get("tabla_proyectos")
+    sel_rows = []
+
+    if isinstance(tabla_state, dict):
+        sel = tabla_state.get("selection", {}).get("rows", {})
+        # puede ser dict {0: True, 1: True} o lista
+        if isinstance(sel, dict):
+            indices = [int(i) for i, selected in sel.items() if selected]
+            if indices:
+                sel_rows = sorted(indices)
+        elif isinstance(sel, list):
+            sel_rows = sel
 
     if sel_rows:
         row_idx = sel_rows[0]
