@@ -1,7 +1,7 @@
-// Modo Desarrollador Eficiente: código directo
+// Modo Desarrollador Eficiente: código directo, una sola lectura inicial a Firestore
 
 // ======= ESTADO EN MEMORIA =======
-let proyectos = []; // lista completa desde Firestore
+let proyectos = [];          // lista completa desde Firestore
 let proyectosFiltrados = []; // tras filtros
 
 // ======= UTILIDADES =======
@@ -54,6 +54,21 @@ function parseDateField(value) {
   }
 }
 
+function formatDateInputValue(value) {
+  try {
+    const d =
+      value instanceof Date
+        ? value
+        : value && typeof value.toDate === "function"
+        ? value.toDate()
+        : new Date(value);
+    if (isNaN(d.getTime())) return "";
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
+
 // ======= NAVEGACIÓN =======
 function setupNavigation() {
   const navButtons = document.querySelectorAll(".nav-btn");
@@ -73,11 +88,13 @@ function setupNavigation() {
   });
 }
 
-// ======= CARGA INICIAL =======
-async function cargarProyectos() {
+// ======= CARGA INICIAL (ÚNICA LECTURA A FIRESTORE) =======
+async function cargarProyectosInicial() {
   const tbody = document.getElementById("projects-table-body");
-  tbody.innerHTML =
-    '<tr><td colspan="10" class="muted">Cargando...</td></tr>';
+  if (tbody) {
+    tbody.innerHTML =
+      '<tr><td colspan="10" class="muted">Cargando...</td></tr>';
+  }
 
   try {
     const snapshot = await db
@@ -94,19 +111,20 @@ async function cargarProyectos() {
     actualizarPanel();
   } catch (err) {
     console.error("Error cargando proyectos:", err);
-    tbody.innerHTML =
-      '<tr><td colspan="10" class="muted error">Error cargando datos</td></tr>';
+    if (tbody) {
+      tbody.innerHTML =
+        '<tr><td colspan="10" class="muted error">Error cargando datos</td></tr>';
+    }
   }
 }
 
 // ======= FILTROS =======
 function aplicarFiltros() {
-  const search = document
-    .getElementById("filter-search")
-    .value.toLowerCase()
+  const search = (document.getElementById("filter-search")?.value || "")
+    .toLowerCase()
     .trim();
-  const estado = document.getElementById("filter-estado").value;
-  const prioridad = document.getElementById("filter-prioridad").value;
+  const estado = document.getElementById("filter-estado")?.value || "";
+  const prioridad = document.getElementById("filter-prioridad")?.value || "";
 
   proyectosFiltrados = proyectos.filter((p) => {
     if (estado && p.estado !== estado) return false;
@@ -131,12 +149,15 @@ function renderProyectosTabla() {
   const tbody = document.getElementById("projects-table-body");
   const countLabel = document.getElementById("projects-count-label");
   const selectAll = document.getElementById("select-all-projects");
-  selectAll.checked = false;
+
+  if (!tbody) return;
+
+  if (selectAll) selectAll.checked = false;
 
   if (!proyectosFiltrados.length) {
     tbody.innerHTML =
       '<tr><td colspan="10" class="muted">No hay proyectos con estos filtros.</td></tr>';
-    countLabel.textContent = "0 proyectos";
+    if (countLabel) countLabel.textContent = "0 proyectos";
     return;
   }
 
@@ -162,7 +183,9 @@ function renderProyectosTabla() {
     .join("");
 
   tbody.innerHTML = rowsHtml;
-  countLabel.textContent = `${proyectosFiltrados.length} proyecto(s)`;
+  if (countLabel) {
+    countLabel.textContent = `${proyectosFiltrados.length} proyecto(s)`;
+  }
 
   // Doble click en fila: editar
   tbody.querySelectorAll("tr").forEach((tr) => {
@@ -171,14 +194,6 @@ function renderProyectosTabla() {
       const proyecto = proyectos.find((p) => p.id === id);
       if (proyecto) abrirModalProyecto(proyecto);
     });
-  });
-
-  // Seleccionar todo
-  selectAll.addEventListener("change", () => {
-    const checked = selectAll.checked;
-    document
-      .querySelectorAll(".project-checkbox")
-      .forEach((cb) => (cb.checked = checked));
   });
 }
 
@@ -193,53 +208,58 @@ function actualizarPanel() {
     0
   );
 
-  document.getElementById("kpi-total").textContent = total;
-  document.getElementById("kpi-seguimiento").textContent = seguimiento;
-  document.getElementById("kpi-ganados").textContent = ganados;
-  document.getElementById("kpi-potencial").textContent =
-    formatNumber(potencialTotal);
-  document.getElementById(
-    "kpi-total-sub"
-  ).textContent = `${ganados} ganados · ${seguimiento} en seguimiento`;
+  const kpiTotal = document.getElementById("kpi-total");
+  const kpiSeg = document.getElementById("kpi-seguimiento");
+  const kpiGan = document.getElementById("kpi-ganados");
+  const kpiPot = document.getElementById("kpi-potencial");
+  const kpiSub = document.getElementById("kpi-total-sub");
+
+  if (kpiTotal) kpiTotal.textContent = total;
+  if (kpiSeg) kpiSeg.textContent = seguimiento;
+  if (kpiGan) kpiGan.textContent = ganados;
+  if (kpiPot) kpiPot.textContent = formatNumber(potencialTotal);
+  if (kpiSub) {
+    kpiSub.textContent = `${ganados} ganados · ${seguimiento} en seguimiento`;
+  }
 
   // Últimos proyectos
   const tbody = document.getElementById("panel-last-projects-body");
-  if (!proyectos.length) {
-    tbody.innerHTML =
-      '<tr><td colspan="5" class="muted">Sin proyectos todavía.</td></tr>';
-  } else {
-    const ultimos = [...proyectos]
-      .sort((a, b) => {
-        const da = a.created_at?.toMillis?.() ?? 0;
-        const db = b.created_at?.toMillis?.() ?? 0;
-        return db - da;
-      })
-      .slice(0, 5);
+  if (tbody) {
+    if (!proyectos.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="5" class="muted">Sin proyectos todavía.</td></tr>';
+    } else {
+      const ultimos = [...proyectos]
+        .sort((a, b) => {
+          const da = a.created_at?.toMillis?.() ?? 0;
+          const db = b.created_at?.toMillis?.() ?? 0;
+          return db - da;
+        })
+        .slice(0, 5);
 
-    tbody.innerHTML = ultimos
-      .map(
-        (p) => `
-      <tr>
-        <td>${p.nombre_obra || "—"}</td>
-        <td>${p.cliente_principal || "—"}</td>
-        <td>${p.ciudad || "—"}</td>
-        <td>${p.estado || "—"}</td>
-        <td class="numeric">${formatNumber(p.potencial_eur)}</td>
-      </tr>
-    `
-      )
-      .join("");
+      tbody.innerHTML = ultimos
+        .map(
+          (p) => `
+        <tr>
+          <td>${p.nombre_obra || "—"}</td>
+          <td>${p.cliente_principal || "—"}</td>
+          <td>${p.ciudad || "—"}</td>
+          <td>${p.estado || "—"}</td>
+          <td class="numeric">${formatNumber(p.potencial_eur)}</td>
+        </tr>
+      `
+        )
+        .join("");
+    }
   }
 
-  // Acciones (como en el panel de Streamlit): Seguimientos + Tareas próximas
+  // Acciones (seguimientos + tareas)
   const acciones = buildAccionesFromProyectos(proyectos);
   const { atras, hoyArr, prox } = particionarAcciones(acciones);
   renderAccionesPanel(acciones, atras, hoyArr, prox);
 }
 
 // Construye lista de acciones desde los proyectos
-// - Seguimiento: fecha_seguimiento + notas_seguimiento
-// - Tareas: array "tareas" con campos {completado, fecha_limite, tipo, titulo}
 function buildAccionesFromProyectos(lista) {
   const acciones = [];
 
@@ -263,7 +283,7 @@ function buildAccionesFromProyectos(lista) {
       });
     }
 
-    // Tareas (si existe lista "tareas" como en la versión Python)
+    // Tareas (si existe lista "tareas")
     const tareas = Array.isArray(p.tareas) ? p.tareas : [];
     tareas.forEach((t) => {
       if (!t || typeof t !== "object" || t.completado) return;
@@ -308,7 +328,7 @@ function particionarAcciones(acciones) {
   return { atras, hoyArr, prox };
 }
 
-// Pinta bloque de acciones en el panel usando solo DOM (sin tocar HTML base)
+// Pinta bloque de acciones en el panel
 function renderAccionesPanel(acciones, atras, hoyArr, prox) {
   const panelSection = document.getElementById("section-panel");
   if (!panelSection) return;
@@ -328,7 +348,9 @@ function renderAccionesPanel(acciones, atras, hoyArr, prox) {
     return lista
       .map((a) => {
         const fecha = formatDateFromDate(a.fechaDate);
-        const desc = a.descripcion ? `<div class="accion-desc">${a.descripcion}</div>` : "";
+        const desc = a.descripcion
+          ? `<div class="accion-desc">${a.descripcion}</div>`
+          : "";
         return `
         <div class="accion-card" style="margin-bottom:4px;padding:6px 8px;border-radius:0.35rem;border:1px solid #e5e7eb;background:#ffffff;">
           <div class="accion-meta" style="font-size:0.72rem;color:#6b7280;">
@@ -454,24 +476,12 @@ function abrirModalProyecto(proyecto = null) {
   modal.classList.remove("hidden");
 }
 
-function formatDateInputValue(value) {
-  try {
-    const d =
-      value instanceof Date
-        ? value
-        : value && typeof value.toDate === "function"
-        ? value.toDate()
-        : new Date(value);
-    if (isNaN(d.getTime())) return "";
-    return d.toISOString().slice(0, 10);
-  } catch {
-    return "";
-  }
-}
-
+// ======= GUARDAR PROYECTO (SIN RECARGAR FIRESTORE) =======
 async function guardarProyectoDesdeFormulario() {
   const id = document.getElementById("project-id").value || null;
-  const nombre_obra = document.getElementById("field-nombre_obra").value.trim();
+  const nombre_obra = document
+    .getElementById("field-nombre_obra")
+    .value.trim();
 
   if (!nombre_obra) {
     alert("El nombre del proyecto es obligatorio.");
@@ -501,22 +511,39 @@ async function guardarProyectoDesdeFormulario() {
 
   try {
     if (id) {
+      // UPDATE EN FIRESTORE
       await db.collection("proyectos").doc(id).update(payload);
+      // UPDATE EN MEMORIA
+      const idx = proyectos.findIndex((p) => p.id === id);
+      if (idx !== -1) {
+        proyectos[idx] = { ...proyectos[idx], ...payload };
+      }
     } else {
-      await db.collection("proyectos").add({
+      // CREATE EN FIRESTORE
+      const docRef = await db.collection("proyectos").add({
         ...payload,
         created_at: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      // AÑADIR AL ARRAY LOCAL (sin nueva lectura)
+      proyectos.push({
+        id: docRef.id,
+        ...payload,
+        created_at: new Date(),
+      });
     }
+
     document.getElementById("project-modal").classList.add("hidden");
-    await cargarProyectos();
+
+    // Recalcular filtros y panel sin volver a leer de Firestore
+    aplicarFiltros();
+    actualizarPanel();
   } catch (err) {
     console.error("Error guardando proyecto:", err);
     alert("Error guardando el proyecto. Revisa la consola.");
   }
 }
 
-// ======= BORRADO =======
+// ======= BORRADO (SIN RECARGAR FIRESTORE) =======
 async function borrarSeleccionados() {
   const cbs = Array.from(
     document.querySelectorAll(".project-checkbox:checked")
@@ -536,13 +563,21 @@ async function borrarSeleccionados() {
 
   try {
     const batch = db.batch();
+    const ids = [];
     cbs.forEach((cb) => {
       const id = cb.dataset.id;
+      ids.push(id);
       const ref = db.collection("proyectos").doc(id);
       batch.delete(ref);
     });
     await batch.commit();
-    await cargarProyectos();
+
+    // Eliminar del array local SIN recargar
+    const idSet = new Set(ids);
+    proyectos = proyectos.filter((p) => !idSet.has(p.id));
+
+    aplicarFiltros();
+    actualizarPanel();
   } catch (err) {
     console.error("Error borrando proyectos:", err);
     alert("Error borrando proyectos. Revisa la consola.");
@@ -574,26 +609,33 @@ function editarSeleccionado() {
 // ======= LISTENERS =======
 function setupEventos() {
   // Filtros
-  document
-    .getElementById("filter-search")
-    .addEventListener("input", aplicarFiltros);
-  document
-    .getElementById("filter-estado")
-    .addEventListener("change", aplicarFiltros);
-  document
-    .getElementById("filter-prioridad")
-    .addEventListener("change", aplicarFiltros);
+  const search = document.getElementById("filter-search");
+  const estado = document.getElementById("filter-estado");
+  const prioridad = document.getElementById("filter-prioridad");
+
+  if (search) search.addEventListener("input", aplicarFiltros);
+  if (estado) estado.addEventListener("change", aplicarFiltros);
+  if (prioridad) prioridad.addEventListener("change", aplicarFiltros);
 
   // Botones
-  document
-    .getElementById("btn-add-project")
-    .addEventListener("click", () => abrirModalProyecto(null));
-  document
-    .getElementById("btn-delete-selected")
-    .addEventListener("click", borrarSeleccionados);
-  document
-    .getElementById("btn-edit-selected")
-    .addEventListener("click", editarSeleccionado);
+  const btnAdd = document.getElementById("btn-add-project");
+  const btnDel = document.getElementById("btn-delete-selected");
+  const btnEdit = document.getElementById("btn-edit-selected");
+
+  if (btnAdd) btnAdd.addEventListener("click", () => abrirModalProyecto(null));
+  if (btnDel) btnDel.addEventListener("click", borrarSeleccionados);
+  if (btnEdit) btnEdit.addEventListener("click", editarSeleccionado);
+
+  // Seleccionar todo
+  const selectAll = document.getElementById("select-all-projects");
+  if (selectAll) {
+    selectAll.addEventListener("change", () => {
+      const checked = selectAll.checked;
+      document
+        .querySelectorAll(".project-checkbox")
+        .forEach((cb) => (cb.checked = checked));
+    });
+  }
 }
 
 // ======= INIT =======
@@ -601,5 +643,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupModalProyecto();
   setupEventos();
-  cargarProyectos();
+  cargarProyectosInicial(); // única lectura global a Firestore
 });
