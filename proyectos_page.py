@@ -149,12 +149,13 @@ def _render_edit_form(row_data: dict, proy_id: str):
                 value=float(row_data.get("potencial_eur", 50_000.0) or 0.0),
             )
             fecha_seg = st.date_input(
-                "Fecha de seguimiento",
+                "Próxima fecha de seguimiento",
                 value=fecha_seg_default,
             )
 
-        notas = st.text_area(
-            "Notas de seguimiento / siguiente acción",
+        # Comentario de seguimiento (se guarda como notas_seguimiento)
+        comentario_seguimiento = st.text_area(
+            "Comentario de seguimiento",
             value=row_data.get("notas_seguimiento", "") or "",
         )
 
@@ -163,24 +164,19 @@ def _render_edit_form(row_data: dict, proy_id: str):
             unsafe_allow_html=True,
         )
 
-        # -------- NUEVA TAREA RÁPIDA PARA LA OBRA --------
-        st.markdown("**Asignar nueva tarea (opcional)**")
-        colt1, colt2, colt3 = st.columns(3)
+        # -------- NUEVA TAREA (comentario + fecha) --------
+        st.markdown("**Asignar nueva tarea a esta obra (opcional)**")
+        colt1, colt2 = st.columns([2, 1])
         with colt1:
-            tipo_tarea = st.selectbox(
-                "Tipo de tarea",
-                ["Llamada", "Email", "Visita", "Demo", "Otro"],
-                index=0,
+            comentario_tarea = st.text_area(
+                "Comentario de tarea",
+                value="",
+                placeholder="Ej. Llamar a promotora para cerrar condiciones",
+                height=70,
             )
         with colt2:
-            titulo_tarea = st.text_input(
-                "Título tarea",
-                value="",
-                placeholder="Ej. Llamar a promotora para cierre",
-            )
-        with colt3:
-            fecha_lim_tarea = st.date_input(
-                "Fecha límite",
+            fecha_tarea = st.date_input(
+                "Fecha de tarea",
                 value=date.today() + timedelta(days=7),
             )
 
@@ -190,7 +186,7 @@ def _render_edit_form(row_data: dict, proy_id: str):
         with cold:
             borrar = st.form_submit_button("🗑️ Borrar proyecto", use_container_width=True)
 
-    # ---- LÓGICA GUARDAR / BORRAR ----
+    # ---- LÓGICA BORRAR ----
     if borrar:
         try:
             delete_proyecto(proy_id)
@@ -201,6 +197,7 @@ def _render_edit_form(row_data: dict, proy_id: str):
             st.error(f"No se pudo borrar el proyecto: {e}")
         return
 
+    # ---- LÓGICA GUARDAR ----
     if guardar:
         if not nombre_obra:
             st.warning("El nombre del proyecto es obligatorio.")
@@ -221,16 +218,14 @@ def _render_edit_form(row_data: dict, proy_id: str):
             "estado": estado,
             "potencial_eur": float(potencial_eur),
             "fecha_seguimiento": fecha_seg.isoformat(),
-            "notas_seguimiento": notas,
+            "notas_seguimiento": comentario_seguimiento,
         }
 
-        # Añadir nueva tarea si la ha rellenado
-        if titulo_tarea.strip():
+        # Añadir nueva tarea si se ha rellenado comentario
+        if comentario_tarea.strip():
             nueva_tarea = {
-                "titulo": titulo_tarea.strip(),
-                "tipo": tipo_tarea,
-                "fecha_limite": fecha_lim_tarea.isoformat(),
-                "completado": False,
+                "comentario": comentario_tarea.strip(),
+                "fecha": fecha_tarea.isoformat(),
             }
             data_update["tareas"] = tareas_existentes + [nueva_tarea]
 
@@ -247,7 +242,7 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
     if hasattr(st, "dialog"):
         @st.dialog("✏️ Editar proyecto")
         def _dlg():
-            st.caption("Modifica los datos del proyecto y asigna tareas o estado de seguimiento.")
+            st.caption("Modifica los datos del proyecto, el seguimiento y las tareas.")
             _render_edit_form(row_data, proy_id)
 
         _dlg()
@@ -265,7 +260,7 @@ def _open_edit_dialog(row_data: dict, proy_id: str):
 
 
 # =====================================================
-# FILTROS (compactos, con etiquetas visibles)
+# FILTROS (compactos)
 # =====================================================
 
 def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
@@ -326,24 +321,27 @@ def _aplicar_filtros_basicos(df: pd.DataFrame, key_prefix: str) -> pd.DataFrame:
 
 
 # =====================================================
-# VISTA GENERAL (TABLA + ICONOS EDITAR/BORRAR)
+# VISTA GENERAL (TABLA + SELECCIÓN)
 # =====================================================
 
 def _vista_general_tabla(df_proy: pd.DataFrame):
-    # Forzar fondo blanco en tablas y permitir copiar/pegar
+    # Fondo blanco y texto oscuro en el grid (dataframe y data_editor)
     st.markdown(
         """
         <style>
         * { user-select: text !important; }
-        div[data-testid="stDataFrame"] table {
+        div[data-testid="stDataFrame"] table,
+        div[data-testid="stDataEditor"] table {
             background-color: #ffffff !important;
             color: #111827 !important;
         }
-        div[data-testid="stDataFrame"] table thead tr th {
+        div[data-testid="stDataFrame"] table thead tr th,
+        div[data-testid="stDataEditor"] table thead tr th {
             background-color: #f3f4f6 !important;
             color: #111827 !important;
         }
-        div[data-testid="stDataFrame"] tbody tr td {
+        div[data-testid="stDataFrame"] tbody tr td,
+        div[data-testid="stDataEditor"] tbody tr td {
             border-bottom: 1px solid #e5e7eb !important;
         }
         </style>
@@ -392,7 +390,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         st.info("No hay proyectos con los filtros actuales.")
         return
 
-    # Métricas muy compactas
+    # Métricas compactas
     colm1, colm2, colm3, colm4 = st.columns(4)
     if "estado" in df_filtrado.columns:
         counts = df_filtrado["estado"].value_counts()
@@ -411,7 +409,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
 
     st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
 
-    # Tabla principal (data_editor para poder seleccionar filas)
+    # Tabla principal
     columnas = [
         "nombre_obra",
         "cliente_principal",
@@ -425,9 +423,7 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
     ]
     columnas = [c for c in columnas if c in df_filtrado.columns]
 
-    # Reset index para que la selección de filas sea consistente
     df_f = df_filtrado.reset_index(drop=True)
-
     df_tabla = df_f[columnas].copy()
     df_tabla = df_tabla.rename(
         columns={
@@ -443,14 +439,20 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
         }
     )
 
-    st.caption("Haz clic en una fila para editarla (se abrirá el cuadro flotante).")
+    # Configuramos columnas como no editables, pero permitimos seleccionar filas
+    column_config = {
+        c: st.column_config.Column(disabled=True) for c in df_tabla.columns
+    }
+
+    st.caption("Haz clic en una fila para abrir el cuadro flotante de edición.")
     st.data_editor(
         df_tabla,
         key="tabla_proyectos",
         use_container_width=True,
         hide_index=True,
-        disabled=True,
+        disabled=False,               # <-- selección y clicks habilitados
         num_rows="fixed",
+        column_config=column_config,
     )
 
     # --- Apertura automática del diálogo al seleccionar fila ---
@@ -466,9 +468,9 @@ def _vista_general_tabla(df_proy: pd.DataFrame):
             row_data = df_f.iloc[row_idx].to_dict()
             _open_edit_dialog(row_data, proy_id)
 
-    # Selector + iconos explícitos (por si prefieres usarlos)
+    # Selector + botones explícitos (por si prefieres usarlos)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("También puedes seleccionar desde esta lista y usar los iconos de acción:")
+    st.caption("También puedes seleccionar desde esta lista y usar los botones de acción:")
 
     opciones = {}
     for idx, row in df_f.iterrows():
@@ -620,7 +622,7 @@ def _render_import_export(df_proy_empty: bool, df_proy: pd.DataFrame | None = No
 
 
 # =====================================================
-# ALTA MANUAL (REESTRUCTURADA, COMPACTA)
+# ALTA MANUAL
 # =====================================================
 
 def _render_alta_manual():
@@ -666,7 +668,7 @@ def _render_alta_manual():
             )
 
         notas = st.text_area(
-            "Notas iniciales (fuente del proyecto, link, siguiente paso...)",
+            "Comentario inicial de seguimiento",
             height=80,
         )
 
@@ -723,7 +725,6 @@ def render_proyectos():
             _render_import_export(df_proy_empty=True)
         return
 
-    # Tabs: vista tabla, alta/edición, import/export, duplicados
     tab_vista, tab_alta, tab_import, tab_duplicados = st.tabs(
         [
             "📁 Vista general (tabla)",
