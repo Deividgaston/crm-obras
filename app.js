@@ -1,44 +1,11 @@
-// Modo Desarrollador Eficiente: código directo, una sola lectura inicial a Firestore
+// Estado global
+let proyectos = [];
+let proyectosFiltrados = [];
 
-// ======= ESTADO EN MEMORIA =======
-let proyectos = [];          // lista completa desde Firestore
-let proyectosFiltrados = []; // tras filtros
-
-// ======= UTILIDADES =======
+// Utils
 function formatNumber(num) {
   if (num == null || isNaN(num)) return "0";
-  return num.toLocaleString("es-ES", {
-    maximumFractionDigits: 0,
-  });
-}
-
-function formatDate(value) {
-  if (!value) return "—";
-  try {
-    let d;
-    if (value instanceof Date) {
-      d = value;
-    } else if (value && typeof value.toDate === "function") {
-      d = value.toDate();
-    } else {
-      d = new Date(value);
-    }
-    if (isNaN(d.getTime())) return "—";
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${day}/${month}/${year}`;
-  } catch {
-    return "—";
-  }
-}
-
-function formatDateFromDate(d) {
-  if (!(d instanceof Date) || isNaN(d.getTime())) return "—";
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${day}/${month}/${year}`;
+  return Number(num).toLocaleString("es-ES", { maximumFractionDigits: 0 });
 }
 
 function parseDateField(value) {
@@ -54,29 +21,28 @@ function parseDateField(value) {
   }
 }
 
-function formatDateInputValue(value) {
-  try {
-    const d =
-      value instanceof Date
-        ? value
-        : value && typeof value.toDate === "function"
-        ? value.toDate()
-        : new Date(value);
-    if (isNaN(d.getTime())) return "";
-    return d.toISOString().slice(0, 10);
-  } catch {
-    return "";
-  }
+function formatDate(value) {
+  const d = parseDateField(value);
+  if (!d) return "—";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${day}/${m}/${y}`;
 }
 
-// ======= NAVEGACIÓN =======
+function formatDateInput(value) {
+  const d = parseDateField(value);
+  if (!d) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+// Navegación
 function setupNavigation() {
   const navButtons = document.querySelectorAll(".nav-btn");
   navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       navButtons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-
       const sectionName = btn.dataset.section;
       document
         .querySelectorAll(".section")
@@ -88,18 +54,19 @@ function setupNavigation() {
   });
 }
 
-// ======= CARGA INICIAL (ÚNICA LECTURA A FIRESTORE) =======
+// Carga inicial (una sola lectura)
 async function cargarProyectosInicial() {
   const tbody = document.getElementById("projects-table-body");
   if (tbody) {
     tbody.innerHTML =
-      '<tr><td colspan="10" class="muted">Cargando...</td></tr>';
+      '<tr><td colspan="8" class="muted">Cargando...</td></tr>';
   }
 
   try {
     const snapshot = await db
       .collection("proyectos")
-      .orderBy("nombre_obra", "asc")
+      .orderBy("Fase_proyecto", "asc")
+      .orderBy("Proyecto", "asc")
       .get();
 
     proyectos = snapshot.docs.map((doc) => ({
@@ -113,29 +80,38 @@ async function cargarProyectosInicial() {
     console.error("Error cargando proyectos:", err);
     if (tbody) {
       tbody.innerHTML =
-        '<tr><td colspan="10" class="muted error">Error cargando datos</td></tr>';
+        '<tr><td colspan="8" class="muted error">Error cargando datos</td></tr>';
     }
   }
 }
 
-// ======= FILTROS =======
+// Filtros
 function aplicarFiltros() {
   const search = (document.getElementById("filter-search")?.value || "")
     .toLowerCase()
     .trim();
-  const estado = document.getElementById("filter-estado")?.value || "";
-  const prioridad = document.getElementById("filter-prioridad")?.value || "";
+  const fase = document.getElementById("filter-fase")?.value || "";
+  const segmento = document.getElementById("filter-segmento")?.value || "";
 
   proyectosFiltrados = proyectos.filter((p) => {
-    if (estado && p.estado !== estado) return false;
-    if (prioridad && p.prioridad !== prioridad) return false;
+    if (fase && p.Fase_proyecto !== fase) return false;
+    if (segmento && p.Segmento !== segmento) return false;
 
     if (search) {
-      const texto =
-        `${p.nombre_obra || ""} ${p.cliente_principal || ""} ${
-          p.ciudad || ""
-        }`.toLowerCase();
-      if (!texto.includes(search)) return false;
+      const txt = (
+        (p.Proyecto || "") +
+        " " +
+        (p.Ciudad || "") +
+        " " +
+        (p.Promotora_Fondo || "") +
+        " " +
+        (p.Arquitectura || "") +
+        " " +
+        (p.Ingenieria || "")
+      )
+        .toLowerCase()
+        .trim();
+      if (!txt.includes(search)) return false;
     }
 
     return true;
@@ -144,7 +120,7 @@ function aplicarFiltros() {
   renderProyectosTabla();
 }
 
-// ======= RENDER TABLA PROYECTOS =======
+// Render tabla de proyectos
 function renderProyectosTabla() {
   const tbody = document.getElementById("projects-table-body");
   const countLabel = document.getElementById("projects-count-label");
@@ -156,29 +132,29 @@ function renderProyectosTabla() {
 
   if (!proyectosFiltrados.length) {
     tbody.innerHTML =
-      '<tr><td colspan="10" class="muted">No hay proyectos con estos filtros.</td></tr>';
+      '<tr><td colspan="8" class="muted">No hay proyectos con estos filtros.</td></tr>';
     if (countLabel) countLabel.textContent = "0 proyectos";
     return;
   }
 
   const rowsHtml = proyectosFiltrados
     .map((p) => {
+      const fase = p.Fase_proyecto || p.estado || "—";
+      const potencial = p.Potencial_2N ?? p.potencial_eur ?? 0;
       return `
-      <tr data-id="${p.id}">
-        <td class="checkbox-col">
-          <input type="checkbox" class="project-checkbox" data-id="${p.id}" />
-        </td>
-        <td>${p.nombre_obra || "—"}</td>
-        <td>${p.cliente_principal || "—"}</td>
-        <td>${p.ciudad || "—"}</td>
-        <td>${p.provincia || "—"}</td>
-        <td>${p.estado || "—"}</td>
-        <td>${p.prioridad || "—"}</td>
-        <td>${p.tipo || "—"}</td>
-        <td class="numeric">${formatNumber(p.potencial_eur)}</td>
-        <td>${formatDate(p.fecha_seguimiento)}</td>
-      </tr>
-    `;
+        <tr data-id="${p.id}">
+          <td class="checkbox-col">
+            <input type="checkbox" class="project-checkbox" data-id="${p.id}" />
+          </td>
+          <td>${p.Proyecto || "—"}</td>
+          <td>${p.Ciudad || "—"}</td>
+          <td>${p.Segmento || "—"}</td>
+          <td>${fase}</td>
+          <td>${p.Promotora_Fondo || "—"}</td>
+          <td>${formatDate(p.Fecha_Inicio_Estimada)}</td>
+          <td class="numeric">${formatNumber(potencial)}</td>
+        </tr>
+      `;
     })
     .join("");
 
@@ -187,7 +163,7 @@ function renderProyectosTabla() {
     countLabel.textContent = `${proyectosFiltrados.length} proyecto(s)`;
   }
 
-  // Doble click en fila: editar
+  // Doble click para editar
   tbody.querySelectorAll("tr").forEach((tr) => {
     tr.addEventListener("dblclick", () => {
       const id = tr.dataset.id;
@@ -197,16 +173,19 @@ function renderProyectosTabla() {
   });
 }
 
-// ======= PANEL: KPIs + ÚLTIMOS PROYECTOS + ACCIONES =======
+// Panel (KPIs + últimos + acciones)
 function actualizarPanel() {
-  // KPIs por proyectos
   const total = proyectos.length;
-  const seguimiento = proyectos.filter((p) => p.estado !== "Detectado").length;
-  const ganados = proyectos.filter((p) => p.estado === "Ganado").length;
-  const potencialTotal = proyectos.reduce(
-    (acc, p) => acc + (Number(p.potencial_eur) || 0),
-    0
-  );
+  const seguimiento = proyectos.filter(
+    (p) => (p.Fase_proyecto || p.estado || "") !== "Detectado"
+  ).length;
+  const avanzados = proyectos.filter((p) =>
+    ["Construcción", "Entregado"].includes(p.Fase_proyecto || p.estado || "")
+  ).length;
+  const potencialTotal = proyectos.reduce((acc, p) => {
+    const val = p.Potencial_2N ?? p.potencial_eur ?? 0;
+    return acc + (Number(val) || 0);
+  }, 0);
 
   const kpiTotal = document.getElementById("kpi-total");
   const kpiSeg = document.getElementById("kpi-seguimiento");
@@ -216,13 +195,13 @@ function actualizarPanel() {
 
   if (kpiTotal) kpiTotal.textContent = total;
   if (kpiSeg) kpiSeg.textContent = seguimiento;
-  if (kpiGan) kpiGan.textContent = ganados;
+  if (kpiGan) kpiGan.textContent = avanzados;
   if (kpiPot) kpiPot.textContent = formatNumber(potencialTotal);
   if (kpiSub) {
-    kpiSub.textContent = `${ganados} ganados · ${seguimiento} en seguimiento`;
+    kpiSub.textContent = `${avanzados} avanzados · ${seguimiento} en seguimiento`;
   }
 
-  // Últimos proyectos
+  // Últimos proyectos (por created_at si existe)
   const tbody = document.getElementById("panel-last-projects-body");
   if (tbody) {
     if (!proyectos.length) {
@@ -238,39 +217,40 @@ function actualizarPanel() {
         .slice(0, 5);
 
       tbody.innerHTML = ultimos
-        .map(
-          (p) => `
-        <tr>
-          <td>${p.nombre_obra || "—"}</td>
-          <td>${p.cliente_principal || "—"}</td>
-          <td>${p.ciudad || "—"}</td>
-          <td>${p.estado || "—"}</td>
-          <td class="numeric">${formatNumber(p.potencial_eur)}</td>
-        </tr>
-      `
-        )
+        .map((p) => {
+          const fase = p.Fase_proyecto || p.estado || "—";
+          const potencial = p.Potencial_2N ?? p.potencial_eur ?? 0;
+          return `
+            <tr>
+              <td>${p.Proyecto || "—"}</td>
+              <td>${p.Ciudad || "—"}</td>
+              <td>${p.Segmento || "—"}</td>
+              <td>${fase}</td>
+              <td class="numeric">${formatNumber(potencial)}</td>
+            </tr>
+          `;
+        })
         .join("");
     }
   }
 
-  // Acciones (seguimientos + tareas)
   const acciones = buildAccionesFromProyectos(proyectos);
   const { atras, hoyArr, prox } = particionarAcciones(acciones);
   renderAccionesPanel(acciones, atras, hoyArr, prox);
 }
 
-// Construye lista de acciones desde los proyectos
+// Acciones próximas desde seguimiento + tarea
 function buildAccionesFromProyectos(lista) {
   const acciones = [];
 
   lista.forEach((p) => {
-    const nombre = p.nombre_obra || "Sin nombre";
-    const cliente = p.cliente_principal || "—";
-    const ciudad = p.ciudad || "—";
-    const estado = p.estado || "Detectado";
+    const nombre = p.Proyecto || "Sin nombre";
+    const cliente = p.Promotora_Fondo || "—";
+    const ciudad = p.Ciudad || "—";
+    const fase = p.Fase_proyecto || p.estado || "Detectado";
 
     // Seguimiento
-    const fSeg = parseDateField(p.fecha_seguimiento);
+    const fSeg = parseDateField(p.seguimiento_fecha);
     if (fSeg) {
       acciones.push({
         tipo: "Seguimiento",
@@ -278,34 +258,30 @@ function buildAccionesFromProyectos(lista) {
         proyecto: nombre,
         cliente,
         ciudad,
-        estado,
-        descripcion: p.notas_seguimiento || "",
+        estado: fase,
+        descripcion: p.seguimiento_comentario || "",
       });
     }
 
-    // Tareas (si existe lista "tareas")
-    const tareas = Array.isArray(p.tareas) ? p.tareas : [];
-    tareas.forEach((t) => {
-      if (!t || typeof t !== "object" || t.completado) return;
-      const fT = parseDateField(t.fecha_limite);
-      if (!fT) return;
+    // Tarea
+    const fT = parseDateField(p.tarea_fecha);
+    if (fT && p.tarea_comentario) {
       acciones.push({
-        tipo: t.tipo || "Tarea",
+        tipo: "Tarea",
         fechaDate: fT,
         proyecto: nombre,
         cliente,
         ciudad,
-        estado,
-        descripcion: t.titulo || "",
+        estado: fase,
+        descripcion: p.tarea_comentario || "",
       });
-    });
+    }
   });
 
   acciones.sort((a, b) => a.fechaDate - b.fechaDate);
   return acciones;
 }
 
-// Particiona acciones en retrasadas / hoy / próximos 7 días
 function particionarAcciones(acciones) {
   const now = new Date();
   const hoy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -328,7 +304,6 @@ function particionarAcciones(acciones) {
   return { atras, hoyArr, prox };
 }
 
-// Pinta bloque de acciones en el panel
 function renderAccionesPanel(acciones, atras, hoyArr, prox) {
   const panelSection = document.getElementById("section-panel");
   if (!panelSection) return;
@@ -347,7 +322,7 @@ function renderAccionesPanel(acciones, atras, hoyArr, prox) {
     }
     return lista
       .map((a) => {
-        const fecha = formatDateFromDate(a.fechaDate);
+        const fecha = formatDate(a.fechaDate);
         const desc = a.descripcion
           ? `<div class="accion-desc">${a.descripcion}</div>`
           : "";
@@ -408,7 +383,7 @@ function renderAccionesPanel(acciones, atras, hoyArr, prox) {
   `;
 }
 
-// ======= MODAL PROYECTO =======
+// Modal proyecto
 function setupModalProyecto() {
   const modal = document.getElementById("project-modal");
   const closeBtn = document.getElementById("project-modal-close");
@@ -443,88 +418,126 @@ function abrirModalProyecto(proyecto = null) {
 
   const setVal = (id, value) => {
     const el = document.getElementById(id);
-    if (!el) return;
-    el.value = value != null ? value : "";
+    if (el) el.value = value != null ? value : "";
   };
 
   if (proyecto) {
-    setVal("field-nombre_obra", proyecto.nombre_obra);
-    setVal("field-cliente_principal", proyecto.cliente_principal);
-    setVal("field-ciudad", proyecto.ciudad);
-    setVal("field-provincia", proyecto.provincia);
-    setVal("field-tipo", proyecto.tipo || "Residencial lujo");
-    setVal("field-estado", proyecto.estado || "Detectado");
-    setVal("field-prioridad", proyecto.prioridad || "Media");
-    setVal("field-potencial_eur", proyecto.potencial_eur || "");
+    setVal("field-Proyecto", proyecto.Proyecto);
+    setVal("field-Ciudad", proyecto.Ciudad);
+    setVal("field-Provincia", proyecto.Provincia);
+    setVal("field-Tipo_Proyecto", proyecto.Tipo_Proyecto);
+    setVal("field-Segmento", proyecto.Segmento);
     setVal(
-      "field-fecha_seguimiento",
-      proyecto.fecha_seguimiento
-        ? formatDateInputValue(proyecto.fecha_seguimiento)
-        : ""
+      "field-Num_viviendas_aprox",
+      proyecto.Num_viviendas_aprox ?? proyecto["Nº_viviendas_aprox"] ?? ""
     );
-    setVal("field-notas_seguimiento", proyecto.notas_seguimiento || "");
+    setVal("field-Promotora_Fondo", proyecto.Promotora_Fondo);
+    setVal("field-Arquitectura", proyecto.Arquitectura);
+    setVal("field-Ingenieria", proyecto.Ingenieria);
     setVal(
-      "field-tarea_fecha",
-      proyecto.tarea_fecha ? formatDateInputValue(proyecto.tarea_fecha) : ""
+      "field-Fase_proyecto",
+      proyecto.Fase_proyecto || proyecto.estado || "Detectado"
     );
+    setVal(
+      "field-Fecha_Inicio_Estimada",
+      formatDateInput(proyecto.Fecha_Inicio_Estimada)
+    );
+    setVal(
+      "field-Fecha_Entrega_Estimada",
+      formatDateInput(proyecto.Fecha_Entrega_Estimada)
+    );
+    setVal("field-Potencial_2N", proyecto.Potencial_2N ?? "");
+    setVal("field-potencial_eur", proyecto.potencial_eur ?? "");
+    setVal("field-Fuente_URL", proyecto.Fuente_URL);
+    setVal("field-Notas", proyecto.Notas);
+    setVal(
+      "field-seguimiento_fecha",
+      formatDateInput(proyecto.seguimiento_fecha)
+    );
+    setVal(
+      "field-seguimiento_comentario",
+      proyecto.seguimiento_comentario || ""
+    );
+    setVal("field-tarea_fecha", formatDateInput(proyecto.tarea_fecha));
     setVal("field-tarea_comentario", proyecto.tarea_comentario || "");
   } else {
     const today = new Date().toISOString().slice(0, 10);
-    document.getElementById("field-fecha_seguimiento").value = today;
+    document.getElementById("field-Fecha_Inicio_Estimada").value = today;
   }
 
   modal.classList.remove("hidden");
 }
 
-// ======= GUARDAR PROYECTO (SIN RECARGAR FIRESTORE) =======
+// Guardar proyecto (sin recargar Firestore completo)
 async function guardarProyectoDesdeFormulario() {
   const id = document.getElementById("project-id").value || null;
-  const nombre_obra = document
-    .getElementById("field-nombre_obra")
-    .value.trim();
 
-  if (!nombre_obra) {
+  const Proyecto = document.getElementById("field-Proyecto").value.trim();
+  if (!Proyecto) {
     alert("El nombre del proyecto es obligatorio.");
     return;
   }
 
   const payload = {
-    nombre_obra,
-    cliente_principal:
-      document.getElementById("field-cliente_principal").value.trim() || null,
-    ciudad: document.getElementById("field-ciudad").value.trim() || null,
-    provincia: document.getElementById("field-provincia").value.trim() || null,
-    tipo: document.getElementById("field-tipo").value || "Residencial lujo",
-    estado: document.getElementById("field-estado").value || "Detectado",
-    prioridad: document.getElementById("field-prioridad").value || "Media",
+    Proyecto,
+    Ciudad: document.getElementById("field-Ciudad").value.trim() || null,
+    Provincia:
+      document.getElementById("field-Provincia").value.trim() || null,
+    Tipo_Proyecto:
+      document.getElementById("field-Tipo_Proyecto").value.trim() || null,
+    Segmento: document.getElementById("field-Segmento").value || null,
+    Num_viviendas_aprox: Number(
+      document.getElementById("field-Num_viviendas_aprox").value || 0
+    ),
+    Promotora_Fondo:
+      document.getElementById("field-Promotora_Fondo").value.trim() || null,
+    Arquitectura:
+      document.getElementById("field-Arquitectura").value.trim() || null,
+    Ingenieria:
+      document.getElementById("field-Ingenieria").value.trim() || null,
+    Fase_proyecto:
+      document.getElementById("field-Fase_proyecto").value || "Detectado",
+    Fecha_Inicio_Estimada:
+      document.getElementById("field-Fecha_Inicio_Estimada").value || null,
+    Fecha_Entrega_Estimada:
+      document.getElementById("field-Fecha_Entrega_Estimada").value || null,
+    Potencial_2N: Number(
+      document.getElementById("field-Potencial_2N").value || 0
+    ),
     potencial_eur: Number(
       document.getElementById("field-potencial_eur").value || 0
     ),
-    fecha_seguimiento:
-      document.getElementById("field-fecha_seguimiento").value || null,
-    notas_seguimiento:
-      document.getElementById("field-notas_seguimiento").value.trim() || null,
-    tarea_fecha: document.getElementById("field-tarea_fecha").value || null,
+    Fuente_URL:
+      document.getElementById("field-Fuente_URL").value.trim() || null,
+    Notas: document.getElementById("field-Notas").value.trim() || null,
+    seguimiento_fecha:
+      document.getElementById("field-seguimiento_fecha").value || null,
+    seguimiento_comentario:
+      document
+        .getElementById("field-seguimiento_comentario")
+        .value.trim() || null,
+    tarea_fecha:
+      document.getElementById("field-tarea_fecha").value || null,
     tarea_comentario:
-      document.getElementById("field-tarea_comentario").value.trim() || null,
+      document.getElementById("field-tarea_comentario").value.trim() ||
+      null,
   };
+
+  // Mantener compatibilidad con panel (estado)
+  payload.estado = payload.Fase_proyecto;
 
   try {
     if (id) {
-      // UPDATE EN FIRESTORE
       await db.collection("proyectos").doc(id).update(payload);
-      // UPDATE EN MEMORIA
       const idx = proyectos.findIndex((p) => p.id === id);
       if (idx !== -1) {
         proyectos[idx] = { ...proyectos[idx], ...payload };
       }
     } else {
-      // CREATE EN FIRESTORE
       const docRef = await db.collection("proyectos").add({
         ...payload,
         created_at: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      // AÑADIR AL ARRAY LOCAL (sin nueva lectura)
       proyectos.push({
         id: docRef.id,
         ...payload,
@@ -534,7 +547,6 @@ async function guardarProyectoDesdeFormulario() {
 
     document.getElementById("project-modal").classList.add("hidden");
 
-    // Recalcular filtros y panel sin volver a leer de Firestore
     aplicarFiltros();
     actualizarPanel();
   } catch (err) {
@@ -543,7 +555,7 @@ async function guardarProyectoDesdeFormulario() {
   }
 }
 
-// ======= BORRADO (SIN RECARGAR FIRESTORE) =======
+// Borrar seleccionados
 async function borrarSeleccionados() {
   const cbs = Array.from(
     document.querySelectorAll(".project-checkbox:checked")
@@ -567,12 +579,10 @@ async function borrarSeleccionados() {
     cbs.forEach((cb) => {
       const id = cb.dataset.id;
       ids.push(id);
-      const ref = db.collection("proyectos").doc(id);
-      batch.delete(ref);
+      batch.delete(db.collection("proyectos").doc(id));
     });
     await batch.commit();
 
-    // Eliminar del array local SIN recargar
     const idSet = new Set(ids);
     proyectos = proyectos.filter((p) => !idSet.has(p.id));
 
@@ -584,7 +594,7 @@ async function borrarSeleccionados() {
   }
 }
 
-// ======= EDICIÓN SELECCIONADO =======
+// Editar seleccionado
 function editarSeleccionado() {
   const cbs = Array.from(
     document.querySelectorAll(".project-checkbox:checked")
@@ -606,18 +616,16 @@ function editarSeleccionado() {
   abrirModalProyecto(proyecto);
 }
 
-// ======= LISTENERS =======
+// Listeners
 function setupEventos() {
-  // Filtros
   const search = document.getElementById("filter-search");
-  const estado = document.getElementById("filter-estado");
-  const prioridad = document.getElementById("filter-prioridad");
+  const fase = document.getElementById("filter-fase");
+  const segmento = document.getElementById("filter-segmento");
 
   if (search) search.addEventListener("input", aplicarFiltros);
-  if (estado) estado.addEventListener("change", aplicarFiltros);
-  if (prioridad) prioridad.addEventListener("change", aplicarFiltros);
+  if (fase) fase.addEventListener("change", aplicarFiltros);
+  if (segmento) segmento.addEventListener("change", aplicarFiltros);
 
-  // Botones
   const btnAdd = document.getElementById("btn-add-project");
   const btnDel = document.getElementById("btn-delete-selected");
   const btnEdit = document.getElementById("btn-edit-selected");
@@ -626,7 +634,6 @@ function setupEventos() {
   if (btnDel) btnDel.addEventListener("click", borrarSeleccionados);
   if (btnEdit) btnEdit.addEventListener("click", editarSeleccionado);
 
-  // Seleccionar todo
   const selectAll = document.getElementById("select-all-projects");
   if (selectAll) {
     selectAll.addEventListener("change", () => {
@@ -638,10 +645,10 @@ function setupEventos() {
   }
 }
 
-// ======= INIT =======
+// Init
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupModalProyecto();
   setupEventos();
-  cargarProyectosInicial(); // única lectura global a Firestore
+  cargarProyectosInicial();
 });
