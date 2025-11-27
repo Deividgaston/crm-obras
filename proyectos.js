@@ -3,27 +3,43 @@
 let proyectos = [];
 let proyectoSeleccionado = null;
 
-// -------------- Utils --------------
+// ------------------ Utils ------------------
 const $ = (sel) => document.querySelector(sel);
 
 function toast(msg, ok = false) {
   const el = $("#toast");
+  if (!el) {
+    console[ok ? "log" : "error"](msg);
+    return;
+  }
   el.textContent = msg;
   el.style.background = ok ? "#0e9f6e" : "#c23934";
   el.style.opacity = "1";
   setTimeout(() => (el.style.opacity = "0"), 3000);
 }
 
-function formatDate(val) {
+function formatDateDisplay(val) {
   if (!val) return "";
-  let d = val.toDate ? val.toDate() : new Date(val);
+  let d = val;
+  if (val.toDate) d = val.toDate(); // Timestamp
+  d = new Date(d);
+  if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("es-ES");
 }
 
-// -------------- Cargar datos --------------
+function formatDateInput(val) {
+  if (!val) return "";
+  let d = val;
+  if (val.toDate) d = val.toDate();
+  d = new Date(d);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+// ------------------ Carga datos ------------------
 async function cargarProyectos() {
   try {
-    const snap = await db.collection("proyectos").get();
+    const snap = await window.db.collection("proyectos").get();
     proyectos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderTabla();
   } catch (e) {
@@ -32,11 +48,11 @@ async function cargarProyectos() {
   }
 }
 
-// -------------- Render tabla --------------
+// ------------------ Render tabla ------------------
 function renderTabla() {
-  const texto = $("#filtroTexto").value.toLowerCase();
-  const fase = $("#filtroFase").value;
-  const segmento = $("#filtroSegmento").value;
+  const texto = ($("#filtroTexto")?.value || "").toLowerCase();
+  const fase = $("#filtroFase")?.value || "";
+  const segmento = $("#filtroSegmento")?.value || "";
 
   const filtrados = proyectos.filter((p) => {
     const t =
@@ -45,8 +61,8 @@ function renderTabla() {
       (p.Ciudad || "") +
       (p.Provincia || "");
     if (!t.toLowerCase().includes(texto)) return false;
-    if (fase && p.Fase_proyecto !== fase) return false;
-    if (segmento && p.Segmento !== segmento) return false;
+    if (fase && (p.Fase_proyecto || "") !== fase) return false;
+    if (segmento && (p.Segmento || "") !== segmento) return false;
     return true;
   });
 
@@ -55,6 +71,7 @@ function renderTabla() {
   );
 
   const tbody = $("#tabla-proyectos");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   filtrados.forEach((p) => {
@@ -67,10 +84,11 @@ function renderTabla() {
       <td>${p.Ciudad || ""}</td>
       <td>${p.Segmento || ""}</td>
       <td>${p.Fase_proyecto || ""}</td>
-      <td>${formatDate(p.Fecha_Inicio_Estimada)}</td>
+      <td>${formatDateDisplay(p.Fecha_Inicio_Estimada)}</td>
       <td>${p.Potencial_2N || ""}</td>
       <td>${p.Promotora_Fondo || ""}</td>
     `;
+    // doble click → editar
     tr.addEventListener("dblclick", () => abrirModal(p.id));
     tbody.appendChild(tr);
   });
@@ -78,21 +96,28 @@ function renderTabla() {
   actualizarBotones();
 }
 
-// -------------- Botones según selección --------------
+// ------------------ Botones según selección ------------------
 function actualizarBotones() {
   const seleccionados = document.querySelectorAll(".chk-proyecto:checked");
-  $("#btnEditar").disabled = seleccionados.length !== 1;
-  $("#btnBorrar").disabled = seleccionados.length === 0;
+  const btnEditar = $("#btnEditar");
+  const btnBorrar = $("#btnBorrar");
+  if (btnEditar) btnEditar.disabled = seleccionados.length !== 1;
+  if (btnBorrar) btnBorrar.disabled = seleccionados.length === 0;
 }
 
-// -------------- Modal --------------
+// ------------------ Modal ------------------
 function abrirModal(id = null) {
   proyectoSeleccionado = id;
-  $("#modal-titulo").textContent = id ? "Editar proyecto" : "Nuevo proyecto";
+  const modal = $("#modal-proyecto");
+  const titulo = $("#modal-titulo");
+  const cont = $("#modalContenido");
+  if (!modal || !titulo || !cont) return;
 
-  const p = id ? proyectos.find((x) => x.id === id) : {};
+  titulo.textContent = id ? "Editar proyecto" : "Nuevo proyecto";
 
-  $("#modalContenido").innerHTML = `
+  const p = id ? proyectos.find((x) => x.id === id) || {} : {};
+
+  cont.innerHTML = `
     <div class="crm-field-group">
       <label class="crm-label">Proyecto</label>
       <input id="mProyecto" class="crm-input" value="${p.Proyecto || ""}">
@@ -140,7 +165,37 @@ function abrirModal(id = null) {
 
     <div class="crm-field-group">
       <label class="crm-label">Potencial 2N (€)</label>
-      <input id="mPotencial" class="crm-input" value="${p.Potencial_2N || ""}">
+      <input id="mPotencial" type="number" class="crm-input" value="${p.Potencial_2N || ""}">
+    </div>
+
+    <div class="crm-field-group">
+      <label class="crm-label">Fecha inicio estimada</label>
+      <input id="mFechaInicio" type="date" class="crm-input"
+             value="${formatDateInput(p.Fecha_Inicio_Estimada)}">
+    </div>
+
+    <hr style="margin:8px 0; border:none; border-top:1px solid #e5e7eb;">
+
+    <div class="crm-field-group">
+      <label class="crm-label">Tarea - Fecha</label>
+      <input id="mTareaFecha" type="date" class="crm-input"
+             value="${formatDateInput(p.tarea_fecha)}">
+    </div>
+
+    <div class="crm-field-group">
+      <label class="crm-label">Tarea - Comentario</label>
+      <textarea id="mTareaComentario" class="crm-textarea">${p.tarea_comentario || ""}</textarea>
+    </div>
+
+    <div class="crm-field-group">
+      <label class="crm-label">Seguimiento - Fecha</label>
+      <input id="mSegFecha" type="date" class="crm-input"
+             value="${formatDateInput(p.seguimiento_fecha)}">
+    </div>
+
+    <div class="crm-field-group">
+      <label class="crm-label">Seguimiento - Comentario</label>
+      <textarea id="mSegComentario" class="crm-textarea">${p.seguimiento_comentario || ""}</textarea>
     </div>
 
     <div class="crm-field-group">
@@ -149,86 +204,114 @@ function abrirModal(id = null) {
     </div>
   `;
 
-  $("#modal-proyecto").style.display = "flex";
+  modal.style.display = "flex";
 }
 
 function cerrarModal() {
-  $("#modal-proyecto").style.display = "none";
+  const modal = $("#modal-proyecto");
+  if (modal) modal.style.display = "none";
   proyectoSeleccionado = null;
 }
 
-// -------------- Guardar --------------
-$("#btnGuardar").onclick = async () => {
+// ------------------ Guardar ------------------
+async function guardarProyecto() {
   const datos = {
-    Proyecto: $("#mProyecto").value,
-    Ciudad: $("#mCiudad").value,
-    Provincia: $("#mProvincia").value,
+    Proyecto: $("#mProyecto").value.trim(),
+    Ciudad: $("#mCiudad").value.trim(),
+    Provincia: $("#mProvincia").value.trim(),
     Segmento: $("#mSegmento").value,
     Fase_proyecto: $("#mFase").value,
-    Promotora_Fondo: $("#mPromotora").value,
-    Potencial_2N: Number($("#mPotencial").value),
-    Notas: $("#mNotas").value,
+    Promotora_Fondo: $("#mPromotora").value.trim(),
+    Potencial_2N: Number($("#mPotencial").value || 0),
+    Fecha_Inicio_Estimada: $("#mFechaInicio").value || null,
+    tarea_fecha: $("#mTareaFecha").value || null,
+    tarea_comentario: $("#mTareaComentario").value.trim() || "",
+    seguimiento_fecha: $("#mSegFecha").value || null,
+    seguimiento_comentario: $("#mSegComentario").value.trim() || "",
+    Notas: $("#mNotas").value.trim() || "",
   };
+
+  if (!datos.Proyecto) {
+    toast("El nombre del proyecto es obligatorio");
+    return;
+  }
 
   try {
     if (proyectoSeleccionado) {
-      await db.collection("proyectos").doc(proyectoSeleccionado).update(datos);
+      await window.db.collection("proyectos").doc(proyectoSeleccionado).update(datos);
       toast("Proyecto actualizado", true);
     } else {
-      await db.collection("proyectos").add(datos);
+      await window.db.collection("proyectos").add(datos);
       toast("Proyecto creado", true);
     }
-
     cerrarModal();
     cargarProyectos();
   } catch (err) {
     console.error(err);
-    toast("Error guardando");
+    toast("Error guardando proyecto");
   }
-};
+}
 
-// -------------- Borrar --------------
-$("#btnBorrar").onclick = async () => {
+// ------------------ Borrar ------------------
+async function borrarSeleccionados() {
   const seleccionados = [...document.querySelectorAll(".chk-proyecto:checked")];
   if (!seleccionados.length) return;
 
   if (!confirm("¿Borrar los proyectos seleccionados?")) return;
 
   try {
-    const batch = db.batch();
+    const batch = window.db.batch();
     seleccionados.forEach((chk) => {
-      batch.delete(db.collection("proyectos").doc(chk.dataset.id));
+      batch.delete(window.db.collection("proyectos").doc(chk.dataset.id));
     });
     await batch.commit();
-
     toast("Proyectos eliminados", true);
     cargarProyectos();
   } catch (err) {
     console.error(err);
-    toast("Error borrando");
+    toast("Error borrando proyectos");
   }
-};
+}
 
-// -------------- Editar --------------
-$("#btnEditar").onclick = () => {
+// ------------------ Editar ------------------
+function editarSeleccionado() {
   const chk = document.querySelector(".chk-proyecto:checked");
   if (chk) abrirModal(chk.dataset.id);
-};
+}
 
-// -------------- Eventos filtros --------------
-$("#filtroTexto").oninput = renderTabla;
-$("#filtroFase").onchange = renderTabla;
-$("#filtroSegmento").onchange = renderTabla;
+// ------------------ Init (espera a db y DOM) ------------------
+function initProyectosPage() {
+  // Eventos filtros
+  $("#filtroTexto")?.addEventListener("input", renderTabla);
+  $("#filtroFase")?.addEventListener("change", renderTabla);
+  $("#filtroSegmento")?.addEventListener("change", renderTabla);
 
-// -------------- Eventos selección --------------
-document.addEventListener("change", (e) => {
-  if (e.target.classList.contains("chk-proyecto")) {
-    actualizarBotones();
-  }
+  // Botones
+  $("#btnNuevo")?.addEventListener("click", () => abrirModal(null));
+  $("#btnEditar")?.addEventListener("click", editarSeleccionado);
+  $("#btnBorrar")?.addEventListener("click", borrarSeleccionados);
+  $("#btnGuardar")?.addEventListener("click", guardarProyecto);
+  $(".crm-modal-close")?.addEventListener("click", cerrarModal);
+
+  // Checkboxes
+  document.addEventListener("change", (e) => {
+    if (e.target.classList.contains("chk-proyecto")) {
+      actualizarBotones();
+    }
+  });
+
+  // Cargar datos
+  cargarProyectos();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Esperar a que firebase.js haya creado window.db
+  const checkDb = () => {
+    if (window.db) {
+      initProyectosPage();
+    } else {
+      setTimeout(checkDb, 50);
+    }
+  };
+  checkDb();
 });
-
-// -------------- Botón nuevo --------------
-$("#btnNuevo").onclick = () => abrirModal(null);
-
-// -------------- Inicial --------------
-document.addEventListener("DOMContentLoaded", cargarProyectos);
