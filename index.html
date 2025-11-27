@@ -4,32 +4,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGO Insight · Panel</title>
+
+  <!-- Estilos globales -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Firebase central -->
+  <script src="firebase.js"></script>
 </head>
+
 <body>
 
   <!-- HEADER ESTILO SALESFORCE -->
   <header class="crm-header">
     <div class="crm-logo">DGO Insight · CRM Obras</div>
+
     <nav class="crm-nav">
-      <!-- De momento solo Panel. Más adelante Proyectos/Buscar -->
-      <button type="button">Panel</button>
+      <button onclick="window.location='index.html'">Panel</button>
+      <button onclick="window.location='proyectos.html'">Proyectos</button>
     </nav>
   </header>
 
-  <!-- CONTENIDO PRINCIPAL -->
+  <!-- CONTENIDO -->
   <main id="app">
     <h1 class="crm-page-title">Panel</h1>
     <p class="crm-page-subtitle">
-      Resumen de tareas y seguimientos de tus proyectos.
+      Resumen de tareas y seguimientos activos de tus proyectos.
     </p>
 
-    <!-- Loader simple (controlado por app.js con #panel-loading) -->
+    <!-- Loader -->
     <div id="panel-loading" style="display:none; margin-bottom:8px;">
       Cargando datos...
     </div>
 
-    <!-- FILA DE TARJETAS RESUMEN -->
+    <!-- TARJETAS RESUMEN -->
     <section class="crm-row" style="margin-bottom:12px;">
       <div class="crm-col-3">
         <div class="crm-card">
@@ -39,6 +46,7 @@
           <div style="font-size:22px;font-weight:700;" id="stat-total">0</div>
         </div>
       </div>
+
       <div class="crm-col-3">
         <div class="crm-card">
           <div class="crm-card-header">
@@ -47,6 +55,7 @@
           <div style="font-size:22px;font-weight:700;color:#c23934;" id="stat-retrasadas">0</div>
         </div>
       </div>
+
       <div class="crm-col-3">
         <div class="crm-card">
           <div class="crm-card-header">
@@ -55,6 +64,7 @@
           <div style="font-size:22px;font-weight:700;color:#0e9f6e;" id="stat-hoy">0</div>
         </div>
       </div>
+
       <div class="crm-col-3">
         <div class="crm-card">
           <div class="crm-card-header">
@@ -65,7 +75,7 @@
       </div>
     </section>
 
-    <!-- FILA DE LISTAS: RETRASADAS / HOY / PROX 7 DÍAS -->
+    <!-- LISTAS -->
     <section class="crm-row" style="margin-bottom:16px;">
       <div class="crm-col-4">
         <div class="crm-card">
@@ -95,14 +105,13 @@
       </div>
     </section>
 
-    <!-- TABLA PRINCIPAL DEL PANEL -->
+    <!-- TABLA PRINCIPAL -->
     <section class="crm-card">
       <div class="crm-card-header">
         <div class="crm-card-title">Listado de acciones por proyecto</div>
-        <button id="btn-panel-refresh" type="button" class="crm-btn">
-          🔄 Refrescar
-        </button>
+        <button id="btn-panel-refresh" class="crm-btn">🔄 Refrescar</button>
       </div>
+
       <div class="crm-table-wrapper">
         <table class="crm-table">
           <thead>
@@ -118,24 +127,20 @@
             </tr>
           </thead>
           <tbody id="panel-table-body">
-            <!-- Rellenado por app.js -->
+            <!-- Rellenado dinamicamente -->
           </tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <!-- TOAST SIMPLE PARA MENSAJES (USADO POR app.js: #toast) -->
+  <!-- TOAST -->
   <div id="toast"
-       style="position:fixed;right:16px;bottom:16px;padding:8px 10px;border-radius:6px;font-size:13px;
-              background:#c23934;color:#fff;opacity:0;transition:opacity 0.3s;z-index:200;">
+       style="position:fixed;right:16px;bottom:16px;padding:8px 10px;border-radius:6px;
+              font-size:13px;background:#c23934;color:#fff;opacity:0;transition:opacity .3s;z-index:200;">
   </div>
 
-  <!-- SDKs Firebase COMPAT (coinciden con app.js) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- LÓGICA DEL PANEL -->
+  <!-- Lógica del Panel -->
   <script src="app.js"></script>
 
 </body>
