@@ -240,7 +240,7 @@
       </div>
 
       <textarea id="promptClientes" rows="15"
-        style="width:100%;border-radius:8px;border:1px solid #D1D5DB;padding:8px;font-family:monospace;font-size:12px;"></textarea>
+        style="width:100%;border-radius:8px;border:1px solid:#D1D5DB;padding:8px;font-family:monospace;font-size:12px;"></textarea>
     </div>
   </dialog>
 
@@ -766,7 +766,7 @@
         alert(`Importación completada.\nAñadidos: ${added}\nDuplicados ignorados: ${skipped}`);
       } catch (err) {
         console.error("Error importando clientes:", err);
-        alert("Ha ocurrido un error durante la importación. Revisa que el archivo tenga datos válidos.");
+        alert("Error durante la importación: " + (err && err.message ? err.message : err));
       } finally {
         inputImportClientes.value = "";
       }
@@ -781,20 +781,25 @@
       let added = 0, skipped = 0;
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(";");
-        const row = {};
-        headers.forEach((h, idx) => row[h] = values[idx] || "");
+        try {
+          const values = lines[i].split(";");
+          const row = {};
+          headers.forEach((h, idx) => row[h] = values[idx] || "");
 
-        const payload = mapRowFlexible(row, "scouting_csv");
-        if (!payload.nombre) continue;
+          const payload = mapRowFlexible(row, "scouting_csv");
+          if (!payload.nombre) continue;
 
-        const key = buildClienteKey(payload);
-        if (existingKeys.has(key)) { skipped++; continue; }
+          const key = buildClienteKey(payload);
+          if (existingKeys.has(key)) { skipped++; continue; }
 
-        const ref = await addDoc(collection(db, "clientes"), payload);
-        clientes.push({ id: ref.id, ...payload });
-        existingKeys.add(key);
-        added++;
+          const ref = await addDoc(collection(db, "clientes"), payload);
+          clientes.push({ id: ref.id, ...payload });
+          existingKeys.add(key);
+          added++;
+        } catch (err) {
+          console.warn("Fila CSV ignorada por error:", err);
+          continue;
+        }
       }
 
       return { a: added, s: skipped };
@@ -802,7 +807,8 @@
 
     async function importarXLSXClientes(file, existingKeys) {
       if (typeof XLSX === "undefined") {
-        throw new Error("Librería XLSX no cargada");
+        alert("La librería de Excel (XLSX) no se ha cargado correctamente. Exporta el archivo como CSV e impórtalo.");
+        return { a: 0, s: 0 };
       }
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
@@ -812,16 +818,21 @@
       let added = 0, skipped = 0;
 
       for (const row of json) {
-        const payload = mapRowFlexible(row, "scouting_excel");
-        if (!payload.nombre) continue;
+        try {
+          const payload = mapRowFlexible(row, "scouting_excel");
+          if (!payload.nombre) continue;
 
-        const key = buildClienteKey(payload);
-        if (existingKeys.has(key)) { skipped++; continue; }
+          const key = buildClienteKey(payload);
+          if (existingKeys.has(key)) { skipped++; continue; }
 
-        const ref = await addDoc(collection(db, "clientes"), payload);
-        clientes.push({ id: ref.id, ...payload });
-        existingKeys.add(key);
-        added++;
+          const ref = await addDoc(collection(db, "clientes"), payload);
+          clientes.push({ id: ref.id, ...payload });
+          existingKeys.add(key);
+          added++;
+        } catch (err) {
+          console.warn("Fila XLSX ignorada por error:", err);
+          continue;
+        }
       }
 
       return { a: added, s: skipped };
