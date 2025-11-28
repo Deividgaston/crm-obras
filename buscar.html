@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Buscar obras</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- NAV SUPERIOR -->
+  <div class="topnav">
+    <div class="logo">CRM 2N</div>
+
+    <div class="nav-tabs">
+      <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
+      <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+      <div class="nav-item active" onclick="location.href='buscar.html'">Buscar</div>
+      <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
+      <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+      <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+      <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
+    </div>
+
+    <input type="text" class="search-box" placeholder="Buscar global (no funcional aún)" />
+  </div>
+
+  <main class="content">
+    <!-- Card introductoria -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="text-transform:none;opacity:0.8;">Scouting</div>
+      <div style="font-size:18px;font-weight:600;margin-top:2px;margin-bottom:4px;">
+        Buscar oportunidades de prescripción
+      </div>
+      <p style="font-size:13px;color:#5A6872;margin:0;">
+        Utiliza los filtros rápidos para localizar proyectos por ciudad, tipo, prioridad y estado,
+        o escribe un prompt en lenguaje natural para que el CRM traduzca tu intención en filtros
+        automáticos sobre la base de datos.
+      </p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card" style="padding:0;">
+      <div style="display:flex;border-bottom:1px solid #E5E7EB;">
+        <button id="tabFiltrosBtn"
+                style="flex:1;padding:10px 12px;border:none;background:#FFFFFF;
+                       border-bottom:2px solid #4C6EF5;font-size:13px;font-weight:600;cursor:pointer;">
+          🔍 Búsqueda por filtros
+        </button>
+        <button id="tabPromptBtn"
+                style="flex:1;padding:10px 12px;border:none;background:#F9FAFB;
+                       font-size:13px;font-weight:500;cursor:pointer;">
+          🤖 Búsqueda por prompt
+        </button>
+      </div>
+
+      <!-- Contenido búsqueda por filtros -->
+      <div id="tabFiltros" style="padding:16px 18px;">
+        <div class="filters-row">
+          <select id="fCiudad" class="select-input">
+            <option value="Todas">Ciudad: todas</option>
+          </select>
+
+          <select id="fTipo" class="select-input">
+            <option value="Todos">Tipo: todos</option>
+          </select>
+
+          <select id="fPrioridad" class="select-input">
+            <option value="Todas">Prioridad: todas</option>
+          </select>
+
+          <select id="fEstado" class="select-input">
+            <option value="Todos">Estado: todos</option>
+          </select>
+
+          <select id="fCliente" class="select-input">
+            <option value="Todos">Cliente: todos</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+          <div style="flex:1;">
+            <input id="fPotencialMin" class="search-input" type="number" min="0" step="50000"
+                   placeholder="Potencial mínimo (€)" />
+          </div>
+          <button id="btnBuscarFiltros" class="btn-primary">Aplicar filtros</button>
+        </div>
+
+        <div id="resultFiltrosMeta"
+             style="margin-top:10px;font-size:12px;color:#6B7280;"></div>
+
+        <div id="tablaFiltrosWrapper" style="margin-top:10px;"></div>
+        <div id="tablaFiltrosEmpty" class="empty-state" style="display:none;">
+          No hay resultados con los criterios seleccionados.
+        </div>
+      </div>
+
+      <!-- Contenido búsqueda por prompt -->
+      <div id="tabPrompt" style="padding:16px 18px;display:none;">
+        <p style="font-size:13px;color:#5A6872;margin-top:0;">
+          Escribe lo que quieres encontrar, por ejemplo:
+        </p>
+        <ul style="font-size:13px;color:#5A6872;margin-top:-8px;">
+          <li>“obras residenciales de lujo en Madrid con potencial 300k”</li>
+          <li>“proyectos en negociación en Málaga con prioridad alta”</li>
+          <li>“hoteles en Barcelona ganados de más de 500k”</li>
+        </ul>
+
+        <textarea id="promptInput" rows="4"
+                  style="width:100%;margin-top:4px;border-radius:8px;border:1px solid #D1D5DB;
+                         padding:8px 10px;font-size:13px;resize:vertical;">
+Obras residenciales de lujo en Madrid con potencial 300k
+        </textarea>
+
+        <div style="margin-top:10px;display:flex;justify-content:flex-end;">
+          <button id="btnBuscarPrompt" class="btn-primary">🔎 Buscar</button>
+        </div>
+
+        <div id="promptExplicacion"
+             style="margin-top:8px;font-size:12px;color:#374151;"></div>
+
+        <div id="tablaPromptWrapper" style="margin-top:10px;"></div>
+        <div id="tablaPromptEmpty" class="empty-state" style="display:none;">
+          No hay resultados para ese prompt.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // ---- Estado global ----
+    let proyectos = [];
+    let proyectosFiltros = [];
+    let proyectosPrompt = [];
+
+    // ---- Referencias DOM ----
+    const tabFiltrosBtn = document.getElementById("tabFiltrosBtn");
+    const tabPromptBtn = document.getElementById("tabPromptBtn");
+    const tabFiltros = document.getElementById("tabFiltros");
+    const tabPrompt = document.getElementById("tabPrompt");
+
+    const fCiudad = document.getElementById("fCiudad");
+    const fTipo = document.getElementById("fTipo");
+    const fPrioridad = document.getElementById("fPrioridad");
+    const fEstado = document.getElementById("fEstado");
+    const fCliente = document.getElementById("fCliente");
+    const fPotencialMin = document.getElementById("fPotencialMin");
+    const btnBuscarFiltros = document.getElementById("btnBuscarFiltros");
+    const resultFiltrosMeta = document.getElementById("resultFiltrosMeta");
+    const tablaFiltrosWrapper = document.getElementById("tablaFiltrosWrapper");
+    const tablaFiltrosEmpty = document.getElementById("tablaFiltrosEmpty");
+
+    const promptInput = document.getElementById("promptInput");
+    const btnBuscarPrompt = document.getElementById("btnBuscarPrompt");
+    const promptExplicacion = document.getElementById("promptExplicacion");
+    const tablaPromptWrapper = document.getElementById("tablaPromptWrapper");
+    const tablaPromptEmpty = document.getElementById("tablaPromptEmpty");
+
+    // ---- Tabs ----
+    tabFiltrosBtn.addEventListener("click", () => {
+      tabFiltrosBtn.style.background = "#FFFFFF";
+      tabFiltrosBtn.style.borderBottom = "2px solid #4C6EF5";
+      tabPromptBtn.style.background = "#F9FAFB";
+      tabPromptBtn.style.borderBottom = "2px solid transparent";
+      tabFiltros.style.display = "block";
+      tabPrompt.style.display = "none";
+    });
+
+    tabPromptBtn.addEventListener("click", () => {
+      tabPromptBtn.style.background = "#FFFFFF";
+      tabPromptBtn.style.borderBottom = "2px solid #4C6EF5";
+      tabFiltrosBtn.style.background = "#F9FAFB";
+      tabFiltrosBtn.style.borderBottom = "2px solid transparent";
+      tabFiltros.style.display = "none";
+      tabPrompt.style.display = "block";
+    });
+
+    // ---- Carga de proyectos desde Firestore ----
+    async function cargarProyectos() {
+      try {
+        const ref = collection(db, "proyectos");
+        const snap = await getDocs(ref);
+        proyectos = [];
+        snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+        inicializarFiltros();
+        aplicarFiltros();
+      } catch (err) {
+        console.error("Error cargando proyectos:", err);
+        tablaFiltrosWrapper.innerHTML =
+          "<div style='padding:12px;color:#c92a2a;font-size:14px;'>Error cargando Firestore.</div>";
+      }
+    }
+
+    // ---- Inicializar selects de filtros ----
+    function inicializarFiltros() {
+      const ciudades = [...new Set(proyectos.map(p => p.ciudad).filter(Boolean))].sort();
+      const tipos = [...new Set(proyectos.map(p => p.tipo || p.tipo_proyecto).filter(Boolean))].sort();
+      const prioridades = [...new Set(proyectos.map(p => p.prioridad).filter(Boolean))].sort();
+      const estados = [...new Set(proyectos.map(p => p.estado).filter(Boolean))].sort();
+      const clientes = [...new Set(proyectos.map(p => p.cliente_principal).filter(Boolean))].sort();
+
+      fCiudad.innerHTML = '<option value="Todas">Ciudad: todas</option>' +
+        ciudades.map(c => `<option value="${c}">${c}</option>`).join("");
+
+      fTipo.innerHTML = '<option value="Todos">Tipo: todos</option>' +
+        tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+
+      fPrioridad.innerHTML = '<option value="Todas">Prioridad: todas</option>' +
+        prioridades.map(p => `<option value="${p}">${p}</option>`).join("");
+
+      fEstado.innerHTML = '<option value="Todos">Estado: todos</option>' +
+        estados.map(e => `<option value="${e}">${e}</option>`).join("");
+
+      fCliente.innerHTML = '<option value="Todos">Cliente: todos</option>' +
+        clientes.map(cl => `<option value="${cl}">${cl}</option>`).join("");
+    }
+
+    // ---- Búsqueda por filtros ----
+    function aplicarFiltros() {
+      const ciudad = fCiudad.value;
+      const tipo = fTipo.value;
+      const prioridad = fPrioridad.value;
+      const estado = fEstado.value;
+      const cliente = fCliente.value;
+      const potMin = Number(fPotencialMin.value || 0);
+
+      proyectosFiltros = proyectos.filter(p => {
+        let ok = true;
+        if (ciudad !== "Todas") ok = ok && p.ciudad === ciudad;
+        const tipoVal = p.tipo || p.tipo_proyecto;
+        if (tipo !== "Todos") ok = ok && tipoVal === tipo;
+        if (prioridad !== "Todas") ok = ok && p.prioridad === prioridad;
+        if (estado !== "Todos") ok = ok && p.estado === estado;
+        if (cliente !== "Todos") ok = ok && p.cliente_principal === cliente;
+        if (potMin && p.potencial_eur != null) {
+          ok = ok && Number(p.potencial_eur) >= potMin;
+        } else if (potMin && (p.potencial_eur == null || p.potencial_eur === "")) {
+          ok = false;
+        }
+        return ok;
+      });
+
+      resultFiltrosMeta.textContent =
+        `Resultados: ${proyectosFiltros.length} proyecto(s) encontrados.`;
+
+      pintarTabla(proyectosFiltros, tablaFiltrosWrapper, tablaFiltrosEmpty);
+    }
+
+    btnBuscarFiltros.addEventListener("click", aplicarFiltros);
+
+    // ---- Helpers tabla ----
+    function pintarTabla(data, contenedor, emptyDiv) {
+      if (!data.length) {
+        contenedor.innerHTML = "";
+        emptyDiv.style.display = "block";
+        return;
+      }
+      emptyDiv.style.display = "none";
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Proyecto</th>
+              <th>Cliente</th>
+              <th>Ciudad</th>
+              <th>Provincia</th>
+              <th>Estado</th>
+              <th>Prioridad</th>
+              <th>Tipo</th>
+              <th>Potencial (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      data.forEach(p => {
+        const pot = p.potencial_eur
+          ? Number(p.potencial_eur).toLocaleString("es-ES")
+          : "–";
+        const tipoVal = p.tipo || p.tipo_proyecto || "";
+        html += `
+          <tr>
+            <td>${p.nombre_obra || ""}</td>
+            <td>${p.cliente_principal || ""}</td>
+            <td>${p.ciudad || ""}</td>
+            <td>${p.provincia || ""}</td>
+            <td>${p.estado || ""}</td>
+            <td>${p.prioridad || ""}</td>
+            <td>${tipoVal}</td>
+            <td>${pot}</td>
+          </tr>
+        `;
+      });
+      html += "</tbody></table>";
+      contenedor.innerHTML = html;
+    }
+
+    // ---- Búsqueda por prompt (versión ligera del Python) ----
+
+    function extraerUmbralPotencial(text) {
+      const t = text.toLowerCase().replace(/\./g, "");
+      const m = t.match(/(\d+)\s*(k|m|millones)?/);
+      if (!m) return null;
+      let cantidad = parseFloat(m[1]);
+      const sufijo = m[2];
+      if (sufijo === "k") cantidad *= 1000;
+      else if (sufijo === "m" || sufijo === "millones") cantidad *= 1000000;
+      return cantidad;
+    }
+
+    function matchValor(text, valores) {
+      const t = text.toLowerCase();
+      for (const v of valores) {
+        if (typeof v !== "string") continue;
+        if (t.includes(v.toLowerCase())) return v;
+      }
+      return null;
+    }
+
+    function normalizarEstado(prompt) {
+      const p = prompt.toLowerCase();
+      if (p.includes("ganad")) return "Ganado";
+      if (p.includes("perdid")) return "Perdido";
+      if (p.includes("negoci")) return "Negociación";
+      if (p.includes("oferta")) return "Oferta Enviada";
+      if (p.includes("prescrip")) return "En Prescripción";
+      if (p.includes("detect")) return "Detectado";
+      return null;
+    }
+
+    function filtrarPorPrompt(prompt) {
+      let df = [...proyectos];
+      const explicacion = [];
+      const p = prompt.trim();
+      if (!p) return { data: df, explicacion };
+
+      // Ciudad
+      const ciudades = [...new Set(df.map(x => x.ciudad).filter(Boolean))];
+      const ciudad = matchValor(p, ciudades);
+      if (ciudad) {
+        df = df.filter(x => x.ciudad === ciudad);
+        explicacion.push(`Ciudad = <b>${ciudad}</b>`);
+      }
+
+      // Provincia
+      const provincias = [...new Set(df.map(x => x.provincia).filter(Boolean))];
+      const provincia = matchValor(p, provincias);
+      if (provincia && df.length) {
+        df = df.filter(x => x.provincia === provincia);
+        explicacion.push(`Provincia = <b>${provincia}</b>`);
+      }
+
+      // Tipo
+      const tipos = [...new Set(df.map(x => x.tipo || x.tipo_proyecto).filter(Boolean))];
+      const tipo = matchValor(p, tipos);
+      if (tipo && df.length) {
+        df = df.filter(x => (x.tipo || x.tipo_proyecto) === tipo);
+        explicacion.push(`Tipo de proyecto = <b>${tipo}</b>`);
+      }
+
+      // Prioridad (alta/media/baja)
+      const prioridades = [...new Set(df.map(x => x.prioridad).filter(Boolean))];
+      for (const [key, val] of [["alta","Alta"],["media","Media"],["baja","Baja"]]) {
+        if (p.toLowerCase().includes(key) && prioridades.includes(val)) {
+          df = df.filter(x => x.prioridad === val);
+          explicacion.push(`Prioridad = <b>${val}</b>`);
+          break;
+        }
+      }
+
+      // Estado
+      const estados = [...new Set(df.map(x => x.estado).filter(Boolean))];
+      const est = normalizarEstado(p);
+      if (est && estados.includes(est)) {
+        df = df.filter(x => x.estado === est);
+        explicacion.push(`Estado = <b>${est}</b>`);
+      }
+
+      // Cliente principal
+      const clientes = [...new Set(df.map(x => x.cliente_principal).filter(Boolean))];
+      const cliente = matchValor(p, clientes);
+      if (cliente && df.length) {
+        df = df.filter(x => x.cliente_principal === cliente);
+        explicacion.push(`Cliente principal = <b>${cliente}</b>`);
+      }
+
+      // Potencial
+      const umbral = extraerUmbralPotencial(p);
+      if (umbral && df.length) {
+        df = df.filter(x => Number(x.potencial_eur || 0) >= umbral);
+        explicacion.push(
+          `Potencial ≥ <b>${umbral.toLocaleString("es-ES", { maximumFractionDigits: 0 })} €</b>`
+        );
+      }
+
+      return { data: df, explicacion };
+    }
+
+    btnBuscarPrompt.addEventListener("click", () => {
+      const prompt = promptInput.value || "";
+      const { data, explicacion } = filtrarPorPrompt(prompt);
+
+      if (explicacion.length) {
+        promptExplicacion.innerHTML =
+          "Filtros detectados a partir del prompt: " + explicacion.join(", ");
+      } else {
+        promptExplicacion.textContent =
+          "No se ha detectado ningún filtro concreto, se muestran todos los proyectos.";
+      }
+
+      proyectosPrompt = data;
+      pintarTabla(proyectosPrompt, tablaPromptWrapper, tablaPromptEmpty);
+    });
+
+    // ---- Init ----
+    cargarProyectos();
+  </script>
+</body>
+</html>
