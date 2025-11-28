@@ -401,3 +401,35 @@ dialog::backdrop {
         grid-template-columns: 1fr;
     }
 }
+
+/* ======== FIX: BOTÓN NOMBRE CLIENTE (SIN CUADRO) ======== */
+
+.link-button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: #4C6EF5;       /* mismo azul corporativo que usas en nav y links */
+    cursor: pointer;
+    text-align: left;
+}
+
+.link-button:hover {
+    text-decoration: underline;
+    color: #3B5BDB;       /* azul un poco más oscuro en hover */
+}
+
+.link-button:focus-visible {
+    outline: none;
+    text-decoration: underline;
+}
+
+/* Nombre cliente: evita que rompa la tabla si es muy largo */
+.cliente-nombre-link {
+    max-width: 240px;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
