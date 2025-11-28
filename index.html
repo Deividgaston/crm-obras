@@ -1,240 +1,374 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CRM 2N – Dashboard</title>
-    <link rel="stylesheet" href="style.css" />
-    <!-- Gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Plugin para mostrar porcentajes dentro del gráfico -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Chart.js para el donut de encaje 2N -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
 <body>
+  <!-- NAV SUPERIOR -->
+  <div class="topnav">
+    <div class="logo">CRM 2N</div>
 
-    <!-- NAV SUPERIOR -->
-    <div class="topnav">
-        <div class="logo">CRM 2N</div>
-
-        <div class="nav-tabs">
-            <div class="nav-item active" onclick="location.href='index.html'">Dashboard</div>
-            <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
-            <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
-            <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
-            <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
-            <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
-            <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
-        </div>
-
-        <input type="text" class="search-box" placeholder="Buscar..." />
+    <div class="nav-tabs">
+      <div class="nav-item active" onclick="location.href='index.html'">Dashboard</div>
+      <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+      <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
+      <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
+      <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+      <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+      <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
     </div>
 
-    <main class="content">
-        <h2 style="margin:0;color:#16325C;">Dashboard</h2>
-        <div style="font-size:12px;color:#5A6872;margin-bottom:14px;">
-            Resumen general de pipeline, tareas y obras con potencial 2N
+    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+  </div>
+
+  <main class="content">
+    <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Dashboard general</h2>
+    <div style="font-size:12px;color:#5A6872;margin-bottom:16px;">
+      Vista rápida de proyectos, encaje 2N y seguimientos de la próxima semana.
+    </div>
+
+    <!-- FILA KPIs -->
+    <div class="kpi-row" style="margin-bottom:14px;">
+      <div class="kpi-card">
+        <div class="kpi-label">Proyectos totales</div>
+        <div id="kpiTotal" class="kpi-value">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">En curso</div>
+        <div id="kpiEnCurso" class="kpi-value">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ganados</div>
+        <div id="kpiGanados" class="kpi-value">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Perdidos</div>
+        <div id="kpiPerdidos" class="kpi-value">–</div>
+      </div>
+    </div>
+
+    <!-- FILA PRINCIPAL: DONUT + SEGUIMIENTOS -->
+    <div style="display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:16px;align-items:flex-start;">
+      <!-- CARD DONUT ENCAJE 2N -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#111827;">
+              Obras potenciales 2N (ALTO / MEDIO)
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;">
+              Distribución por encaje 2N de todos los proyectos del CRM.
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;height:220px;">
+          <canvas id="chartEncaje"></canvas>
+        </div>
+      </div>
+
+      <!-- CARD SEGUIMIENTOS PRÓXIMOS 7 DÍAS -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#111827;">
+              Seguimientos próximos 7 días
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;">
+              Proyectos con fecha de seguimiento entre hoy y los próximos 7 días.
+            </div>
+          </div>
         </div>
 
-        <!-- CARDS RESUMEN -->
-        <div class="cards-grid">
-            <div class="card">
-                <div class="card-title">Proyectos totales</div>
-                <div id="kpiProyectos" class="card-value">–</div>
-            </div>
+        <div id="seguimientosList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+  </main>
 
-            <div class="card">
-                <div class="card-title">En seguimiento</div>
-                <div id="kpiSeguimiento" class="card-value">–</div>
-            </div>
+  <!-- DIALOGO EDICIÓN SEGUIMIENTO / TAREA -->
+  <dialog id="seguimientoDialog">
+    <div class="modal-header">Editar seguimiento</div>
+    <form id="seguimientoForm" method="dialog">
+      <input type="hidden" id="segProjId" />
 
-            <div class="card">
-                <div class="card-title">Ganados</div>
-                <div id="kpiGanados" class="card-value">–</div>
-            </div>
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:600;color:#111827;">Proyecto</label>
+        <div id="segNombreObra" style="font-size:12px;color:#374151;padding:6px 8px;border-radius:6px;background:#F9FAFB;border:1px solid #E5E7EB;"></div>
+      </div>
 
-            <div class="card">
-                <div class="card-title">Obras potenciales 2N (ALTO/MEDIO)</div>
-                <div id="kpiPotenciales2N" class="card-value">–</div>
-            </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="segFecha" style="font-size:11.5px;font-weight:600;color:#111827;">Fecha seguimiento</label>
+          <input id="segFecha" type="date" />
         </div>
-
-        <!-- COLUMNAS -->
-        <div class="columns">
-            <!-- Seguimientos -->
-            <div class="panel">
-                <div class="panel-title">Seguimientos pendientes</div>
-                <div id="seguimientosList">Cargando...</div>
-            </div>
-
-            <!-- Tareas -->
-            <div class="panel">
-                <div class="panel-title">Tareas pendientes</div>
-                <div id="tareasList">Cargando...</div>
-            </div>
-
-            <!-- Obras potenciales 2N -->
-            <div class="panel">
-                <div class="panel-title">Obras potenciales 2N (ALTO / MEDIO / BAJO)</div>
-                <div style="width:100%;max-width:360px;margin:4px auto 4px auto;">
-                    <canvas id="chartEncaje2N"></canvas>
-                </div>
-            </div>
+        <div class="form-group">
+          <label for="tareaFecha" style="font-size:11.5px;font-weight:600;color:#111827;">Fecha tarea</label>
+          <input id="tareaFecha" type="date" />
         </div>
-    </main>
+      </div>
 
-    <script type="module">
-        import { db } from "./firebase.js";
-        import { collection, getDocs }
-            from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+      <div class="form-group">
+        <label for="segComentario" style="font-size:11.5px;font-weight:600;color:#111827;">Comentario seguimiento</label>
+        <textarea id="segComentario" rows="3"></textarea>
+      </div>
 
-        const kpiProyectos = document.getElementById("kpiProyectos");
-        const kpiSeguimiento = document.getElementById("kpiSeguimiento");
-        const kpiGanados = document.getElementById("kpiGanados");
-        const kpiPotenciales2N = document.getElementById("kpiPotenciales2N");
+      <div class="form-group">
+        <label for="tareaComentario" style="font-size:11.5px;font-weight:600;color:#111827;">Descripción tarea</label>
+        <textarea id="tareaComentario" rows="3"></textarea>
+      </div>
 
-        const seguimientosList = document.getElementById("seguimientosList");
-        const tareasList = document.getElementById("tareasList");
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="window.closeSegDialog()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
 
-        let encajeChart = null;
+  <script type="module">
+    import { db } from "./firebase.js";
+    import {
+      collection,
+      getDocs,
+      updateDoc,
+      doc
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        async function cargarDashboard() {
-            try {
-                const ref = collection(db, "proyectos");
-                const snap = await getDocs(ref);
+    let proyectos = [];
+    let chartEncaje = null;
 
-                const proyectos = [];
-                snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+    const kpiTotal = document.getElementById("kpiTotal");
+    const kpiEnCurso = document.getElementById("kpiEnCurso");
+    const kpiGanados = document.getElementById("kpiGanados");
+    const kpiPerdidos = document.getElementById("kpiPerdidos");
 
-                // KPIs básicos
-                kpiProyectos.textContent = proyectos.length;
-                kpiSeguimiento.textContent =
-                    proyectos.filter(p => p.estado && p.estado !== "Detectado").length;
-                kpiGanados.textContent =
-                    proyectos.filter(p => p.estado === "Ganado").length;
+    const seguimientosList = document.getElementById("seguimientosList");
+    const segDialog = document.getElementById("seguimientoDialog");
+    const segForm = document.getElementById("seguimientoForm");
 
-                // Encaje 2N
-                const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
-                proyectos.forEach(p => {
-                    const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
-                    if (enc === "ALTO") counts.ALTO++;
-                    else if (enc === "MEDIO") counts.MEDIO++;
-                    else if (enc === "BAJO") counts.BAJO++;
-                    else counts.SIN++;
-                });
+    const segProjId = document.getElementById("segProjId");
+    const segNombreObra = document.getElementById("segNombreObra");
+    const segFecha = document.getElementById("segFecha");
+    const tareaFecha = document.getElementById("tareaFecha");
+    const segComentario = document.getElementById("segComentario");
+    const tareaComentario = document.getElementById("tareaComentario");
 
-                const potenciales2N = proyectos.filter(p => {
-                    const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
-                    return enc === "ALTO" || enc === "MEDIO";
-                });
-                kpiPotenciales2N.textContent = potenciales2N.length;
+    async function cargarDashboard() {
+      const snap = await getDocs(collection(db, "proyectos"));
+      proyectos = [];
+      snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
 
-                // Seguimientos (solo con fecha de seguimiento)
-                const seg = proyectos
-                    .filter(p => p.seguimiento_fecha)
-                    .sort((a, b) => (a.seguimiento_fecha || "").localeCompare(b.seguimiento_fecha));
+      renderKpis();
+      renderEncajeChart();
+      renderSeguimientos();
+    }
 
-                seguimientosList.innerHTML = seg.length
-                    ? seg.map(p => `
-                        <div class="follow-item">
-                            <b>${p.nombre_obra}</b><br>
-                            ${p.seguimiento_fecha} – ${p.seguimiento_comentario || ""}
-                        </div>
-                    `).join("")
-                    : "<div class='empty-state'>No hay seguimientos pendientes.</div>";
+    function renderKpis() {
+      const total = proyectos.length;
+      const ganados = proyectos.filter(p => p.estado === "Ganado").length;
+      const perdidos = proyectos.filter(p => p.estado === "Perdido").length;
+      const enCurso = proyectos.filter(p =>
+        p.estado &&
+        !["Ganado", "Perdido"].includes(p.estado)
+      ).length;
 
-                // Tareas
-                const t = proyectos
-                    .filter(p => p.tarea_fecha)
-                    .sort((a, b) => (a.tarea_fecha || "").localeCompare(b.tarea_fecha));
+      kpiTotal.textContent = total;
+      kpiGanados.textContent = ganados;
+      kpiPerdidos.textContent = perdidos;
+      kpiEnCurso.textContent = enCurso;
+    }
 
-                tareasList.innerHTML = t.length
-                    ? t.map(p => `
-                        <div class="task-item">
-                            <b>${p.nombre_obra}</b><br>
-                            ${p.tarea_fecha} – ${p.tarea_comentario || ""}
-                        </div>
-                    `).join("")
-                    : "<div class='empty-state'>No hay tareas pendientes.</div>";
+    function renderEncajeChart() {
+      const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
 
-                // ===== Gráfico Encaje 2N con porcentajes dentro =====
-                const totalEncaje =
-                    counts.ALTO + counts.MEDIO + counts.BAJO + counts.SIN || 1;
+      proyectos.forEach(p => {
+        const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
+        if (enc === "ALTO") counts.ALTO++;
+        else if (enc === "MEDIO") counts.MEDIO++;
+        else if (enc === "BAJO") counts.BAJO++;
+        else counts.SIN++;
+      });
 
-                const valores = [
-                    counts.ALTO,
-                    counts.MEDIO,
-                    counts.BAJO,
-                    counts.SIN
-                ];
+      const data = [counts.ALTO, counts.MEDIO, counts.BAJO, counts.SIN];
+      const total = data.reduce((a, b) => a + b, 0);
 
-                const etiquetasBase = ["ALTO", "MEDIO", "BAJO", "Sin dato"];
+      const ctx = document.getElementById("chartEncaje").getContext("2d");
+      if (chartEncaje) {
+        chartEncaje.destroy();
+      }
 
-                const ctx = document.getElementById("chartEncaje2N");
-                if (ctx) {
-                    if (encajeChart) encajeChart.destroy();
-                    encajeChart = new Chart(ctx, {
-                        type: "doughnut",
-                        data: {
-                            labels: etiquetasBase,
-                            datasets: [{
-                                data: valores,
-                                backgroundColor: [
-                                    "#0EA5E9", // ALTO
-                                    "#22C55E", // MEDIO
-                                    "#F97316", // BAJO
-                                    "#E5E7EB"  // SIN
-                                ]
-                            }]
-                        },
-                        options: {
-                            cutout: "60%",
-                            plugins: {
-                                legend: {
-                                    position: "bottom",
-                                    labels: { boxWidth: 14, font: { size: 11 } }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label(ctx) {
-                                            const data = ctx.dataset.data;
-                                            const total = data.reduce((a, b) => a + b, 0) || 1;
-                                            const value = ctx.parsed;
-                                            const pct = Math.round(value * 100 / total);
-                                            const label = etiquetasBase[ctx.dataIndex];
-                                            return `${label}: ${value} (${pct}%)`;
-                                        }
-                                    }
-                                },
-                                datalabels: {
-                                    color: "#111827",
-                                    font: {
-                                        weight: "600",
-                                        size: 11
-                                    },
-                                    formatter(value, ctx) {
-                                        const data = ctx.chart.data.datasets[0].data;
-                                        const total = data.reduce((a, b) => a + b, 0) || 1;
-                                        if (!value || total === 0) return "";
-                                        const pct = Math.round(value * 100 / total);
-                                        if (pct === 0) return "";
-                                        return pct + "%";
-                                    }
-                                }
-                            }
-                        },
-                        plugins: [ChartDataLabels]
-                    });
-                }
+      // Registrar plugin de datalabels
+      Chart.register(window.ChartDataLabels);
 
-            } catch (err) {
-                seguimientosList.innerHTML = "Error cargando Firestore";
-                tareasList.innerHTML = "Error cargando Firestore";
-                console.error(err);
+      chartEncaje = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["ALTO", "MEDIO", "BAJO", "SIN"],
+          datasets: [
+            {
+              data,
+              backgroundColor: ["#16A34A", "#FACC15", "#F97316", "#E5E7EB"],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
             }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                font: { size: 11 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.raw || 0;
+                  const pct = total ? Math.round((val * 100) / total) : 0;
+                  return `${ctx.label}: ${val} (${pct}%)`;
+                }
+              }
+            },
+            datalabels: {
+              formatter: (value, ctx) => {
+                if (!total || !value) return "";
+                const pct = Math.round((value * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: {
+                weight: "700",
+                size: 11
+              }
+            }
+          },
+          cutout: "55%"
         }
+      });
+    }
 
-        cargarDashboard();
-    </script>
+    function renderSeguimientos() {
+      seguimientosList.innerHTML = "";
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const limite = new Date(hoy);
+      limite.setDate(limite.getDate() + 7);
+      limite.setHours(23, 59, 59, 999);
+
+      const proximos = proyectos
+        .filter(p => p.seguimiento_fecha)
+        .map(p => {
+          const d = new Date(p.seguimiento_fecha);
+          if (isNaN(d.getTime())) return null;
+          d.setHours(0, 0, 0, 0);
+          return { ...p, _segDate: d };
+        })
+        .filter(p => p && p._segDate >= hoy && p._segDate <= limite)
+        .sort((a, b) => a._segDate - b._segDate);
+
+      if (!proximos.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No hay seguimientos en los próximos 7 días.";
+        seguimientosList.appendChild(empty);
+        return;
+      }
+
+      proximos.forEach(p => {
+        const fechaStr = p._segDate.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "2-digit"
+        });
+
+        const item = document.createElement("div");
+        item.className = "seguimiento-item";
+        item.style.border = "1px solid #E5E7EB";
+        item.style.borderRadius = "8px";
+        item.style.padding = "6px 8px";
+        item.style.background = "#F9FAFB";
+
+        item.innerHTML = `
+          <div class="seguimiento-main" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <button class="link-like" data-id="${p.id}"
+              style="border:none;background:none;padding:0;margin:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:11px;color:#6B7280;">${fechaStr}</span>
+              <span style="font-size:12px;font-weight:600;color:#111827;">${p.nombre_obra || ""}</span>
+            </button>
+            <div style="font-size:10.5px;color:#6B7280;white-space:nowrap;">
+              ${p.estado || ""}
+            </div>
+          </div>
+          <div class="seg-coment" style="font-size:11px;color:#4B5563;margin-top:4px;">
+            ${(p.seguimiento_comentario || "").slice(0, 140) || "Sin comentario de seguimiento."}
+          </div>
+        `;
+
+        seguimientosList.appendChild(item);
+      });
+
+      // Eventos de click para abrir diálogo
+      seguimientosList.querySelectorAll("button.link-like").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          openSegDialog(id);
+        });
+      });
+    }
+
+    function openSegDialog(id) {
+      const p = proyectos.find(x => x.id === id);
+      if (!p) return;
+
+      segProjId.value = p.id;
+      segNombreObra.textContent = p.nombre_obra || "";
+      segFecha.value = p.seguimiento_fecha || "";
+      tareaFecha.value = p.tarea_fecha || "";
+      segComentario.value = p.seguimiento_comentario || "";
+      tareaComentario.value = p.tarea_comentario || "";
+
+      segDialog.showModal();
+    }
+
+    window.closeSegDialog = function () {
+      segDialog.close();
+    };
+
+    segForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = segProjId.value;
+      if (!id) {
+        segDialog.close();
+        return;
+      }
+
+      const payload = {
+        seguimiento_fecha: segFecha.value || null,
+        seguimiento_comentario: segComentario.value.trim(),
+        tarea_fecha: tareaFecha.value || null,
+        tarea_comentario: tareaComentario.value.trim()
+      };
+
+      try {
+        await updateDoc(doc(db, "proyectos", id), payload);
+        segDialog.close();
+        await cargarDashboard(); // recargar datos y volver a pintar
+      } catch (err) {
+        console.error("❌ Error guardando seguimiento:", err);
+        alert("Error guardando el seguimiento.");
+      }
+    });
+
+    // Inicializar
+    cargarDashboard();
+  </script>
 </body>
 </html>
