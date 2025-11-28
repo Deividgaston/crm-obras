@@ -286,7 +286,7 @@
 
             kpiTotal.textContent = proyectosFiltrados.length;
             kpiSeguimiento.textContent =
-                proyectosFiltrados.filter(p => p.estado && p.estado !== "Detectado").length;
+                proyectosFiltrados.filter(p => p.seguimiento_fecha).length;
             kpiGanados.textContent =
                 proyectosFiltrados.filter(p => p.estado === "Ganado").length;
 
@@ -804,7 +804,8 @@
                 cliente_principal: getCell(row, HEADER_MAP.cliente_principal, "cliente_principal").toString().trim(),
                 ciudad: getCell(row, HEADER_MAP.ciudad, "ciudad").toString().trim(),
                 provincia: getCell(row, HEADER_MAP.provincia, "provincia").toString().trim(),
-                estado: (getCell(row, HEADER_MAP.estado, "estado") || "Detectado").toString().trim(),
+                // 🔴 SIEMPRE estado inicial detectado al importar
+                estado: "Detectado",
                 prioridad: (getCell(row, HEADER_MAP.prioridad, "prioridad") || "Media").toString().trim(),
                 tipo: (getCell(row, HEADER_MAP.tipo, "tipo") || "Residencial").toString().trim(),
                 potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur, "potencial_eur") || 0),
