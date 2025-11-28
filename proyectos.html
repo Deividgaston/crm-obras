@@ -14,7 +14,6 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
     <link rel="stylesheet" href="styles.css">
 
     <style>
-        /* ===== LAYOUT GENERAL (MISMO QUE INDEX) ===== */
         body {
             margin: 0;
             font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -22,98 +21,65 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             color: #1A1A1A;
         }
 
-        .layout {
+        /* NAV SUPERIOR */
+        .topnav {
+            height: 56px;
+            background: #FFFFFF;
             display: flex;
-            min-height: 100vh;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            gap: 20px;
         }
 
-        .sidebar {
-            width: 230px;
-            background: #111827;
-            color: #E5E7EB;
-            padding: 20px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .sidebar-logo {
-            font-weight: 700;
+        .logo {
             font-size: 18px;
-            margin-bottom: 8px;
+            font-weight: 700;
+            color: #4C6EF5;
+            margin-right: 12px;
         }
 
-        .sidebar-sub {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 12px;
-        }
-
-        .nav-section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            opacity: 0.6;
-            margin: 12px 0 4px;
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            flex: 1;
         }
 
         .nav-item {
-            display: block;
-            padding: 8px 10px;
-            border-radius: 10px;
+            padding: 8px 14px;
+            border-radius: 8px;
             font-size: 14px;
-            text-decoration: none;
-            color: #E5E7EB;
-            opacity: 0.9;
             cursor: pointer;
-            margin-bottom: 4px;
+            color: #333;
+            transition: 0.15s;
         }
 
         .nav-item:hover {
-            background: #1F2937;
+            background: #F1F3F5;
         }
 
         .nav-item.active {
-            background: #4C6EF5;
-            color: #FFFFFF;
-        }
-
-        .nav-item.disabled {
-            opacity: 0.4;
-            cursor: default;
-        }
-
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .topbar {
-            height: 64px;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-        }
-
-        .topbar-title {
-            font-size: 18px;
+            color: #4C6EF5;
             font-weight: 600;
+            border-bottom: 3px solid #4C6EF5;
+            padding-bottom: 5px;
         }
 
-        .topbar-right {
+        .search-box {
+            background: #F1F3F5;
+            border-radius: 6px;
+            padding: 6px 12px;
+            width: 220px;
+            border: 1px solid #E1E3E5;
+            outline: none;
             font-size: 13px;
-            opacity: 0.7;
         }
 
         .content {
             padding: 24px;
         }
 
-        /* ===== ZONA DE FILTROS Y LISTA ===== */
+        /* PROYECTOS */
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -131,9 +97,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             outline: none;
         }
 
-        .search-input:focus {
-            border-color: #4C6EF5;
-        }
+        .search-input:focus { border-color: #4C6EF5; }
 
         .select-input {
             padding: 8px 10px;
@@ -154,9 +118,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             cursor: pointer;
         }
 
-        .btn-primary:hover {
-            background: #3B5BDB;
-        }
+        .btn-primary:hover { background: #3B5BDB; }
 
         .project-list {
             display: flex;
@@ -177,9 +139,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             transition: 0.15s;
         }
 
-        .project-card:hover {
-            transform: translateY(-1px);
-        }
+        .project-card:hover { transform: translateY(-1px); }
 
         .project-main {
             display: flex;
@@ -229,65 +189,54 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         }
     </style>
 </head>
+
 <body>
-<div class="layout">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div>
-            <div class="sidebar-logo">CRM 2N</div>
-            <div class="sidebar-sub">Prescripción · Proyectos</div>
+
+    <!-- NAV SUPERIOR -->
+    <div class="topnav">
+        <div class="logo">CRM 2N</div>
+
+        <div class="nav-tabs">
+            <div class="nav-item" onclick="go('index.html')">Dashboard</div>
+            <div class="nav-item active" onclick="go('proyectos.html')">Proyectos</div>
+            <div class="nav-item" onclick="go('pipeline.html')">Pipeline</div>
+            <div class="nav-item" onclick="go('clientes.html')">Clientes</div>
+            <div class="nav-item" onclick="go('tareas.html')">Tareas</div>
+            <div class="nav-item" onclick="go('reportes.html')">Reportes</div>
         </div>
 
-        <div>
-            <div class="nav-section-title">Principal</div>
-            <a href="index.html" class="nav-item">📊 Dashboard</a>
-        </div>
-
-        <div>
-            <div class="nav-section-title">Operativa</div>
-            <a href="proyectos.html" class="nav-item active">📁 Proyectos</a>
-            <a class="nav-item disabled">👥 Clientes (próx.)</a>
-        </div>
-    </aside>
-
-    <!-- ZONA PRINCIPAL -->
-    <div class="main">
-        <header class="topbar">
-            <div class="topbar-title">Proyectos</div>
-            <div class="topbar-right">
-                Búsqueda, filtros y pipeline · Firebase lectura única
-            </div>
-        </header>
-
-        <main class="content">
-            <div class="toolbar">
-                <input
-                    id="searchInput"
-                    class="search-input"
-                    type="text"
-                    placeholder="Buscar por nombre, cliente, ciudad..."
-                />
-
-                <select id="estadoFilter" class="select-input">
-                    <option value="todos">Todos los estados</option>
-                    <option value="Pipeline">Pipeline</option>
-                    <option value="Prescripción">Prescripción</option>
-                    <option value="Ganado">Ganado</option>
-                    <option value="Perdido">Perdido</option>
-                </select>
-
-                <button class="btn-primary" onclick="nuevoProyecto()">
-                    + Nuevo proyecto
-                </button>
-            </div>
-
-            <div id="projectList" class="project-list"></div>
-            <div id="emptyState" class="empty-state" style="display:none;">
-                No hay proyectos con estos filtros.
-            </div>
-        </main>
+        <input type="text" class="search-box" placeholder="Buscar..." />
     </div>
-</div>
+
+    <main class="content">
+        <h2 style="margin-top:0; margin-bottom:12px;">Proyectos</h2>
+
+        <div class="toolbar">
+            <input
+                id="searchInput"
+                class="search-input"
+                type="text"
+                placeholder="Buscar por nombre, cliente, ciudad..."
+            />
+
+            <select id="estadoFilter" class="select-input">
+                <option value="todos">Todos los estados</option>
+                <option value="Pipeline">Pipeline</option>
+                <option value="Prescripción">Prescripción</option>
+                <option value="Ganado">Ganado</option>
+                <option value="Perdido">Perdido</option>
+            </select>
+
+            <button class="btn-primary" onclick="nuevoProyecto()">
+                + Nuevo proyecto
+            </button>
+        </div>
+
+        <div id="projectList" class="project-list"></div>
+        <div id="emptyState" class="empty-state" style="display:none;">
+            No hay proyectos con estos filtros.
+        </div>
+    </main>
 
 <script type="module">
     import { db } from "./firebaseConfig.js";
@@ -301,10 +250,9 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
     const searchInput = document.getElementById("searchInput");
     const estadoFilter = document.getElementById("estadoFilter");
 
-    let proyectos = [];      // cache local
+    let proyectos = [];
     let proyectosFiltrados = [];
 
-    // ===== CARGA ÚNICA DESDE FIREBASE (OPTIMIZADO) =====
     async function cargarProyectos() {
         const ref = collection(db, "proyectos");
         const snap = await getDocs(ref);
@@ -386,9 +334,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         });
     }
 
-    // ===== ACCIONES =====
     window.nuevoProyecto = function() {
-        // Cuando tengamos la pantalla, enlazamos
         window.location.href = "proyecto_nuevo.html";
     };
 
@@ -396,12 +342,15 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         window.location.href = `proyecto_detalle.html?id=${id}`;
     };
 
-    // ===== LISTENERS =====
     searchInput.addEventListener("input", aplicarFiltros);
     estadoFilter.addEventListener("change", aplicarFiltros);
 
-    // Carga inicial
     cargarProyectos();
+
+    window.go = function(ruta) {
+        window.location.href = ruta;
+    };
 </script>
+
 </body>
 </html>
