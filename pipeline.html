@@ -28,7 +28,23 @@
   <main class="content">
     <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Pipeline de proyectos</h2>
     <div style="font-size:12px;color:#5A6872;margin-bottom:10px;">
-      Arrastra las obras entre columnas para cambiar el estado (Detectado → Prescripción → Oferta → Negociación → Ganado / Perdido).
+      Todos los proyectos empiezan en <b>Detectado</b>. Arrastra las obras entre columnas para cambiar el estado
+      (Detectado → Prescripción → Oferta → Negociación → Ganado / Perdido / Paralizado).
+    </div>
+
+    <!-- CUADRO SEGUIMIENTO -->
+    <div class="card" style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#111827;">
+            Seguimiento activo
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;">
+            Obras que tienen fecha de seguimiento definida (independiente del estado del pipeline).
+          </div>
+        </div>
+      </div>
+      <div id="seguimientoBox" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;"></div>
     </div>
 
     <!-- FILTRO RÁPIDO ARRIBA -->
@@ -84,6 +100,7 @@
     const prioridadFilter = document.getElementById("fPrioridad");
     const textoFilter = document.getElementById("fTexto");
     const kanbanBoard = document.getElementById("kanbanBoard");
+    const seguimientoBox = document.getElementById("seguimientoBox");
 
     let proyectos = [];
     let proyectosFiltrados = [];
@@ -93,7 +110,7 @@
       const raw = (p.estado || "").toString().trim();
       if (!raw) return "Detectado";
       if (ESTADOS.includes(raw)) return raw;
-      // Cualquier estado raro → a "Detectado" para que se vea en la primera columna
+      // Si viene de Construdata o texto raro → empieza en Detectado
       return "Detectado";
     }
 
@@ -103,6 +120,7 @@
         proyectos = [];
         snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
         aplicarFiltros();
+        renderSeguimientoBox();
       } catch (err) {
         console.error("❌ Error obteniendo proyectos:", err);
         kanbanBoard.innerHTML =
@@ -212,7 +230,7 @@
               ${colProyectos.length}
             </div>
           </div>
-        """
+        `;
 
         const dropZone = document.createElement("div");
         dropZone.className = "kanban-dropzone";
@@ -315,13 +333,65 @@
         kanbanBoard.appendChild(col);
       });
 
-      // De momento, al pinchar en el título te llevo a proyectos.html (detalle)
       kanbanBoard.querySelectorAll(".kanban-title").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-id");
-          // Futura fase: abrir modal rápido. Por ahora, simplemente a la lista.
+          // Por ahora te llevo a la tabla general para editar ahí
           window.location.href = "proyectos.html";
         });
+      });
+    }
+
+    function renderSeguimientoBox() {
+      seguimientoBox.innerHTML = "";
+
+      const conSeguimiento = proyectos
+        .filter(p => p.seguimiento_fecha)
+        .map(p => {
+          const d = new Date(p.seguimiento_fecha);
+          if (isNaN(d.getTime())) return null;
+          d.setHours(0, 0, 0, 0);
+          return { ...p, _segDate: d };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a._segDate - b._segDate);
+
+      if (!conSeguimiento.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No hay obras con seguimiento activo.";
+        seguimientoBox.appendChild(empty);
+        return;
+      }
+
+      conSeguimiento.forEach(p => {
+        const fechaStr = p._segDate.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "2-digit"
+        });
+
+        const item = document.createElement("div");
+        item.style.border = "1px solid #E5E7EB";
+        item.style.borderRadius = "8px";
+        item.style.padding = "6px 8px";
+        item.style.background = "#F9FAFB";
+
+        item.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:11px;color:#6B7280;">${fechaStr}</span>
+              <span style="font-size:12px;font-weight:600;color:#111827;">${p.nombre_obra || ""}</span>
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;white-space:nowrap;">
+              ${estadoNormalizado(p)}
+            </div>
+          </div>
+          <div style="font-size:11px;color:#4B5563;margin-top:4px;">
+            ${(p.seguimiento_comentario || "").slice(0, 120) || "Sin comentario de seguimiento."}
+          </div>
+        `;
+
+        seguimientoBox.appendChild(item);
       });
     }
 
