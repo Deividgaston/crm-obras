@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Clientes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- NAV SUPERIOR -->
+  <div class="topnav">
+    <div class="logo">CRM 2N</div>
+
+    <div class="nav-tabs">
+      <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
+      <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+      <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
+      <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
+      <div class="nav-item active" onclick="location.href='clientes.html'">Clientes</div>
+      <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+      <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
+    </div>
+
+    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+  </div>
+
+  <main class="content">
+    <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Clientes</h2>
+    <div style="font-size:12px;color:#5A6872;margin-bottom:10px;">
+      Mapa de promotoras, arquitecturas, ingenierías, fondos, integradores, etc. vinculados a tus obras.
+    </div>
+
+    <!-- FILTROS Y ACCIONES LISTA CLIENTES -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+      <select id="fTipoCliente" class="select-input" style="max-width:180px;">
+        <option value="Todos">Tipo: todos</option>
+        <option value="Promotora">Promotora</option>
+        <option value="Arquitectura">Arquitectura</option>
+        <option value="Ingeniería">Ingeniería</option>
+        <option value="Fondo / SOCIMI">Fondo / SOCIMI</option>
+        <option value="Integrador / Instalador">Integrador / Instalador</option>
+        <option value="Property / Gestor">Property / Gestor</option>
+        <option value="Otro">Otro</option>
+      </select>
+      <select id="fSegmentoCliente" class="select-input" style="max-width:200px;">
+        <option value="Todos">Segmento: todos</option>
+        <option value="Residencial">Residencial</option>
+        <option value="Terciario">Terciario</option>
+        <option value="Seguridad / CCTV">Seguridad / CCTV</option>
+        <option value="Telecom / IT">Telecom / IT</option>
+        <option value="Mixto">Mixto</option>
+      </select>
+      <input id="fTextoCliente" class="search-input" style="max-width:240px;" placeholder="Buscar por nombre / ciudad..." />
+
+      <div style="flex:1;"></div>
+
+      <button id="btnNuevoCliente" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
+        + Nuevo cliente (simple)
+      </button>
+    </div>
+
+    <!-- RESUMEN / GRAFICO -->
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-bottom:12px;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:12px;font-weight:600;color:#111827;">Clientes y obras vinculadas</div>
+          <div style="font-size:10px;color:#6B7280;">
+            Cada obra puede contar varias veces (promotora, arquitectura, ingeniería, etc.).
+          </div>
+        </div>
+        <div id="clientesTableWrapper"></div>
+        <div id="clientesEmpty" class="empty-state" style="display:none;">
+          No hay clientes con los filtros seleccionados.
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:12px;font-weight:600;color:#111827;">TOP clientes por nº de obras</div>
+          <div style="font-size:10px;color:#6B7280;">Incluye repeticiones por rol (promotora, arquitectura, etc.).</div>
+        </div>
+        <div id="graficoClientes" style="font-size:11px;color:#4B5563;"></div>
+      </div>
+    </div>
+
+    <!-- BLOQUE SCOUTING CLIENTES -->
+    <div class="card" style="margin-top:4px;">
+      <div style="display:flex;justify-content:space-between;align-items-center;margin-bottom:8px;">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#111827;display:flex;align-items:center;gap:6px;">
+            <span>🛰️ Scouting · Buscar clientes</span>
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;margin-top:2px;">
+            Genera un <b>prompt de investigador</b> para localizar promotoras, arquitecturas, ingenierías,
+            fondos, integradores, etc. con datos completos y enfoque 2N.
+          </div>
+        </div>
+        <button id="btnCopiarPromptClientes" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
+          Copiar prompt
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-bottom:10px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="form-group">
+            <label style="font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">📍 Zonas objetivo</label>
+            <input id="cliZonas" placeholder="Ej: Madrid, Málaga, Barcelona, Lisboa" />
+            <div style="font-size:10px;color:#6B7280;margin-top:2px;">
+              Provincias, áreas o países donde quieres centrarse (España, Portugal, etc.).
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">🏢 Tipo de cliente</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10.5px;">
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="promotoras" /> Promotoras</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="arquitecturas" /> Arquitecturas</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="ingenierias" /> Ingenierías</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="constructores" /> Constructoras</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="fondos" /> Fondos / SOCIMIs</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="property" /> Property / Gestores</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-tipo" value="integradores" /> Integradores / instaladores</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">🏗️ Segmento principal</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10.5px;">
+              <label class="chip"><input type="checkbox" class="chk-cli-seg" value="Residencial" /> Residencial</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-seg" value="Terciario" /> Terciario</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-seg" value="Seguridad / CCTV" /> Seguridad</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-seg" value="Telecom / IT" /> Telecom / IT</label>
+              <label class="chip"><input type="checkbox" class="chk-cli-seg" value="Mixto" /> Mixto</label>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="form-group">
+            <label style="font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">💶 Perfil de proyecto / ticket</label>
+            <input id="cliTicket" placeholder="Ej: clientes activos en proyectos &gt; 3M€" />
+            <div style="font-size:10px;color:#6B7280;margin-top:2px;">
+              Cómo deben ser sus obras típicas: volumen, nº de viviendas, tipo de activo, etc.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">🔍 Notas adicionales</label>
+            <textarea id="cliNotas" rows="4"
+              placeholder="Ej: players con foco en BTR, co-living, hoteles urbanos, oficinas prime, integración domótica, etc."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <textarea id="promptClientes" rows="14"
+        style="width:100%;border-radius:10px;border:1px solid #D1D5DB;padding:8px 10px;font-size:11.5px;font-family:Menlo,Consolas,monospace;"></textarea>
+    </div>
+  </main>
+
+  <!-- DIALOGO NUEVO CLIENTE SIMPLE -->
+  <dialog id="clienteDialog">
+    <div class="modal-header">Nuevo cliente rápido</div>
+    <form id="clienteForm" method="dialog">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="cliNombre">Nombre</label>
+          <input id="cliNombre" required />
+        </div>
+        <div class="form-group">
+          <label for="cliTipo">Tipo</label>
+          <select id="cliTipo">
+            <option>Promotora</option>
+            <option>Arquitectura</option>
+            <option>Ingeniería</option>
+            <option>Fondo / SOCIMI</option>
+            <option>Integrador / Instalador</option>
+            <option>Property / Gestor</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cliSegmento">Segmento</label>
+          <select id="cliSegmento">
+            <option>Residencial</option>
+            <option>Terciario</option>
+            <option>Seguridad / CCTV</option>
+            <option>Telecom / IT</option>
+            <option>Mixto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cliCiudad">Ciudad</label>
+          <input id="cliCiudad" />
+        </div>
+        <div class="form-group">
+          <label for="cliProvincia">Provincia</label>
+          <input id="cliProvincia" />
+        </div>
+        <div class="form-group">
+          <label for="cliTelefono">Teléfono</label>
+          <input id="cliTelefono" />
+        </div>
+        <div class="form-group">
+          <label for="cliWeb">Web</label>
+          <input id="cliWeb" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="window.closeClienteDialog()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import {
+      collection,
+      getDocs,
+      addDoc
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // --------- ESTADO ---------
+    let clientes = [];
+    let proyectos = [];
+    let clientesView = [];
+
+    const fTipoCliente = document.getElementById("fTipoCliente");
+    const fSegmentoCliente = document.getElementById("fSegmentoCliente");
+    const fTextoCliente = document.getElementById("fTextoCliente");
+
+    const clientesTableWrapper = document.getElementById("clientesTableWrapper");
+    const clientesEmpty = document.getElementById("clientesEmpty");
+    const graficoClientes = document.getElementById("graficoClientes");
+
+    const clienteDialog = document.getElementById("clienteDialog");
+    const clienteForm = document.getElementById("clienteForm");
+
+    // --------- CARGA DATOS ---------
+    async function cargarClientesYProyectos() {
+      try {
+        const [cliSnap, proySnap] = await Promise.all([
+          getDocs(collection(db, "clientes")),
+          getDocs(collection(db, "proyectos"))
+        ]);
+
+        clientes = [];
+        cliSnap.forEach(d => clientes.push({ id: d.id, ...d.data() }));
+
+        proyectos = [];
+        proySnap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+
+        recalcularVinculaciones();
+        aplicarFiltrosClientes();
+      } catch (err) {
+        console.error("❌ Error cargando clientes/proyectos:", err);
+        clientesTableWrapper.innerHTML =
+          "<div style='font-size:12px;color:#B91C1C;'>Error cargando datos. Revisa la consola.</div>";
+      }
+    }
+
+    function normalizarTexto(txt) {
+      return (txt || "").toString().toLowerCase().trim();
+    }
+
+    function contarObrasParaCliente(nombreCliente) {
+      const target = normalizarTexto(nombreCliente);
+      if (!target) return 0;
+
+      let contador = 0;
+      proyectos.forEach(p => {
+        const campos = [
+          p.cliente_principal,
+          p.promotora,
+          p.constructora,
+          p.arquitectura,
+          p.ingenieria
+        ];
+        const hayMatch = campos.some(c => normalizarTexto(c) === target);
+        if (hayMatch) contador += 1;
+      });
+      return contador;
+    }
+
+    function recalcularVinculaciones() {
+      clientesView = clientes.map(c => {
+        const numObras = contarObrasParaCliente(c.nombre || c.nombre_cliente);
+        return { ...c, num_obras: numObras };
+      });
+    }
+
+    // --------- FILTROS Y PINTADO LISTA ---------
+    function aplicarFiltrosClientes() {
+      const tipo = fTipoCliente.value;
+      const seg = fSegmentoCliente.value;
+      const texto = normalizarTexto(fTextoCliente.value);
+
+      let lista = clientesView.slice();
+
+      lista = lista.filter(c => {
+        let ok = true;
+        if (tipo !== "Todos") ok = ok && (c.tipo === tipo);
+        if (seg !== "Todos") ok = ok && (c.segmento === seg);
+
+        if (texto) {
+          const blob = [
+            c.nombre,
+            c.nombre_cliente,
+            c.ciudad,
+            c.provincia,
+            c.tipo,
+            c.segmento
+          ].join(" ").toLowerCase();
+          ok = ok && blob.includes(texto);
+        }
+        return ok;
+      });
+
+      lista.sort((a,b) => (b.num_obras || 0) - (a.num_obras || 0));
+      pintarTablaClientes(lista);
+      pintarGraficoClientes(lista);
+    }
+
+    function renderWeb(url) {
+      if (!url) return "";
+      const href = url.startsWith("http") ? url : "https://" + url;
+      return `<a href="${href}" target="_blank">🔗</a>`;
+    }
+
+    function pintarTablaClientes(lista) {
+      if (!lista.length) {
+        clientesTableWrapper.innerHTML = "";
+        clientesEmpty.style.display = "block";
+        return;
+      }
+      clientesEmpty.style.display = "none";
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Tipo</th>
+              <th>Segmento</th>
+              <th>Ciudad</th>
+              <th>Provincia</th>
+              <th>Teléfono</th>
+              <th>Web</th>
+              <th>Obras vinculadas</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      lista.forEach(c => {
+        html += `
+          <tr>
+            <td>${c.nombre || c.nombre_cliente || ""}</td>
+            <td>${c.tipo || ""}</td>
+            <td>${c.segmento || ""}</td>
+            <td>${c.ciudad || ""}</td>
+            <td>${c.provincia || ""}</td>
+            <td>${c.telefono || ""}</td>
+            <td>${renderWeb(c.web)}</td>
+            <td>${c.num_obras || 0}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      clientesTableWrapper.innerHTML = html;
+    }
+
+    function pintarGraficoClientes(lista) {
+      if (!lista.length) {
+        graficoClientes.innerHTML = "<div style='font-size:11px;color:#9CA3AF;'>Sin datos.</div>";
+        return;
+      }
+
+      const top = lista.slice(0, 8);
+      const max = Math.max(...top.map(c => c.num_obras || 0)) || 1;
+
+      let html = "<div style='display:flex;flex-direction:column;gap:6px;'>";
+      top.forEach(c => {
+        const pct = ((c.num_obras || 0) / max) * 100;
+        html += `
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:2px;">
+              <span style="max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                ${c.nombre || c.nombre_cliente || ""}
+              </span>
+              <span style="color:#4B5563;">${c.num_obras || 0} obras</span>
+            </div>
+            <div style="width:100%;background:#E5E7EB;border-radius:999px;overflow:hidden;height:8px;">
+              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#4F46E5,#22C55E);"></div>
+            </div>
+          </div>
+        `;
+      });
+      html += "</div>";
+      graficoClientes.innerHTML = html;
+    }
+
+    // --------- NUEVO CLIENTE RÁPIDO ---------
+    document.getElementById("btnNuevoCliente").addEventListener("click", () => {
+      clienteForm.reset();
+      clienteDialog.showModal();
+    });
+
+    window.closeClienteDialog = function () {
+      clienteDialog.close();
+    };
+
+    clienteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById("cliNombre").value.trim(),
+        tipo: document.getElementById("cliTipo").value,
+        segmento: document.getElementById("cliSegmento").value,
+        ciudad: document.getElementById("cliCiudad").value.trim(),
+        provincia: document.getElementById("cliProvincia").value.trim(),
+        telefono: document.getElementById("cliTelefono").value.trim(),
+        web: document.getElementById("cliWeb").value.trim(),
+        fuente: "manual"
+      };
+      try {
+        await addDoc(collection(db, "clientes"), payload);
+        clienteDialog.close();
+        await cargarClientesYProyectos();
+      } catch (err) {
+        console.error("❌ Error añadiendo cliente:", err);
+        alert("Error guardando el cliente.");
+      }
+    });
+
+    // --------- SCOUTING / PROMPT CLIENTES ---------
+    const cliZonas     = document.getElementById("cliZonas");
+    const chkCliTipo   = document.querySelectorAll(".chk-cli-tipo");
+    const chkCliSeg    = document.querySelectorAll(".chk-cli-seg");
+    const cliTicket    = document.getElementById("cliTicket");
+    const cliNotas     = document.getElementById("cliNotas");
+    const promptClientes = document.getElementById("promptClientes");
+    const btnCopiarPromptClientes = document.getElementById("btnCopiarPromptClientes");
+
+    function getCheckedValues(nodeList) {
+      return Array.from(nodeList)
+        .filter(el => el.checked)
+        .map(el => el.value);
+    }
+
+    function generarPromptClientes() {
+      const zonas = cliZonas.value.trim();
+      const tipos = getCheckedValues(chkCliTipo);
+      const segmentos = getCheckedValues(chkCliSeg);
+      const ticket = cliTicket.value.trim();
+      const notas = cliNotas.value.trim();
+
+      const partes = [];
+
+      partes.push(
+        "Actúa como un analista sénior de mercado inmobiliario y de inversión, " +
+        "especializado en identificar <clientes clave> para soluciones de control de accesos y videoportero IP de 2N " +
+        "(promotoras, arquitecturas, ingenierías, fondos, integradores, etc.)."
+      );
+      partes.push(
+        "Trabaja en MODO INVESTIGACIÓN PROFUNDA: busca en webs corporativas, notas de prensa, bases de datos profesionales, " +
+        "registros mercantiles, portales de obras, LinkedIn y noticias especializadas. " +
+        "Tu objetivo es localizar los players que mueven proyectos relevantes donde un sistema 2N encaja muy bien."
+      );
+
+      if (zonas) {
+        partes.push(
+          `Céntrate en compañías con actividad significativa en las siguientes zonas: ${zonas}. ` +
+          "Si una empresa trabaja en más zonas pero tiene presencia relevante en estas áreas, inclúyela igualmente."
+        );
+      } else {
+        partes.push(
+          "Céntrate en España y Portugal, priorizando capitales de provincia y zonas con fuerte desarrollo residencial y terciario."
+        );
+      }
+
+      if (tipos.length) {
+        partes.push(
+          `Quiero que priorices estos tipos de cliente: ${tipos.join(", ")}. ` +
+          "Si detectas otros players muy relevantes para proyectos 2N (gestoras de co-living, operadores BTR, etc.), añádelos con tipo 'Otro'."
+        );
+      } else {
+        partes.push(
+          "Incluye promotoras, arquitecturas, ingenierías, constructoras, fondos / SOCIMIs, property managers e integradores de seguridad / telecom."
+        );
+      }
+
+      if (segmentos.length) {
+        partes.push(
+          `Los segmentos de actividad que más me interesan son: ${segmentos.join(", ")}.`
+        );
+      } else {
+        partes.push(
+          "Puedes combinar residencial, terciario, hoteles, oficinas, co-living y usos mixtos siempre que haya un nivel de proyecto medio/alto."
+        );
+      }
+
+      if (ticket) {
+        partes.push(
+          `Da prioridad a empresas cuya cartera habitual de proyectos encaje con este perfil: ${ticket}. ` +
+          "Si no hay datos exactos, estima el rango de ticket por tipología de activo y tamaño de las obras."
+        );
+      }
+
+      if (notas) {
+        partes.push(`Ten en cuenta también lo siguiente al seleccionar empresas: ${notas}`);
+      }
+
+      partes.push(
+        "Muy importante: para cada empresa, evalúa el <encaje potencial con soluciones 2N> " +
+        "(nº de proyectos con accesos complejos, uso intensivo de videoportero IP, integración con domótica / PMS, etc.). " +
+        "Clasifica cada cliente con un nivel de encaje 2N: ALTO, MEDIO o BAJO y explica brevemente el motivo."
+      );
+
+      // Salida en Excel / CSV
+      partes.push("SALIDA DE DATOS (MUY IMPORTANTE):");
+      partes.push(
+        "1) Si tu entorno permite generar archivos, crea un Excel (.xlsx) llamado 'clientes_2n.xlsx' con una hoja llamada 'Clientes' " +
+        "y usa EXACTAMENTE estas columnas en este orden en la primera fila:"
+      );
+      partes.push(
+        "nombre_cliente, tipo_cliente, segmento_principal, telefono, email, persona_contacto, cargo_contacto, " +
+        "telefono_contacto, email_contacto, web, direccion, ciudad, provincia, pais, linkedin_empresa, linkedin_contacto, " +
+        "proyectos_relevantes_resumen, volumen_estimado_proyectos, encaje_2n_cliente, motivo_encaje_2n, fuente_principal"
+      );
+      partes.push(
+        "Rellena una fila por empresa y adjunta el archivo Excel como descargable en tu respuesta."
+      );
+      partes.push(
+        "2) SOLO si no puedes generar ni adjuntar un Excel, devuelve los datos como un único bloque CSV (separador ';'). " +
+        "La primera línea debe ser la cabecera con exactamente los mismos nombres de columna y en el mismo orden."
+      );
+      partes.push(
+        "En el modo CSV no añadas texto libre ni explicaciones fuera del bloque CSV. " +
+        "Devuelve únicamente el CSV (idealmente dentro de un bloque de código ```csv ... ```)."
+      );
+
+      promptClientes.value = partes.join("\n\n");
+    }
+
+    // Generar prompt inicial
+    generarPromptClientes();
+
+    cliZonas.addEventListener("input", generarPromptClientes);
+    cliTicket.addEventListener("input", generarPromptClientes);
+    cliNotas.addEventListener("input", generarPromptClientes);
+    document.querySelectorAll(".chk-cli-tipo,.chk-cli-seg").forEach(chk => {
+      chk.addEventListener("change", generarPromptClientes);
+    });
+
+    btnCopiarPromptClientes.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(promptClientes.value || "");
+        btnCopiarPromptClientes.textContent = "Copiado ✔";
+        setTimeout(() => (btnCopiarPromptClientes.textContent = "Copiar prompt"), 1200);
+      } catch {
+        alert("No se ha podido copiar al portapapeles.");
+      }
+    });
+
+    // Filtros lista clientes
+    fTipoCliente.addEventListener("change", aplicarFiltrosClientes);
+    fSegmentoCliente.addEventListener("change", aplicarFiltrosClientes);
+    fTextoCliente.addEventListener("input", aplicarFiltrosClientes);
+
+    // Carga inicial
+    cargarClientesYProyectos();
+  </script>
+</body>
+</html>
