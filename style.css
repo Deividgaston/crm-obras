@@ -1,23 +1,22 @@
 /* =====================================================
-   BASE GENERAL (Forzar modo claro tipo Salesforce)
+   BASE GENERAL (modo claro tipo Salesforce)
    ===================================================== */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-    system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
   background: #f4f6fb;
   color: #1e2d3d;
   color-scheme: light;
 }
 
-/* Para evitar que el modo oscuro del navegador se meta
-   en los componentes (tablas, inputs, etc.) */
+/* Evitar interferencias del modo oscuro del navegador */
 * {
   background-color: transparent;
 }
 
-/* Enlaces */
 a {
   color: #0176d3;
   text-decoration: none;
@@ -36,7 +35,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 24px;
+  padding: 6px 20px;
   background: linear-gradient(90deg, #0176d3, #014486);
   color: #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -44,71 +43,83 @@ a:hover {
 
 .crm-logo {
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   letter-spacing: 0.03em;
 }
 
 .crm-nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .crm-nav button {
   border: none;
   outline: none;
-  padding: 6px 14px;
+  padding: 4px 11px;
   border-radius: 16px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
   cursor: pointer;
   transition: background 0.18s ease, transform 0.05s ease;
 }
 
 .crm-nav button:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.26);
 }
 
 .crm-nav button:active {
   transform: scale(0.97);
 }
 
+.crm-nav-active {
+  background: #ffffff !important;
+  color: #014486 !important;
+}
+
 /* =====================================================
    LAYOUT GENERAL
    ===================================================== */
 #app {
-  padding: 16px 24px 32px;
+  padding: 14px 22px 26px;
   max-width: 1280px;
   margin: 0 auto;
 }
 
-/* Títulos de página */
 .crm-page-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .crm-page-subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: #5f6a7a;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 /* =====================================================
-   CARDS & GRID SALESFORCE
+   GRID / CARDS
    ===================================================== */
 .crm-row {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
-.crm-col-3 { grid-column: span 3; }
-.crm-col-4 { grid-column: span 4; }
-.crm-col-6 { grid-column: span 6; }
-.crm-col-12 { grid-column: span 12; }
+.crm-col-3 {
+  grid-column: span 3;
+}
+.crm-col-4 {
+  grid-column: span 4;
+}
+.crm-col-6 {
+  grid-column: span 6;
+}
+.crm-col-12 {
+  grid-column: span 12;
+}
 
 @media (max-width: 900px) {
   .crm-col-3,
@@ -119,48 +130,70 @@ a:hover {
   }
 }
 
-/* Card base */
 .crm-card {
   background: #ffffff;
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   box-shadow: 0 1px 3px rgba(3, 45, 96, 0.15);
   border: 1px solid #dde3f0;
 }
 
-/* Card header */
 .crm-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .crm-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .crm-tag {
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 10px;
+  padding: 2px 7px;
   border-radius: 999px;
   background: #e3f3ff;
   color: #0176d3;
 }
 
+/* Tarjetas de acción pequeñas */
+.crm-card--action {
+  margin-bottom: 6px;
+}
+.crm-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+.crm-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #032d60;
+}
+.crm-card__body {
+  font-size: 11px;
+  color: #4b5563;
+}
+.crm-card__date {
+  font-size: 11px;
+  color: #6b7280;
+}
+
 /* =====================================================
-   BOTONES SECUNDARIOS
+   BOTONES
    ===================================================== */
 .crm-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   border-radius: 16px;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border: 1px solid #c6d1e6;
   background: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   color: #1f2a3c;
   transition: background 0.15s ease, border-color 0.15s ease,
@@ -176,29 +209,53 @@ a:hover {
   transform: scale(0.97);
 }
 
-/* Variante primaria */
 .crm-btn-primary {
   background: #0176d3;
   color: #ffffff;
   border-color: #0176d3;
 }
+
 .crm-btn-primary:hover {
   background: #0160ab;
   border-color: #015797;
 }
 
+/* Icon buttons pequeños */
+.crm-icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #c6d1e6;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: #4b5a73;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.crm-icon-btn:hover {
+  background: #f3f6fb;
+}
+
+.crm-icon-btn:active {
+  transform: scale(0.94);
+}
+
 /* =====================================================
-   INPUTS / FILTROS
+   CAMPOS / FORM
    ===================================================== */
 .crm-field-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 3px;
+  margin-bottom: 6px;
 }
 
 .crm-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #5f6a7a;
   text-transform: uppercase;
@@ -209,20 +266,14 @@ a:hover {
 .crm-textarea {
   width: 100%;
   font-family: inherit;
-  font-size: 13px;
-  padding: 6px 8px;
+  font-size: 12px;
+  padding: 5px 7px;
   border-radius: 4px;
   border: 1px solid #c6d1e6;
   background: #ffffff;
   color: #1e2d3d;
   outline: none;
   box-sizing: border-box;
-}
-
-/* Forzar modo claro también aquí */
-.crm-input,
-.crm-select,
-.crm-textarea {
   color-scheme: light;
 }
 
@@ -234,22 +285,24 @@ a:hover {
 }
 
 .crm-textarea {
-  min-height: 80px;
+  min-height: 70px;
   resize: vertical;
 }
 
 /* =====================================================
-   TABLA SALESFORCE (GRID SIEMPRE BLANCO)
+   TABLAS (compactas tipo Salesforce)
    ===================================================== */
+
+/* Wrapper con borde y fondo blanco garantizado */
 .crm-table-wrapper {
-  margin-top: 10px;
+  margin-top: 8px;
   overflow: auto;
   border-radius: 8px;
   border: 1px solid #dde3f0;
   background: #ffffff;
 }
 
-/* Forzar modo claro dentro de la tabla */
+/* Forzar modo claro en toda la tabla */
 table,
 thead,
 tbody,
@@ -263,7 +316,7 @@ td {
 .crm-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
   table-layout: fixed;
 }
 
@@ -273,7 +326,7 @@ td {
 
 .crm-table th,
 .crm-table td {
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-bottom: 1px solid #e0e6f2;
   text-align: left;
   white-space: nowrap;
@@ -282,7 +335,7 @@ td {
 }
 
 .crm-table th {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   color: #5f6a7a;
   font-weight: 600;
@@ -301,44 +354,113 @@ td {
   background: #e6f2ff;
 }
 
-/* Checkbox columna estrecha */
+/* Columna checkbox e iconos */
 .crm-col-checkbox {
-  width: 34px;
+  width: 30px;
   text-align: center;
 }
 
-/* Iconos de acción */
-.crm-actions {
+/* Fila de acciones en la parte superior de la tabla (iconos) */
+.crm-table-actions {
   display: flex;
-  gap: 6px;
   justify-content: flex-end;
-}
-
-.crm-icon-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid #c6d1e6;
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 13px;
-  color: #4b5a73;
-  transition: background 0.15s ease, transform 0.05s ease;
-}
-
-.crm-icon-btn:hover {
-  background: #f3f6fb;
-}
-
-.crm-icon-btn:active {
-  transform: scale(0.94);
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 /* =====================================================
-   MODAL FLOTANTE (EDICIÓN / BORRADO)
+   BADGES (fases, segmentos, importancia)
+   ===================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Fases */
+.badge-fase-detectado {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+.badge-fase-conceptual {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+.badge-fase-anteproyecto {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.badge-fase-basico {
+  background: #e0ecff;
+  color: #1d4ed8;
+  border-color: #c7ddff;
+}
+.badge-fase-ejecucion {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+.badge-fase-licitacion {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #fef08a;
+}
+.badge-fase-construccion {
+  background: #ffedd5;
+  color: #c05621;
+  border-color: #fed7aa;
+}
+.badge-fase-entregado {
+  background: #e0f2f1;
+  color: #0f766e;
+  border-color: #b2dfdb;
+}
+.badge-fase-paralizado {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.badge-fase-cancelado {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+/* Segmentos */
+.badge-segmento-lujo {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.badge-segmento-estandar {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.badge-segmento-btr {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #ddd6fe;
+}
+
+/* Importante / Hot */
+.badge-hot {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* =====================================================
+   MODAL
    ===================================================== */
 .crm-modal-backdrop {
   position: fixed;
@@ -355,7 +477,7 @@ td {
   background: #ffffff;
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  padding: 16px 18px 14px;
+  padding: 12px 14px 12px;
   border: 1px solid #dde3f0;
 }
 
@@ -363,11 +485,11 @@ td {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .crm-modal-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -380,16 +502,22 @@ td {
   color: #5f6a7a;
 }
 
-/* Footer modal */
 .crm-modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Modal más compacto en móvil */
+@media (max-width: 600px) {
+  .crm-modal {
+    padding: 10px 10px 10px;
+  }
 }
 
 /* =====================================================
-   TOAST / NOTIFICACIONES
+   TOAST
    ===================================================== */
 .crm-toast-container {
   position: fixed;
@@ -417,11 +545,20 @@ td {
 }
 
 /* =====================================================
-   RESPONSIVE
+   ESTADOS VACÍOS
+   ===================================================== */
+.crm-empty {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 4px 2px;
+}
+
+/* =====================================================
+   RESPONSIVE GENERAL
    ===================================================== */
 @media (max-width: 600px) {
   #app {
-    padding: 12px 10px 20px;
+    padding: 10px 10px 18px;
   }
 
   .crm-header {
@@ -429,11 +566,15 @@ td {
   }
 
   .crm-logo {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .crm-nav button {
-    padding: 4px 8px;
+    padding: 3px 7px;
+    font-size: 10px;
+  }
+
+  .crm-table {
     font-size: 11px;
   }
 }
