@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CRM 2N – Dashboard</title>
     <link rel="stylesheet" href="style.css" />
+    <!-- Gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -72,7 +74,10 @@
             <!-- Obras potenciales 2N -->
             <div class="panel">
                 <div class="panel-title">Obras potenciales 2N (ALTO/MEDIO)</div>
-                <div id="potenciales2NList">Cargando...</div>
+                <div style="width:100%;max-width:360px;margin:0 auto 10px auto;">
+                    <canvas id="chartEncaje2N"></canvas>
+                </div>
+                <div id="potenciales2NList"></div>
             </div>
         </div>
     </main>
@@ -91,6 +96,8 @@
         const tareasList = document.getElementById("tareasList");
         const potenciales2NList = document.getElementById("potenciales2NList");
 
+        let encajeChart = null;
+
         async function cargarDashboard() {
             try {
                 const ref = collection(db, "proyectos");
@@ -104,10 +111,19 @@
                 kpiSeguimiento.textContent = proyectos.filter(p => p.estado && p.estado !== "Detectado").length;
                 kpiGanados.textContent = proyectos.filter(p => p.estado === "Ganado").length;
 
-                // 🔴 Obras potenciales 2N (encaje ALTO/MEDIO)
+                // Encaje 2N
+                const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
+                proyectos.forEach(p => {
+                    const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
+                    if (enc === "ALTO") counts.ALTO++;
+                    else if (enc === "MEDIO") counts.MEDIO++;
+                    else if (enc === "BAJO") counts.BAJO++;
+                    else counts.SIN++;
+                });
+
                 const potenciales2N = proyectos.filter(p => {
-                    const encaje = (p.encaje_2n || "").toString().toUpperCase();
-                    return encaje === "ALTO" || encaje === "MEDIO";
+                    const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
+                    return enc === "ALTO" || enc === "MEDIO";
                 });
 
                 kpiPotenciales2N.textContent = potenciales2N.length;
@@ -140,7 +156,52 @@
                     `).join("")
                     : "<div class='empty-state'>No hay tareas pendientes.</div>";
 
-                // Lista de obras potenciales 2N
+                // Gráfico Encaje 2N
+                const ctx = document.getElementById("chartEncaje2N");
+                if (ctx) {
+                    if (encajeChart) encajeChart.destroy();
+                    encajeChart = new Chart(ctx, {
+                        type: "doughnut",
+                        data: {
+                            labels: ["ALTO", "MEDIO", "BAJO", "Sin dato"],
+                            datasets: [{
+                                data: [
+                                    counts.ALTO,
+                                    counts.MEDIO,
+                                    counts.BAJO,
+                                    counts.SIN
+                                ],
+                                backgroundColor: [
+                                    "#0EA5E9",
+                                    "#22C55E",
+                                    "#F97316",
+                                    "#E5E7EB"
+                                ]
+                            }]
+                        },
+                        options: {
+                            cutout: "60%",
+                            plugins: {
+                                legend: {
+                                    position: "bottom",
+                                    labels: { boxWidth: 14, font: { size: 11 } }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label(ctx) {
+                                            const total = ctx.dataset.data.reduce((a,b)=>a+b,0) || 1;
+                                            const value = ctx.parsed;
+                                            const pct = Math.round(value * 100 / total);
+                                            return `${ctx.label}: ${value} (${pct}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Mini-lista top obras potenciales 2N
                 const ordenados2N = potenciales2N
                     .sort((a, b) => {
                         const rank = v => {
@@ -152,7 +213,7 @@
                         };
                         return rank(a) - rank(b);
                     })
-                    .slice(0, 20); // top 20
+                    .slice(0, 8); // top 8
 
                 potenciales2NList.innerHTML = ordenados2N.length
                     ? ordenados2N.map(p => {
@@ -160,14 +221,11 @@
                         const motivo = p.motivo_encaje_2n || "";
                         const ciudad = p.ciudad || "";
                         const tipo = p.tipo || "";
-                        const pot = p.potencial_eur
-                            ? Number(p.potencial_eur).toLocaleString("es-ES")
-                            : "–";
                         return `
                             <div class="follow-item">
                                 <b>${p.nombre_obra || "(sin nombre)"}</b><br>
                                 <span style="font-size:11px;color:#6B7280;">
-                                    ${ciudad} · ${tipo} · Potencial: ${pot} €
+                                    ${ciudad} · ${tipo}
                                 </span><br>
                                 <span style="font-size:11px;font-weight:600;">
                                     Encaje 2N: ${encaje || "N/D"}
