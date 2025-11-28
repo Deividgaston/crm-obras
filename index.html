@@ -24,52 +24,63 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             color: #1A1A1A;
         }
 
-        .layout { display: flex; min-height: 100vh; }
-
-        /* Sidebar igual que proyectos.html */
-        .sidebar {
-            width: 230px;
-            background: #111827;
-            color: #E5E7EB;
-            padding: 20px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .sidebar-logo { font-weight: 700; font-size: 18px; }
-        .sidebar-sub { font-size: 12px; opacity: 0.8; }
-        .nav-section-title {
-            font-size: 11px; text-transform: uppercase;
-            letter-spacing: 0.08em; opacity: 0.6;
-            margin: 12px 0 4px;
-        }
-        .nav-item {
-            padding: 8px 10px; border-radius: 10px;
-            text-decoration: none; color: #E5E7EB;
-            opacity: 0.9; cursor: pointer; margin-bottom: 4px;
-            display: block;
-        }
-        .nav-item:hover { background: #1F2937; }
-        .nav-item.active { background: #4C6EF5; color: #FFF; }
-
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .topbar {
-            background: white;
-            height: 64px;
+        /* ===== BARRA SUPERIOR TIPO SALESFORCE ===== */
+        .topnav {
+            height: 56px;
+            background: #FFFFFF;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            padding: 0 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            gap: 20px;
         }
 
-        .topbar-title { font-size: 18px; font-weight: 600; }
-        .content { padding: 24px; }
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #4C6EF5;
+            margin-right: 12px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .nav-item {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #333;
+            transition: 0.15s;
+        }
+
+        .nav-item:hover {
+            background: #F1F3F5;
+        }
+
+        .nav-item.active {
+            color: #4C6EF5;
+            font-weight: 600;
+            border-bottom: 3px solid #4C6EF5;
+            padding-bottom: 5px;
+        }
+
+        .search-box {
+            background: #F1F3F5;
+            border-radius: 6px;
+            padding: 6px 12px;
+            width: 220px;
+            border: 1px solid #E1E3E5;
+            outline: none;
+            font-size: 13px;
+        }
+
+        .content {
+            padding: 24px;
+        }
 
         /* Tarjetas resumen */
         .cards-grid {
@@ -93,7 +104,6 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         }
         .card-value { font-size: 22px; font-weight: 600; }
 
-        /* Columnas inferiores */
         .columns {
             margin-top: 32px;
             display: grid;
@@ -121,88 +131,78 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             margin-bottom: 8px;
             font-size: 14px;
         }
+
+        @media (max-width: 900px) {
+            .columns {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
 <body>
-<div class="layout">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div>
-            <div class="sidebar-logo">CRM 2N</div>
-            <div class="sidebar-sub">Prescripción · Proyectos</div>
+
+    <!-- NAV SUPERIOR -->
+    <div class="topnav">
+        <div class="logo">CRM 2N</div>
+
+        <div class="nav-tabs">
+            <div class="nav-item active" onclick="go('index.html')">Dashboard</div>
+            <div class="nav-item" onclick="go('proyectos.html')">Proyectos</div>
+            <div class="nav-item" onclick="go('pipeline.html')">Pipeline</div>
+            <div class="nav-item" onclick="go('clientes.html')">Clientes</div>
+            <div class="nav-item" onclick="go('tareas.html')">Tareas</div>
+            <div class="nav-item" onclick="go('reportes.html')">Reportes</div>
         </div>
 
-        <div>
-            <div class="nav-section-title">Principal</div>
-            <a href="index.html" class="nav-item active">📊 Dashboard</a>
-        </div>
-
-        <div>
-            <div class="nav-section-title">Operativa</div>
-            <a href="proyectos.html" class="nav-item">📁 Proyectos</a>
-            <a class="nav-item disabled">👥 Clientes (próx.)</a>
-        </div>
-    </aside>
-
-    <!-- MAIN -->
-    <div class="main">
-        <header class="topbar">
-            <div class="topbar-title">Dashboard general</div>
-            <div>CRM 2N · Seguimientos · Gráficos</div>
-        </header>
-
-        <main class="content">
-            <!-- TOP CARDS -->
-            <div class="cards-grid">
-                <div class="card">
-                    <div class="card-title">Proyectos totales</div>
-                    <div id="cardProyectos" class="card-value">–</div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Obras Potenciales</div>
-                    <div id="cardPotenciales" class="card-value">–</div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Tareas pendientes</div>
-                    <div id="cardTareas" class="card-value">–</div>
-                </div>
-            </div>
-
-            <!-- PANELS -->
-            <div class="columns">
-
-                <!-- Panel de Tareas -->
-                <div class="panel">
-                    <div class="panel-title">Tareas pendientes</div>
-                    <div id="listaTareas"></div>
-                </div>
-
-                <!-- Panel de Seguimientos -->
-                <div class="panel">
-                    <div class="panel-title">Acciones de seguimiento</div>
-                    <div id="listaSeguimientos"></div>
-                </div>
-            </div>
-
-            <!-- GRÁFICOS -->
-            <div class="columns" style="margin-top: 30px;">
-                <div class="panel">
-                    <div class="panel-title">Tipos de Obra</div>
-                    <canvas id="graficoTipos"></canvas>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title">Obras Potenciales</div>
-                    <canvas id="graficoPotenciales"></canvas>
-                </div>
-            </div>
-
-        </main>
+        <input type="text" class="search-box" placeholder="Buscar..." />
     </div>
-</div>
+
+    <main class="content">
+        <!-- TOP CARDS -->
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-title">Proyectos totales</div>
+                <div id="cardProyectos" class="card-value">–</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Obras Potenciales</div>
+                <div id="cardPotenciales" class="card-value">–</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Tareas pendientes</div>
+                <div id="cardTareas" class="card-value">–</div>
+            </div>
+        </div>
+
+        <!-- TAREAS / SEGUIMIENTOS -->
+        <div class="columns">
+            <div class="panel">
+                <div class="panel-title">Tareas pendientes</div>
+                <div id="listaTareas"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Acciones de seguimiento</div>
+                <div id="listaSeguimientos"></div>
+            </div>
+        </div>
+
+        <!-- GRÁFICOS -->
+        <div class="columns" style="margin-top: 30px;">
+            <div class="panel">
+                <div class="panel-title">Tipos de Obra</div>
+                <canvas id="graficoTipos"></canvas>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Obras Potenciales</div>
+                <canvas id="graficoPotenciales"></canvas>
+            </div>
+        </div>
+    </main>
 
 <script type="module">
     import { db } from "./firebaseConfig.js";
@@ -211,7 +211,6 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         getDocs
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Containers
     const cardProyectos = document.getElementById("cardProyectos");
     const cardPotenciales = document.getElementById("cardPotenciales");
     const cardTareas = document.getElementById("cardTareas");
@@ -219,7 +218,6 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
     const listaTareas = document.getElementById("listaTareas");
     const listaSeguimientos = document.getElementById("listaSeguimientos");
 
-    // ======== LECTURA ÚNICA ========
     async function cargarDashboard() {
         const ref = collection(db, "proyectos");
         const snap = await getDocs(ref);
@@ -234,65 +232,57 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             const p = doc.data();
             proyectos.push(p);
 
-            // Tareas (del proyecto)
             if (p.tareas) tareas.push(...p.tareas);
-
-            // Acciones de seguimiento
             if (p.seguimientos) seguimientos.push(...p.seguimientos);
 
-            // Gráfico Tipos de Obra
             if (p.tipoObra) {
                 tiposObra[p.tipoObra] = (tiposObra[p.tipoObra] || 0) + 1;
             }
 
-            // Obras Potenciales (condición original que usabas)
             if (p.potencial === true) {
                 obrasPotenciales++;
             }
         });
 
-        // Totales
         cardProyectos.textContent = proyectos.length;
         cardPotenciales.textContent = obrasPotenciales;
         cardTareas.textContent = tareas.length;
 
-        // Pintar tareas
         listaTareas.innerHTML = tareas.length
             ? tareas.map(t => `<div class="task-item">${t}</div>`).join("")
             : `<div style="opacity:0.6;">No hay tareas pendientes</div>`;
 
-        // Pintar seguimientos
         listaSeguimientos.innerHTML = seguimientos.length
             ? seguimientos.map(s => `<div class="follow-item">${s}</div>`).join("")
             : `<div style="opacity:0.6;">Sin seguimientos pendientes</div>`;
 
-        // GRÁFICO TIPOS DE OBRA
         new Chart(document.getElementById("graficoTipos"), {
             type: "doughnut",
             data: {
                 labels: Object.keys(tiposObra),
                 datasets: [{
-                    data: Object.values(tiposObra),
-                    backgroundColor: ["#4C6EF5","#2F9E44","#E03131","#FD7E14","#15AABF","#845EF7"]
+                    data: Object.values(tiposObra)
                 }]
             }
         });
 
-        // GRÁFICO OBRAS POTENCIALES
         new Chart(document.getElementById("graficoPotenciales"), {
             type: "bar",
             data: {
                 labels: ["Obras Potenciales"],
                 datasets: [{
                     label: "Total",
-                    data: [obrasPotenciales],
-                    backgroundColor: "#4C6EF5"
+                    data: [obrasPotenciales]
                 }]
             }
         });
     }
 
     cargarDashboard();
+
+    window.go = function(ruta) {
+        window.location.href = ruta;
+    };
 </script>
 
 </body>
