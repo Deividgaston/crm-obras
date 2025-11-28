@@ -73,18 +73,20 @@
 
             <!-- Obras potenciales 2N -->
             <div class="panel">
-                <div class="panel-title">Obras potenciales 2N (ALTO/MEDIO)</div>
-                <div style="width:100%;max-width:360px;margin:0 auto 10px auto;">
+                <div class="panel-title">Obras potenciales 2N (ALTO / MEDIO / BAJO)</div>
+                <div style="width:100%;max-width:360px;margin:0 auto 4px auto;">
                     <canvas id="chartEncaje2N"></canvas>
                 </div>
-                <div id="potenciales2NList"></div>
+                <div id="resumenEncaje2N" style="font-size:11px;color:#6B7280;text-align:center;margin-top:4px;">
+                    <!-- aquí se pinta el resumen porcentual -->
+                </div>
             </div>
         </div>
     </main>
 
     <script type="module">
         import { db } from "./firebase.js";
-        import { collection, getDocs } 
+        import { collection, getDocs }
             from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const kpiProyectos = document.getElementById("kpiProyectos");
@@ -94,7 +96,7 @@
 
         const seguimientosList = document.getElementById("seguimientosList");
         const tareasList = document.getElementById("tareasList");
-        const potenciales2NList = document.getElementById("potenciales2NList");
+        const resumenEncaje2N = document.getElementById("resumenEncaje2N");
 
         let encajeChart = null;
 
@@ -108,8 +110,10 @@
 
                 // KPIs básicos
                 kpiProyectos.textContent = proyectos.length;
-                kpiSeguimiento.textContent = proyectos.filter(p => p.estado && p.estado !== "Detectado").length;
-                kpiGanados.textContent = proyectos.filter(p => p.estado === "Ganado").length;
+                kpiSeguimiento.textContent =
+                    proyectos.filter(p => p.estado && p.estado !== "Detectado").length;
+                kpiGanados.textContent =
+                    proyectos.filter(p => p.estado === "Ganado").length;
 
                 // Encaje 2N
                 const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
@@ -125,7 +129,6 @@
                     const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
                     return enc === "ALTO" || enc === "MEDIO";
                 });
-
                 kpiPotenciales2N.textContent = potenciales2N.length;
 
                 // Seguimientos (solo con fecha de seguimiento)
@@ -156,26 +159,38 @@
                     `).join("")
                     : "<div class='empty-state'>No hay tareas pendientes.</div>";
 
-                // Gráfico Encaje 2N
+                // ===== Gráfico Encaje 2N con porcentajes =====
+                const totalEncaje = counts.ALTO + counts.MEDIO + counts.BAJO + counts.SIN || 1;
+
+                const valores = [
+                    counts.ALTO,
+                    counts.MEDIO,
+                    counts.BAJO,
+                    counts.SIN
+                ];
+
+                const etiquetasBase = ["ALTO", "MEDIO", "BAJO", "Sin dato"];
+
+                const etiquetasConPct = etiquetasBase.map((label, idx) => {
+                    const value = valores[idx];
+                    const pct = Math.round(value * 100 / totalEncaje);
+                    return `${label} (${pct}%)`;
+                });
+
                 const ctx = document.getElementById("chartEncaje2N");
                 if (ctx) {
                     if (encajeChart) encajeChart.destroy();
                     encajeChart = new Chart(ctx, {
                         type: "doughnut",
                         data: {
-                            labels: ["ALTO", "MEDIO", "BAJO", "Sin dato"],
+                            labels: etiquetasConPct,
                             datasets: [{
-                                data: [
-                                    counts.ALTO,
-                                    counts.MEDIO,
-                                    counts.BAJO,
-                                    counts.SIN
-                                ],
+                                data: valores,
                                 backgroundColor: [
-                                    "#0EA5E9",
-                                    "#22C55E",
-                                    "#F97316",
-                                    "#E5E7EB"
+                                    "#0EA5E9", // ALTO
+                                    "#22C55E", // MEDIO
+                                    "#F97316", // BAJO
+                                    "#E5E7EB"  // SIN
                                 ]
                             }]
                         },
@@ -189,10 +204,11 @@
                                 tooltip: {
                                     callbacks: {
                                         label(ctx) {
-                                            const total = ctx.dataset.data.reduce((a,b)=>a+b,0) || 1;
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1;
                                             const value = ctx.parsed;
                                             const pct = Math.round(value * 100 / total);
-                                            return `${ctx.label}: ${value} (${pct}%)`;
+                                            const label = etiquetasBase[ctx.dataIndex];
+                                            return `${label}: ${value} (${pct}%)`;
                                         }
                                     }
                                 }
@@ -201,47 +217,19 @@
                     });
                 }
 
-                // Mini-lista top obras potenciales 2N
-                const ordenados2N = potenciales2N
-                    .sort((a, b) => {
-                        const rank = v => {
-                            const e = (v.encaje_2n || "").toString().toUpperCase();
-                            if (e === "ALTO") return 0;
-                            if (e === "MEDIO") return 1;
-                            if (e === "BAJO") return 2;
-                            return 3;
-                        };
-                        return rank(a) - rank(b);
-                    })
-                    .slice(0, 8); // top 8
-
-                potenciales2NList.innerHTML = ordenados2N.length
-                    ? ordenados2N.map(p => {
-                        const encaje = (p.encaje_2n || "").toString().toUpperCase();
-                        const motivo = p.motivo_encaje_2n || "";
-                        const ciudad = p.ciudad || "";
-                        const tipo = p.tipo || "";
-                        return `
-                            <div class="follow-item">
-                                <b>${p.nombre_obra || "(sin nombre)"}</b><br>
-                                <span style="font-size:11px;color:#6B7280;">
-                                    ${ciudad} · ${tipo}
-                                </span><br>
-                                <span style="font-size:11px;font-weight:600;">
-                                    Encaje 2N: ${encaje || "N/D"}
-                                </span><br>
-                                <span style="font-size:11px;color:#4B5563;">
-                                    ${motivo}
-                                </span>
-                            </div>
-                        `;
-                    }).join("")
-                    : "<div class='empty-state'>No hay obras marcadas como potencial 2N (ALTO/MEDIO).</div>";
+                // Resumen porcentual bajo el gráfico (sin lista de proyectos)
+                const pct = v => Math.round((v * 100) / totalEncaje);
+                resumenEncaje2N.innerHTML = `
+                    ALTO: <b>${counts.ALTO}</b> (${pct(counts.ALTO)}%) ·
+                    MEDIO: <b>${counts.MEDIO}</b> (${pct(counts.MEDIO)}%) ·
+                    BAJO: <b>${counts.BAJO}</b> (${pct(counts.BAJO)}%) ·
+                    Sin dato: <b>${counts.SIN}</b> (${pct(counts.SIN)}%)
+                `;
 
             } catch (err) {
                 seguimientosList.innerHTML = "Error cargando Firestore";
                 tareasList.innerHTML = "Error cargando Firestore";
-                potenciales2NList.innerHTML = "Error cargando Firestore";
+                resumenEncaje2N.innerHTML = "Error cargando Firestore";
                 console.error(err);
             }
         }
