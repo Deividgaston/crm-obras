@@ -9,9 +9,12 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM 2N – Proyectos</title>
+    <title>CRM 2N – Dashboard</title>
 
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Chart.js para los gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body {
@@ -21,7 +24,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             color: #1A1A1A;
         }
 
-        /* NAV SUPERIOR */
+        /* ===== NAV SUPERIOR ===== */
         .topnav {
             height: 56px;
             background: #FFFFFF;
@@ -52,6 +55,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             cursor: pointer;
             color: #333;
             transition: 0.15s;
+            text-decoration: none;
         }
 
         .nav-item:hover {
@@ -79,258 +83,66 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             padding: 24px;
         }
 
-        h2 {
-            margin-top: 0;
-            margin-bottom: 4px;
-            font-size: 24px;
-            color: #16325C;
-        }
-
-        .subtitle {
-            font-size: 12px;
-            color: #5A6872;
-            margin-bottom: 14px;
-        }
-
-        /* FILTROS SUPERIORES */
-        .filters-row {
+        /* Tarjetas resumen */
+        .cards-grid {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
         }
 
-        .select-input, .search-input {
-            padding: 8px 10px;
-            border-radius: 999px;
-            border: 1px solid #D1D5DB;
-            font-size: 13px;
-            outline: none;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .select-input:focus, .search-input:focus {
-            border-color: #4C6EF5;
-        }
-
-        @media (max-width: 1100px) {
-            .filters-row {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        /* KPIs */
-        .kpi-row {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            margin: 6px 0 10px;
-        }
-
-        .kpi-card {
+        .card {
             background: white;
-            border-radius: 12px;
-            padding: 10px 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
         }
 
-        .kpi-label {
-            font-size: 11px;
-            color: #5A6872;
-            margin-bottom: 2px;
+        .card-title {
+            font-size: 13px;
+            opacity: 0.6;
             text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .card-value { font-size: 22px; font-weight: 600; }
+
+        .card-link {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #4C6EF5;
+            cursor: pointer;
+            text-decoration: none;
         }
 
-        .kpi-value {
-            font-size: 22px;
-            font-weight: 700;
-            color: #16325C;
+        .columns {
+            margin-top: 32px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        .task-item, .follow-item {
+            background: #F1F3F5;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
 
         @media (max-width: 900px) {
-            .kpi-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* TOOLBAR TABLA */
-        .toolbar-table {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin: 8px 0;
-            align-items: center;
-        }
-
-        .btn-icon {
-            background: white;
-            border-radius: 999px;
-            border: 1px solid #D1D5DB;
-            padding: 6px 10px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .btn-icon:hover {
-            background: #F1F3F5;
-        }
-
-        .btn-primary {
-            background: #4C6EF5;
-            color: #FFFFFF;
-            border: none;
-            border-radius: 999px;
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-primary:hover {
-            background: #3B5BDB;
-        }
-
-        /* TABLA */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-        }
-
-        thead {
-            background: #E5E7EB;
-        }
-
-        th, td {
-            padding: 8px 10px;
-            text-align: left;
-            border-bottom: 1px solid #E5E7EB;
-        }
-
-        th {
-            font-weight: 600;
-            color: #111827;
-        }
-
-        tbody tr:nth-child(even) {
-            background: #F9FAFB;
-        }
-
-        tbody tr:hover {
-            background: #EEF2FF;
-        }
-
-        .badge {
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 600;
-            color: white;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-
-        .badge.detectado { background: #6B7280; }
-        .badge.prescripcion { background: #FD7E14; }
-        .badge.oferta { background: #4C6EF5; }
-        .badge.negociacion { background: #845EF7; }
-        .badge.ganado { background: #2F9E44; }
-        .badge.perdido { background: #E03131; }
-        .badge.paralizado { background: #ADB5BD; }
-
-        .empty-state {
-            font-size: 14px;
-            opacity: 0.7;
-            margin-top: 18px;
-        }
-
-        /* MODAL EDICIÓN */
-        dialog {
-            border: none;
-            border-radius: 14px;
-            max-width: 720px;
-            width: 100%;
-            padding: 18px 20px;
-            box-shadow: 0 10px 40px rgba(15,23,42,0.35);
-        }
-
-        dialog::backdrop {
-            background: rgba(15,23,42,0.45);
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0,1fr));
-            gap: 12px 14px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            color: #4B5563;
-            margin-bottom: 4px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 8px;
-            border: 1px solid #D1D5DB;
-            padding: 7px 9px;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: #4C6EF5;
-        }
-
-        .modal-header {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 14px;
-        }
-
-        .btn-secondary {
-            background: #E5E7EB;
-            border-radius: 999px;
-            border: none;
-            padding: 8px 14px;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        .btn-secondary:hover {
-            background: #D1D5DB;
-        }
-
-        @media (max-width: 800px) {
-            dialog {
-                max-width: 95%;
-                padding: 14px;
-            }
-            .form-grid {
+            .columns {
                 grid-template-columns: 1fr;
             }
         }
@@ -344,542 +156,141 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         <div class="logo">CRM 2N</div>
 
         <div class="nav-tabs">
-            <div class="nav-item" onclick="go('index.html')">Dashboard</div>
-            <div class="nav-item active" onclick="go('proyectos.html')">Proyectos</div>
-            <div class="nav-item" onclick="go('pipeline.html')">Pipeline</div>
-            <div class="nav-item" onclick="go('clientes.html')">Clientes</div>
-            <div class="nav-item" onclick="go('tareas.html')">Tareas</div>
-            <div class="nav-item" onclick="go('reportes.html')">Reportes</div>
+            <a href="index.html" class="nav-item active">Dashboard</a>
+            <a href="proyectos.html" class="nav-item">Proyectos</a>
+            <a href="pipeline.html" class="nav-item">Pipeline</a>
+            <a href="clientes.html" class="nav-item">Clientes</a>
+            <a href="tareas.html" class="nav-item">Tareas</a>
+            <a href="reportes.html" class="nav-item">Reportes</a>
         </div>
 
         <input type="text" class="search-box" placeholder="Buscar..." />
     </div>
 
     <main class="content">
-        <h2>Proyectos</h2>
-        <div class="subtitle">
-            Vista general en tabla · Filtra, selecciona, edita o borra
-        </div>
-
-        <!-- FILTROS SUPERIORES -->
-        <div class="filters-row">
-            <select id="fCiudad" class="select-input">
-                <option value="Todas">Ciudad: todas</option>
-            </select>
-
-            <select id="fEstado" class="select-input">
-                <option value="Todos">Estado: todos</option>
-            </select>
-
-            <select id="fTipo" class="select-input">
-                <option value="Todos">Tipo: todos</option>
-            </select>
-
-            <select id="fPrioridad" class="select-input">
-                <option value="Todas">Prioridad: todas</option>
-            </select>
-
-            <input id="fTexto" class="search-input" placeholder="Buscar texto libre..." />
-        </div>
-
-        <!-- KPIs -->
-        <div class="kpi-row">
-            <div class="kpi-card">
-                <div class="kpi-label">Total</div>
-                <div id="kpiTotal" class="kpi-value">–</div>
+        <!-- TOP CARDS -->
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-title">Proyectos totales</div>
+                <div id="cardProyectos" class="card-value">–</div>
+                <a href="proyectos.html" class="card-link">Ver proyectos →</a>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Seguimiento</div>
-                <div id="kpiSeguimiento" class="kpi-value">–</div>
+
+            <div class="card">
+                <div class="card-title">Obras Potenciales</div>
+                <div id="cardPotenciales" class="card-value">–</div>
+                <a href="pipeline.html" class="card-link">Ver pipeline →</a>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Ganados</div>
-                <div id="kpiGanados" class="kpi-value">–</div>
+
+            <div class="card">
+                <div class="card-title">Tareas pendientes</div>
+                <div id="cardTareas" class="card-value">–</div>
+                <a href="tareas.html" class="card-link">Ver tareas →</a>
             </div>
         </div>
 
-        <!-- TOOLBAR TABLA -->
-        <div class="toolbar-table">
-            <button class="btn-primary" onclick="openNewProject()">+ Nuevo proyecto</button>
-            <button class="btn-icon" onclick="onEditSelected()">✏️</button>
-            <button class="btn-icon" onclick="onDeleteSelected()">🗑️</button>
+        <!-- TAREAS / SEGUIMIENTOS -->
+        <div class="columns">
+            <div class="panel">
+                <div class="panel-title">Tareas pendientes</div>
+                <div id="listaTareas"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Acciones de seguimiento</div>
+                <div id="listaSeguimientos"></div>
+            </div>
         </div>
 
-        <!-- TABLA -->
-        <div id="tablaWrapper"></div>
-        <div id="emptyState" class="empty-state" style="display:none;">
-            No hay proyectos que coincidan con los filtros seleccionados.
+        <!-- GRÁFICOS -->
+        <div class="columns" style="margin-top: 30px;">
+            <div class="panel">
+                <div class="panel-title">Tipos de Obra</div>
+                <canvas id="graficoTipos"></canvas>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Obras Potenciales</div>
+                <canvas id="graficoPotenciales"></canvas>
+            </div>
         </div>
     </main>
-
-    <!-- MODAL EDICIÓN / ALTA -->
-    <dialog id="projectDialog">
-        <div class="modal-header" id="dialogTitle">Proyecto</div>
-        <form id="projectForm" method="dialog">
-            <input type="hidden" id="projId" />
-
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="nombre_obra">Nombre de la obra</label>
-                    <input id="nombre_obra" required />
-                </div>
-
-                <div class="form-group">
-                    <label for="cliente_principal">Cliente principal</label>
-                    <input id="cliente_principal" />
-                </div>
-
-                <div class="form-group">
-                    <label for="ciudad">Ciudad</label>
-                    <input id="ciudad" />
-                </div>
-
-                <div class="form-group">
-                    <label for="provincia">Provincia</label>
-                    <input id="provincia" />
-                </div>
-
-                <div class="form-group">
-                    <label for="estado">Estado</label>
-                    <select id="estado">
-                        <option>Detectado</option>
-                        <option>En Prescripción</option>
-                        <option>Oferta Enviada</option>
-                        <option>Negociación</option>
-                        <option>Ganado</option>
-                        <option>Perdido</option>
-                        <option>Paralizado</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="prioridad">Prioridad</label>
-                    <select id="prioridad">
-                        <option>Alta</option>
-                        <option selected>Media</option>
-                        <option>Baja</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="tipo">Tipo de proyecto</label>
-                    <select id="tipo">
-                        <option>Residencial</option>
-                        <option>Terciario</option>
-                        <option>Mixto</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="potencial_eur">Potencial (€)</label>
-                    <input id="potencial_eur" type="number" min="0" step="10000" />
-                </div>
-
-                <div class="form-group">
-                    <label for="seguimiento_fecha">Fecha seguimiento</label>
-                    <input id="seguimiento_fecha" type="date" />
-                </div>
-
-                <div class="form-group">
-                    <label for="seguimiento_comentario">Comentario seguimiento</label>
-                    <textarea id="seguimiento_comentario"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="tarea_fecha">Fecha tarea</label>
-                    <input id="tarea_fecha" type="date" />
-                </div>
-
-                <div class="form-group">
-                    <label for="tarea_comentario">Descripción tarea</label>
-                    <textarea id="tarea_comentario"></textarea>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeDialog()">Cancelar</button>
-                <button type="submit" class="btn-primary">Guardar</button>
-            </div>
-        </form>
-    </dialog>
-
-    <!-- CONFIRMACIÓN BORRADO BÁSICA -->
-    <dialog id="deleteDialog">
-        <div class="modal-header">Confirmar borrado</div>
-        <p id="deleteText"></p>
-        <div class="modal-footer">
-            <button type="button" class="btn-secondary" onclick="closeDeleteDialog()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="confirmDelete()">Borrar</button>
-        </div>
-    </dialog>
 
 <script type="module">
     import { db } from "./firebaseConfig.js";
     import {
         collection,
-        getDocs,
-        addDoc,
-        updateDoc,
-        deleteDoc,
-        doc
+        getDocs
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const ESTADOS_PIPELINE = [
-        "Detectado",
-        "En Prescripción",
-        "Oferta Enviada",
-        "Negociación",
-        "Ganado",
-        "Perdido",
-        "Paralizado"
-    ];
+    const cardProyectos = document.getElementById("cardProyectos");
+    const cardPotenciales = document.getElementById("cardPotenciales");
+    const cardTareas = document.getElementById("cardTareas");
 
-    const fCiudad = document.getElementById("fCiudad");
-    const fEstado = document.getElementById("fEstado");
-    const fTipo = document.getElementById("fTipo");
-    const fPrioridad = document.getElementById("fPrioridad");
-    const fTexto = document.getElementById("fTexto");
+    const listaTareas = document.getElementById("listaTareas");
+    const listaSeguimientos = document.getElementById("listaSeguimientos");
 
-    const kpiTotal = document.getElementById("kpiTotal");
-    const kpiSeguimiento = document.getElementById("kpiSeguimiento");
-    const kpiGanados = document.getElementById("kpiGanados");
-
-    const tablaWrapper = document.getElementById("tablaWrapper");
-    const emptyState = document.getElementById("emptyState");
-
-    const projectDialog = document.getElementById("projectDialog");
-    const deleteDialog = document.getElementById("deleteDialog");
-    const deleteText = document.getElementById("deleteText");
-
-    const projectForm = document.getElementById("projectForm");
-
-    let proyectos = [];
-    let proyectosFiltrados = [];
-    let selectedIds = [];
-    let pendingDeleteIds = [];
-
-    // ===== NAV =====
-    window.go = function(ruta) {
-        window.location.href = ruta;
-    };
-
-    // ===== CARGA INICIAL =====
-    async function cargarProyectos() {
+    async function cargarDashboard() {
         const ref = collection(db, "proyectos");
         const snap = await getDocs(ref);
 
-        proyectos = [];
-        snap.forEach(d => {
-            proyectos.push({
-                id: d.id,
-                ...d.data()
-            });
+        let proyectos = [];
+        let tareas = [];
+        let seguimientos = [];
+        let tiposObra = {};
+        let obrasPotenciales = 0;
+
+        snap.forEach(doc => {
+            const p = doc.data();
+            proyectos.push(p);
+
+            if (p.tareas) tareas.push(...p.tareas);
+            if (p.seguimientos) seguimientos.push(...p.seguimientos);
+
+            if (p.tipoObra) {
+                tiposObra[p.tipoObra] = (tiposObra[p.tipoObra] || 0) + 1;
+            }
+
+            if (p.potencial === true) {
+                obrasPotenciales++;
+            }
         });
 
-        inicializarFiltros();
-        aplicarFiltros();
-    }
+        cardProyectos.textContent = proyectos.length;
+        cardPotenciales.textContent = obrasPotenciales;
+        cardTareas.textContent = tareas.length;
 
-    function inicializarFiltros() {
-        // Ciudad
-        const ciudades = Array.from(new Set(
-            proyectos
-                .map(p => p.ciudad)
-                .filter(x => x && x.trim() !== "")
-        )).sort();
+        listaTareas.innerHTML = tareas.length
+            ? tareas.map(t => `<div class="task-item">${t}</div>`).join("")
+            : `<div style="opacity:0.6;">No hay tareas pendientes</div>`;
 
-        fCiudad.innerHTML = '<option value="Todas">Ciudad: todas</option>' +
-            ciudades.map(c => `<option value="${c}">${c}</option>`).join("");
+        listaSeguimientos.innerHTML = seguimientos.length
+            ? seguimientos.map(s => `<div class="follow-item">${s}</div>`).join("")
+            : `<div style="opacity:0.6;">Sin seguimientos pendientes</div>`;
 
-        // Estado
-        const estados = Array.from(new Set(
-            proyectos
-                .map(p => p.estado)
-                .filter(x => x && x.trim() !== "")
-        ));
-        fEstado.innerHTML = '<option value="Todos">Estado: todos</option>' +
-            estados.map(e => `<option value="${e}">${e}</option>`).join("");
-
-        // Tipo
-        const tipos = Array.from(new Set(
-            proyectos
-                .map(p => p.tipo)
-                .filter(x => x && x.trim() !== "")
-        ));
-        fTipo.innerHTML = '<option value="Todos">Tipo: todos</option>' +
-            tipos.map(t => `<option value="${t}">${t}</option>`).join("");
-
-        // Prioridad
-        const prioridades = Array.from(new Set(
-            proyectos
-                .map(p => p.prioridad)
-                .filter(x => x && x.trim() !== "")
-        ));
-        fPrioridad.innerHTML = '<option value="Todas">Prioridad: todas</option>' +
-            prioridades.map(pr => `<option value="${pr}">${pr}</option>`).join("");
-    }
-
-    function aplicarFiltros() {
-        const ciudad = fCiudad.value;
-        const estado = fEstado.value;
-        const tipo = fTipo.value;
-        const prioridad = fPrioridad.value;
-        const texto = (fTexto.value || "").toLowerCase();
-
-        proyectosFiltrados = proyectos.filter(p => {
-            let ok = true;
-
-            if (ciudad !== "Todas") {
-                ok = ok && p.ciudad === ciudad;
+        new Chart(document.getElementById("graficoTipos"), {
+            type: "doughnut",
+            data: {
+                labels: Object.keys(tiposObra),
+                datasets: [{
+                    data: Object.values(tiposObra)
+                }]
             }
-            if (estado !== "Todos") {
-                ok = ok && p.estado === estado;
-            }
-            if (tipo !== "Todos") {
-                ok = ok && p.tipo === tipo;
-            }
-            if (prioridad !== "Todas") {
-                ok = ok && p.prioridad === prioridad;
-            }
-
-            if (texto) {
-                const blob = [
-                    p.nombre_obra,
-                    p.cliente_principal,
-                    p.ciudad,
-                    p.provincia
-                ].join(" ").toLowerCase();
-                ok = ok && blob.includes(texto);
-            }
-
-            return ok;
         });
 
-        pintarKPIs();
-        pintarTabla();
-    }
-
-    function pintarKPIs() {
-        const total = proyectosFiltrados.length;
-        const seguimiento = proyectosFiltrados.filter(p => p.estado && p.estado !== "Detectado").length;
-        const ganados = proyectosFiltrados.filter(p => p.estado === "Ganado").length;
-
-        kpiTotal.textContent = total;
-        kpiSeguimiento.textContent = seguimiento;
-        kpiGanados.textContent = ganados;
-    }
-
-    function badgeClass(estado) {
-        if (!estado) return "badge detectado";
-        const e = estado.toLowerCase();
-        if (e === "detectado") return "badge detectado";
-        if (e.includes("prescripción")) return "badge prescripcion";
-        if (e.includes("oferta")) return "badge oferta";
-        if (e.includes("negociación")) return "badge negociacion";
-        if (e === "ganado") return "badge ganado";
-        if (e === "perdido") return "badge perdido";
-        if (e === "paralizado") return "badge paralizado";
-        return "badge detectado";
-    }
-
-    function pintarTabla() {
-        selectedIds = [];
-
-        if (!proyectosFiltrados.length) {
-            tablaWrapper.innerHTML = "";
-            emptyState.style.display = "block";
-            return;
-        }
-        emptyState.style.display = "none";
-
-        let html = `
-            <table>
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="selectAll"/></th>
-                        <th>Proyecto</th>
-                        <th>Cliente</th>
-                        <th>Ciudad</th>
-                        <th>Provincia</th>
-                        <th>Estado</th>
-                        <th>Prioridad</th>
-                        <th>Tipo</th>
-                        <th>Potencial (€)</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        proyectosFiltrados.forEach(p => {
-            const pot = p.potencial_eur ? Number(p.potencial_eur).toLocaleString("es-ES") : "–";
-            html += `
-                <tr data-id="${p.id}">
-                    <td><input type="checkbox" class="rowCheck"/></td>
-                    <td>${p.nombre_obra || ""}</td>
-                    <td>${p.cliente_principal || ""}</td>
-                    <td>${p.ciudad || ""}</td>
-                    <td>${p.provincia || ""}</td>
-                    <td><span class="${badgeClass(p.estado)}">${p.estado || ""}</span></td>
-                    <td>${p.prioridad || ""}</td>
-                    <td>${p.tipo || ""}</td>
-                    <td>${pot}</td>
-                </tr>
-            `;
-        });
-
-        html += `</tbody></table>`;
-        tablaWrapper.innerHTML = html;
-
-        // Listeners selección
-        const selectAll = document.getElementById("selectAll");
-        const rowChecks = Array.from(document.querySelectorAll(".rowCheck"));
-
-        selectAll.addEventListener("change", () => {
-            selectedIds = [];
-            rowChecks.forEach((chk, idx) => {
-                chk.checked = selectAll.checked;
-                if (chk.checked) {
-                    selectedIds.push(proyectosFiltrados[idx].id);
-                }
-            });
-        });
-
-        rowChecks.forEach((chk, idx) => {
-            chk.addEventListener("change", () => {
-                const id = proyectosFiltrados[idx].id;
-                if (chk.checked) {
-                    if (!selectedIds.includes(id)) selectedIds.push(id);
-                } else {
-                    selectedIds = selectedIds.filter(x => x !== id);
-                    selectAll.checked = false;
-                }
-            });
+        new Chart(document.getElementById("graficoPotenciales"), {
+            type: "bar",
+            data: {
+                labels: ["Obras Potenciales"],
+                datasets: [{
+                    label: "Total",
+                    data: [obrasPotenciales]
+                }]
+            }
         });
     }
 
-    // ========= MODAL EDICIÓN =========
-    function fillForm(p) {
-        document.getElementById("projId").value = p?.id || "";
-        document.getElementById("nombre_obra").value = p?.nombre_obra || "";
-        document.getElementById("cliente_principal").value = p?.cliente_principal || "";
-        document.getElementById("ciudad").value = p?.ciudad || "";
-        document.getElementById("provincia").value = p?.provincia || "";
-        document.getElementById("estado").value = ESTADOS_PIPELINE.includes(p?.estado) ? p.estado : "Detectado";
-        document.getElementById("prioridad").value = p?.prioridad || "Media";
-        document.getElementById("tipo").value = p?.tipo || "Residencial";
-        document.getElementById("potencial_eur").value = p?.potencial_eur || "";
-
-        document.getElementById("seguimiento_fecha").value = p?.seguimiento_fecha || "";
-        document.getElementById("seguimiento_comentario").value = p?.seguimiento_comentario || "";
-        document.getElementById("tarea_fecha").value = p?.tarea_fecha || "";
-        document.getElementById("tarea_comentario").value = p?.tarea_comentario || "";
-    }
-
-    window.openNewProject = function() {
-        document.getElementById("dialogTitle").textContent = "Alta de proyecto";
-        fillForm(null);
-        projectDialog.showModal();
-    };
-
-    window.onEditSelected = function() {
-        if (selectedIds.length === 0) {
-            alert("Selecciona una única obra para editar.");
-            return;
-        }
-        if (selectedIds.length > 1) {
-            alert("Solo puedes editar una obra a la vez.");
-            return;
-        }
-        const id = selectedIds[0];
-        const p = proyectos.find(x => x.id === id);
-        if (!p) return;
-        document.getElementById("dialogTitle").textContent = "Edición de proyecto";
-        fillForm(p);
-        projectDialog.showModal();
-    };
-
-    window.closeDialog = function() {
-        projectDialog.close();
-    };
-
-    projectForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const id = document.getElementById("projId").value || null;
-        const payload = {
-            nombre_obra: document.getElementById("nombre_obra").value.trim(),
-            cliente_principal: document.getElementById("cliente_principal").value.trim(),
-            ciudad: document.getElementById("ciudad").value.trim(),
-            provincia: document.getElementById("provincia").value.trim(),
-            estado: document.getElementById("estado").value,
-            prioridad: document.getElementById("prioridad").value,
-            tipo: document.getElementById("tipo").value,
-            potencial_eur: Number(document.getElementById("potencial_eur").value || 0),
-            seguimiento_fecha: document.getElementById("seguimiento_fecha").value || null,
-            seguimiento_comentario: document.getElementById("seguimiento_comentario").value.trim(),
-            tarea_fecha: document.getElementById("tarea_fecha").value || null,
-            tarea_comentario: document.getElementById("tarea_comentario").value.trim()
-        };
-
-        if (!payload.nombre_obra) {
-            alert("El nombre de la obra es obligatorio.");
-            return;
-        }
-
-        try {
-            if (id) {
-                const ref = doc(db, "proyectos", id);
-                await updateDoc(ref, payload);
-            } else {
-                await addDoc(collection(db, "proyectos"), payload);
-            }
-            projectDialog.close();
-            await cargarProyectos(); // refresco único
-        } catch (err) {
-            console.error(err);
-            alert("No se pudo guardar el proyecto.");
-        }
-    });
-
-    // ========= BORRADO =========
-    window.onDeleteSelected = function() {
-        if (!selectedIds.length) {
-            alert("Selecciona al menos una obra para borrar.");
-            return;
-        }
-        pendingDeleteIds = [...selectedIds];
-        deleteText.textContent = `Vas a borrar ${pendingDeleteIds.length} proyecto(s). Esta acción no se puede deshacer.`;
-        deleteDialog.showModal();
-    };
-
-    window.closeDeleteDialog = function() {
-        deleteDialog.close();
-    };
-
-    window.confirmDelete = async function() {
-        try {
-            for (const id of pendingDeleteIds) {
-                const ref = doc(db, "proyectos", id);
-                await deleteDoc(ref);
-            }
-            deleteDialog.close();
-            await cargarProyectos();
-        } catch (err) {
-            console.error(err);
-            alert("No se pudo borrar alguno de los proyectos.");
-        }
-    };
-
-    // LISTENERS FILTROS
-    [fCiudad, fEstado, fTipo, fPrioridad, fTexto].forEach(el => {
-        el.addEventListener("change", aplicarFiltros);
-        if (el === fTexto) {
-            el.addEventListener("input", aplicarFiltros);
-        }
-    });
-
-    // CARGA
-    cargarProyectos();
+    cargarDashboard();
 </script>
 
 </body>
