@@ -26,131 +26,271 @@
   </div>
 
   <main class="content">
-    <!-- Intro -->
-    <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:11px;text-transform:uppercase;color:#6B7280;font-weight:600;letter-spacing:.06em;">
-        Scouting de oportunidades
+    <!-- HERO / INTRO -->
+    <div class="card" style="
+        margin-bottom:18px;
+        padding:18px 20px;
+        background: radial-gradient(circle at 0 0, #EEF2FF 0, #E0ECFF 45%, #FFFFFF 100%);
+        border: 1px solid #E5E7EB;
+        display:flex;
+        gap:18px;
+        align-items:flex-start;
+      ">
+      <div style="
+          width:44px;height:44px;border-radius:999px;
+          background:rgba(59,130,246,0.09);
+          display:flex;align-items:center;justify-content:center;
+          font-size:22px;
+        ">
+        🛰️
       </div>
-      <div style="font-size:18px;font-weight:600;margin-top:2px;margin-bottom:4px;color:#111827;">
-        Generador de prompt para buscar obras en Internet (orientado a 2N)
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;text-transform:uppercase;color:#4F46E5;font-weight:600;letter-spacing:.08em;">
+          Scouting · Modo investigación profunda
+        </div>
+        <div style="font-size:18px;font-weight:650;margin-top:4px;margin-bottom:6px;color:#111827;">
+          Buscar obras potenciales para soluciones 2N
+        </div>
+        <p style="font-size:13px;color:#4B5563;margin:0 0 6px 0;">
+          Configura los criterios y genera un <b>prompt avanzado</b> para que la IA haga una
+          <b>búsqueda intensa en Internet</b> y devuelva un <b>CSV listo para Excel</b> con proyectos
+          priorizados por <b>encaje 2N</b>.
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+          <span style="
+              font-size:11px;padding:3px 8px;border-radius:999px;
+              background:#EEF2FF;color:#3730A3;font-weight:500;
+            ">
+            🎯 Foco 2N: videoportero IP + accesos
+          </span>
+          <span style="
+              font-size:11px;padding:3px 8px;border-radius:999px;
+              background:#ECFDF3;color:#166534;font-weight:500;
+            ">
+            🧠 Prompt reutilizable
+          </span>
+          <span style="
+              font-size:11px;padding:3px 8px;border-radius:999px;
+              background:#FFFBEB;color:#92400E;font-weight:500;
+            ">
+            ⬇️ Salida en CSV para importar
+          </span>
+        </div>
       </div>
-      <p style="font-size:13px;color:#4B5563;margin:0;">
-        Rellena los campos y el CRM te generará un prompt listo para copiar y pegar en ChatGPT / Gemini.
-        El modelo hará una <b>investigación profunda</b> en Internet y devolverá una tabla de proyectos
-        con <b>prioridad de encaje para soluciones 2N</b> (videoportero IP y control de accesos),
-        que luego podrás importar en el apartado <b>Proyectos</b>.
-      </p>
     </div>
 
-    <!-- Formulario -->
-    <div class="card">
-      <div class="card-title">Configurar búsqueda</div>
-
-      <div class="form-grid">
-        <!-- Zonas -->
-        <div class="form-group">
-          <label for="zonas">Zonas / provincias objetivo</label>
-          <input id="zonas" placeholder="Ej: Madrid, Málaga, Valencia, Barcelona, Mallorca" />
-        </div>
-
-        <!-- Tipo de activo -->
-        <div class="form-group">
-          <label>Tipo de activo</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
-            <label><input type="checkbox" class="chk-tipo" value="Residencial BTR" /> Residencial BTR</label>
-            <label><input type="checkbox" class="chk-tipo" value="Residencial BTS" /> Residencial BTS</label>
-            <label><input type="checkbox" class="chk-tipo" value="Coliving" /> Coliving</label>
-            <label><input type="checkbox" class="chk-tipo" value="Hoteles" /> Hoteles</label>
-            <label><input type="checkbox" class="chk-tipo" value="Oficinas" /> Oficinas</label>
-            <label><input type="checkbox" class="chk-tipo" value="Retail" /> Retail</label>
-            <label><input type="checkbox" class="chk-tipo" value="Mixto" /> Mixto</label>
+    <!-- BLOQUE CONFIGURACIÓN -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <!-- Cabecera sección -->
+      <div style="
+          padding:14px 18px;
+          border-bottom:1px solid #E5E7EB;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+        ">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#111827;display:flex;align-items:center;gap:6px;">
+            <span>⚙️ Configurar búsqueda</span>
           </div>
-        </div>
-
-        <!-- Segmento orientado a tipología 2N -->
-        <div class="form-group">
-          <label for="segmento">Segmento principal (tipología objetivo)</label>
-          <select id="segmento">
-            <option value="">Cualquiera</option>
-            <option value="residencia">Residencia / residencial multifamiliar</option>
-            <option value="villas">Villas</option>
-            <option value="lujo">Residenciales de lujo / high-end</option>
-            <option value="oficinas">Oficinas / edificios corporativos</option>
-          </select>
-        </div>
-
-        <!-- Ticket mínimo -->
-        <div class="form-group">
-          <label for="ticketMin">Ticket mínimo por proyecto (estimado)</label>
-          <input id="ticketMin" type="number" min="0" step="50000" placeholder="Ej: 3000000" />
           <div style="font-size:11px;color:#6B7280;margin-top:2px;">
-            Importe en euros (€). Pide que se muestren proyectos con inversión/obra igual o superior.
+            Define zonas, tipología, ticket y horizonte para centrar el radar.
           </div>
         </div>
-
-        <!-- Estado / fase -->
-        <div class="form-group">
-          <label>Estado / fase del proyecto</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
-            <label><input type="checkbox" class="chk-fase" value="suelo" /> Suelo / compra de suelo</label>
-            <label><input type="checkbox" class="chk-fase" value="licencia" /> Proyecto / licencia</label>
-            <label><input type="checkbox" class="chk-fase" value="construccion" /> En construcción</label>
-            <label><input type="checkbox" class="chk-fase" value="llave en mano" /> Llave en mano / entrega próxima</label>
-          </div>
-        </div>
-
-        <!-- Perfiles objetivo -->
-        <div class="form-group">
-          <label>Perfiles / players objetivo</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
-            <label><input type="checkbox" class="chk-player" value="promotoras" /> Promotoras</label>
-            <label><input type="checkbox" class="chk-player" value="constructoras" /> Constructoras</label>
-            <label><input type="checkbox" class="chk-player" value="estudios de arquitectura" /> Arquitecturas</label>
-            <label><input type="checkbox" class="chk-player" value="ingenierías" /> Ingenierías</label>
-            <label><input type="checkbox" class="chk-player" value="fondos" /> Fondos / socimis</label>
-            <label><input type="checkbox" class="chk-player" value="family offices" /> Family offices</label>
-          </div>
-        </div>
-
-        <!-- Horizonte temporal -->
-        <div class="form-group">
-          <label for="horizonte">Horizonte temporal</label>
-          <select id="horizonte">
-            <option value="">Cualquiera</option>
-            <option value="corto">Corto plazo (0–2 años)</option>
-            <option value="medio">Medio plazo (2–5 años)</option>
-            <option value="largo">Largo plazo (+5 años)</option>
-          </select>
-        </div>
-
-        <!-- Notas -->
-        <div class="form-group" style="grid-column:1/-1;">
-          <label for="notasExtra">Notas adicionales (palabras clave, cadenas, operadores, etc.)</label>
-          <textarea id="notasExtra" rows="3"
-            placeholder="Ej: solo build-to-rent de lujo, foco en vistas al mar, proyectos con garaje y zonas comunes potentes, etc."></textarea>
+        <div style="display:flex;gap:8px;">
+          <button id="btnLimpiar" class="btn-secondary" type="button" style="font-size:12px;padding:6px 10px;">
+            Limpiar
+          </button>
+          <button id="btnGenerar" class="btn-primary" type="button" style="font-size:12px;padding:6px 14px;">
+            🚀 Generar prompt
+          </button>
         </div>
       </div>
 
-      <!-- Botones -->
-      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
-        <button id="btnLimpiar" class="btn-secondary" type="button">Limpiar</button>
-        <button id="btnGenerar" class="btn-primary" type="button">Generar prompt</button>
+      <!-- Contenido dividido en columnas -->
+      <div style="padding:16px 18px;">
+        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;">
+          <!-- Columna izquierda -->
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <!-- Zonas -->
+            <div class="form-group">
+              <label for="zonas" style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+                📍 Zonas / provincias objetivo
+              </label>
+              <input id="zonas"
+                     placeholder="Ej: Madrid, Málaga, Valencia, Barcelona, Mallorca"
+                     style="width:100%;" />
+              <div style="font-size:11px;color:#6B7280;margin-top:2px;">
+                Puedes combinar provincias y áreas (Costa del Sol, Levante, etc.).
+              </div>
+            </div>
+
+            <!-- Tipo de activo -->
+            <div class="form-group">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label style="font-size:12px;font-weight:600;color:#111827;">
+                  🏗️ Tipo de activo
+                </label>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Residencial BTR" /> BTR
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Residencial BTS" /> BTS
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Coliving" /> Coliving
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Hoteles" /> Hoteles
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Oficinas" /> Oficinas
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Retail" /> Retail
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-tipo" value="Mixto" /> Mixto
+                </label>
+              </div>
+            </div>
+
+            <!-- Segmento orientado a tipología 2N -->
+            <div class="form-group">
+              <label for="segmento" style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+                🧱 Segmento principal (tipología objetivo)
+              </label>
+              <select id="segmento" class="select-input" style="width:100%;">
+                <option value="">Cualquiera</option>
+                <option value="residencia">Residencia / multifamiliar</option>
+                <option value="villas">Villas</option>
+                <option value="lujo">Residenciales de lujo / high-end</option>
+                <option value="oficinas">Oficinas / edificios corporativos</option>
+              </select>
+              <div style="font-size:11px;color:#6B7280;margin-top:2px;">
+                Esto empuja al modelo a pensar en la tipología donde el acceso 2N tiene más impacto.
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna derecha -->
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <!-- Ticket mínimo -->
+            <div class="form-group">
+              <label for="ticketMin" style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+                💶 Ticket mínimo por proyecto (estimado)
+              </label>
+              <input id="ticketMin" type="number" min="0" step="50000"
+                     placeholder="Ej: 3000000" style="width:100%;" />
+              <div style="font-size:11px;color:#6B7280;margin-top:2px;">
+                Se filtrarán proyectos por inversión/obra ≥ este importe (estimado).
+              </div>
+            </div>
+
+            <!-- Estado / fase -->
+            <div class="form-group">
+              <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+                📆 Estado / fase del proyecto
+              </label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
+                <label class="chip">
+                  <input type="checkbox" class="chk-fase" value="suelo" /> Suelo
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-fase" value="licencia" /> Proyecto / licencia
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-fase" value="construccion" /> En construcción
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-fase" value="llave en mano" /> Llave en mano
+                </label>
+              </div>
+            </div>
+
+            <!-- Perfiles objetivo -->
+            <div class="form-group">
+              <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+                👥 Perfiles / players objetivo
+              </label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
+                <label class="chip">
+                  <input type="checkbox" class="chk-player" value="promotoras" /> Promotoras
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-player" value="constructoras" /> Constructoras
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-player" value="estudios de arquitectura" /> Arquitecturas
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-player" value="ingenierías" /> Ingenierías
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-player" value="fondos" /> Fondos / socimis
+                </label>
+                <label class="chip">
+                  <input type="checkbox" class="chk-player" value="family offices" /> Family offices
+                </label>
+              </div>
+            </div>
+
+            <!-- Horizonte temporal -->
+            <div class="form-group">
+              <label for="horizonte" style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+                ⏳ Horizonte temporal
+              </label>
+              <select id="horizonte" class="select-input" style="width:100%;">
+                <option value="">Cualquiera</option>
+                <option value="corto">Corto plazo (0–2 años)</option>
+                <option value="medio">Medio plazo (2–5 años)</option>
+                <option value="largo">Largo plazo (+5 años)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notas extra (a todo lo ancho) -->
+        <div class="form-group" style="margin-top:16px;">
+          <label for="notasExtra" style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+            🧩 Notas adicionales / palabras clave
+          </label>
+          <textarea id="notasExtra" rows="3"
+            placeholder="Ej: solo build-to-rent de lujo, foco en vistas al mar, proyectos con garaje y zonas comunes potentes, etc."
+            style="width:100%;resize:vertical;"></textarea>
+        </div>
       </div>
     </div>
 
-    <!-- Prompt generado -->
-    <div class="card" style="margin-top:16px;">
-      <div class="card-title">Prompt generado</div>
-      <p style="font-size:12px;color:#6B7280;margin-top:0;">
-        Copia y pega este prompt en ChatGPT / Gemini. El modelo hará <b>búsqueda en modo investigación profunda</b>,
-        y te devolverá una tabla de proyectos con <b>prioridad de encaje para soluciones 2N</b>.
-      </p>
+    <!-- BLOQUE PROMPT -->
+    <div class="card" style="margin-top:18px;">
+      <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:8px;
+        ">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#111827;display:flex;align-items:center;gap:6px;">
+            <span>🧠 Prompt generado para IA</span>
+          </div>
+          <div style="font-size:11px;color:#6B7280;margin-top:2px;">
+            Copia este prompt en ChatGPT / Gemini. La respuesta será un <b>CSV</b> listo para Excel,
+            que podrás importar en la pestaña <b>Proyectos</b>.
+          </div>
+        </div>
+        <button id="btnCopiar" class="btn-secondary" type="button" style="font-size:12px;padding:6px 12px;">
+          Copiar prompt
+        </button>
+      </div>
 
-      <textarea id="promptGenerado" rows="14"
-        style="width:100%;border-radius:8px;border:1px solid #D1D5DB;padding:8px 10px;font-size:12px;"></textarea>
+      <textarea id="promptGenerado" rows="18"
+        style="width:100%;border-radius:10px;border:1px solid #D1D5DB;padding:10px 12px;font-size:12px;font-family:Menlo,Consolas,monospace;"></textarea>
 
-      <div style="margin-top:8px;display:flex;justify-content:flex-end;">
-        <button id="btnCopiar" class="btn-secondary" type="button">Copiar prompt</button>
+      <div style="font-size:10.5px;color:#9CA3AF;margin-top:6px;">
+        Tip: guarda este prompt en tus favoritos y solo ajusta zonas / ticket cuando hagas nuevos barridos.
       </div>
     </div>
   </main>
@@ -277,7 +417,7 @@
         );
       } else if (horizonte === "largo") {
         partes.push(
-          "Puedes incluir también proyectos a más largo plazo (+5 años) si son emblemáticos o de gran volumen, marcándolos igualmente en la tabla."
+          "Puedes incluir también proyectos a más largo plazo (+5 años) si son emblemáticos o de gran volumen, marcándolos igualmente."
         );
       }
 
@@ -293,33 +433,24 @@
         "Utiliza esta evaluación para asignar a cada proyecto una prioridad de encaje 2N (ALTO, MEDIO o BAJO) en función del número de accesos, la complejidad del edificio, el segmento y el presupuesto."
       );
       partes.push(
-        "Ordena la tabla poniendo primero los proyectos con encaje 2N ALTO, después MEDIO y por último BAJO."
+        "Ordena los proyectos de forma que aparezcan primero los de encaje 2N ALTO, luego MEDIO y por último BAJO."
       );
 
-      // Formato de salida
+      // Formato de salida: CSV compatible Excel
       partes.push(
-        "Devuélveme el resultado en una tabla (markdown) con una fila por proyecto y al menos las siguientes columnas:"
+        "Devuélveme el resultado EXCLUSIVAMENTE como un único bloque de datos en formato CSV (valores separados por punto y coma ';'), sin textos adicionales antes ni después del CSV."
       );
       partes.push(
-        "- Ciudad / Zona\n" +
-        "- Nombre del proyecto o promoción\n" +
-        "- Tipo de activo (BTR, BTS, hotel, coliving, oficinas, mixto, etc.)\n" +
-        "- Segmento / posicionamiento (lujo, premium, core, villas, etc.)\n" +
-        "- Nº aproximado de unidades / habitaciones\n" +
-        "- Estado / fase (suelo, licencia, construcción, llave en mano, etc.)\n" +
-        "- Promotora / Propiedad\n" +
-        "- Estudio de arquitectura\n" +
-        "- Ingeniería (si aplica)\n" +
-        "- Constructora\n" +
-        "- Ticket estimado de obra o inversión (€)\n" +
-        "- Año/fecha estimada de entrega\n" +
-        "- Encaje soluciones 2N (ALTO / MEDIO / BAJO)\n" +
-        "- Motivo del encaje 2N (ej: nº accesos, uso intensivo de zonas comunes, hotel con muchas habitaciones, oficinas multi-tenant, villas de lujo, etc.)\n" +
-        "- Enlace a la fuente principal (web de la promotora, nota de prensa, portal inmobiliario profesional, etc.)"
+        "La PRIMERA LÍNEA del CSV debe ser la cabecera con exactamente estos nombres de columna (en este orden):\n" +
+        "nombre_obra;cliente_principal;ciudad;provincia;tipo;segmento;num_unidades;estado;" +
+        "promotora;constructora;arquitectura;ingenieria;potencial_eur;ano_entrega;" +
+        "encaje_2n;motivo_encaje_2n;enlace_fuente"
       );
-
       partes.push(
-        "Si no encuentras alguno de los datos para un proyecto, deja la celda en blanco pero mantén la fila igualmente. Prioriza siempre la calidad y relevancia de los proyectos frente a la cantidad."
+        "Cada línea siguiente debe corresponder a un proyecto. No incluyas comas como separador; utiliza solo ';' como separador de columnas. Si algún dato no está disponible, deja la celda vacía pero mantén la estructura de columnas."
+      );
+      partes.push(
+        "Muy importante: NO añadas explicaciones en texto libre, ni resúmenes, ni comentarios fuera del CSV. Solo devuelve el bloque CSV, idealmente dentro de un bloque de código marcado como ```csv ... ``` para poder copiarlo fácilmente."
       );
 
       promptGenerado.value = partes.join("\n\n");
@@ -343,8 +474,8 @@
     btnCopiar.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(promptGenerado.value || "");
-        btnCopiar.textContent = "Copiado ✔";
-        setTimeout(() => (btnCopiar.textContent = "Copiar prompt"), 1200);
+          btnCopiar.textContent = "Copiado ✔";
+          setTimeout(() => (btnCopiar.textContent = "Copiar prompt"), 1200);
       } catch {
         alert("No se ha podido copiar al portapapeles.");
       }
