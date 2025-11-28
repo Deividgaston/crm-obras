@@ -1,150 +1,19 @@
 <!--
 CRM 2N – Modo Desarrollador Eficiente
 Estilo Salesforce Moderno + Apple Clean UI
-Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas duplicadas)
+Firebase optimizado (mínimas lecturas, funciones reutilizables)
 -->
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CRM 2N – Dashboard</title>
 
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css" />
 
-    <!-- Chart.js para los gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-            background: #F5F7FA;
-            color: #1A1A1A;
-        }
-
-        /* ===== NAV SUPERIOR ===== */
-        .topnav {
-            height: 56px;
-            background: #FFFFFF;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            gap: 20px;
-        }
-
-        .logo {
-            font-size: 18px;
-            font-weight: 700;
-            color: #4C6EF5;
-            margin-right: 12px;
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 10px;
-            flex: 1;
-        }
-
-        .nav-item {
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            color: #333;
-            transition: 0.15s;
-        }
-
-        .nav-item:hover {
-            background: #F1F3F5;
-        }
-
-        .nav-item.active {
-            color: #4C6EF5;
-            font-weight: 600;
-            border-bottom: 3px solid #4C6EF5;
-            padding-bottom: 5px;
-        }
-
-        .search-box {
-            background: #F1F3F5;
-            border-radius: 6px;
-            padding: 6px 12px;
-            width: 220px;
-            border: 1px solid #E1E3E5;
-            outline: none;
-            font-size: 13px;
-        }
-
-        .content {
-            padding: 24px;
-        }
-
-        /* Tarjetas resumen */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 16px 18px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
-        }
-
-        .card-title {
-            font-size: 13px;
-            opacity: 0.6;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        .card-value { font-size: 22px; font-weight: 600; }
-
-        .card-link {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #4C6EF5;
-            cursor: pointer;
-        }
-
-        .columns {
-            margin-top: 32px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-
-        .panel {
-            background: white;
-            padding: 20px;
-            border-radius: 14px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
-        }
-
-        .panel-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 14px;
-        }
-
-        .task-item, .follow-item {
-            background: #F1F3F5;
-            padding: 10px 12px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        @media (max-width: 900px) {
-            .columns {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -154,36 +23,37 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         <div class="logo">CRM 2N</div>
 
         <div class="nav-tabs">
-            <div class="nav-item active" onclick="go('index.html')">Dashboard</div>
-            <div class="nav-item" onclick="go('proyectos.html')">Proyectos</div>
-            <div class="nav-item" onclick="go('pipeline.html')">Pipeline</div>
-            <div class="nav-item" onclick="go('clientes.html')">Clientes</div>
-            <div class="nav-item" onclick="go('tareas.html')">Tareas</div>
-            <div class="nav-item" onclick="go('reportes.html')">Reportes</div>
+            <div class="nav-item active" onclick="location.href='index.html'">Dashboard</div>
+            <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+            <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
+            <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+            <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+            <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
         </div>
 
         <input type="text" class="search-box" placeholder="Buscar..." />
     </div>
 
     <main class="content">
+
         <!-- TOP CARDS -->
         <div class="cards-grid">
             <div class="card">
                 <div class="card-title">Proyectos totales</div>
                 <div id="cardProyectos" class="card-value">–</div>
-                <div class="card-link" onclick="go('proyectos.html')">Ver proyectos →</div>
+                <a class="card-link" onclick="location.href='proyectos.html'">Ver proyectos →</a>
             </div>
 
             <div class="card">
                 <div class="card-title">Obras Potenciales</div>
                 <div id="cardPotenciales" class="card-value">–</div>
-                <div class="card-link" onclick="go('pipeline.html')">Ver pipeline →</div>
+                <a class="card-link" onclick="location.href='pipeline.html'">Ver pipeline →</a>
             </div>
 
             <div class="card">
                 <div class="card-title">Tareas pendientes</div>
                 <div id="cardTareas" class="card-value">–</div>
-                <div class="card-link" onclick="go('tareas.html')">Ver tareas →</div>
+                <a class="card-link" onclick="location.href='tareas.html'">Ver tareas →</a>
             </div>
         </div>
 
@@ -214,86 +84,81 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         </div>
     </main>
 
-<script type="module">
-    import { db } from "./firebaseConfig.js";
-    import {
-        collection,
-        getDocs
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    <script type="module">
+        import { db } from "./firebase.js";
+        import {
+            collection,
+            getDocs
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const cardProyectos = document.getElementById("cardProyectos");
-    const cardPotenciales = document.getElementById("cardPotenciales");
-    const cardTareas = document.getElementById("cardTareas");
+        const cardProyectos = document.getElementById("cardProyectos");
+        const cardPotenciales = document.getElementById("cardPotenciales");
+        const cardTareas = document.getElementById("cardTareas");
+        const listaTareas = document.getElementById("listaTareas");
+        const listaSeguimientos = document.getElementById("listaSeguimientos");
 
-    const listaTareas = document.getElementById("listaTareas");
-    const listaSeguimientos = document.getElementById("listaSeguimientos");
+        async function cargarDashboard() {
+            const ref = collection(db, "proyectos");
+            const snap = await getDocs(ref);
 
-    async function cargarDashboard() {
-        const ref = collection(db, "proyectos");
-        const snap = await getDocs(ref);
+            let proyectos = [];
+            let tareas = [];
+            let seguimientos = [];
+            let tiposObra = {};
+            let obrasPotenciales = 0;
 
-        let proyectos = [];
-        let tareas = [];
-        let seguimientos = [];
-        let tiposObra = {};
-        let obrasPotenciales = 0;
+            snap.forEach(doc => {
+                const p = doc.data();
+                proyectos.push(p);
 
-        snap.forEach(doc => {
-            const p = doc.data();
-            proyectos.push(p);
+                if (p.tareas) tareas.push(...p.tareas);
+                if (p.seguimientos) seguimientos.push(...p.seguimientos);
 
-            if (p.tareas) tareas.push(...p.tareas);
-            if (p.seguimientos) seguimientos.push(...p.seguimientos);
+                if (p.tipoObra) {
+                    tiposObra[p.tipoObra] = (tiposObra[p.tipoObra] || 0) + 1;
+                }
 
-            if (p.tipoObra) {
-                tiposObra[p.tipoObra] = (tiposObra[p.tipoObra] || 0) + 1;
-            }
+                if (p.potencial === true) {
+                    obrasPotenciales++;
+                }
+            });
 
-            if (p.potencial === true) {
-                obrasPotenciales++;
-            }
-        });
+            cardProyectos.textContent = proyectos.length;
+            cardPotenciales.textContent = obrasPotenciales;
+            cardTareas.textContent = tareas.length;
 
-        cardProyectos.textContent = proyectos.length;
-        cardPotenciales.textContent = obrasPotenciales;
-        cardTareas.textContent = tareas.length;
+            listaTareas.innerHTML = tareas.length
+                ? tareas.map(t => `<div class="task-item">${t}</div>`).join("")
+                : `<div style="opacity:0.6;">No hay tareas pendientes</div>`;
 
-        listaTareas.innerHTML = tareas.length
-            ? tareas.map(t => `<div class="task-item">${t}</div>`).join("")
-            : `<div style="opacity:0.6;">No hay tareas pendientes</div>`;
+            listaSeguimientos.innerHTML = seguimientos.length
+                ? seguimientos.map(s => `<div class="follow-item">${s}</div>`).join("")
+                : `<div style="opacity:0.6;">Sin seguimientos pendientes</div>`;
 
-        listaSeguimientos.innerHTML = seguimientos.length
-            ? seguimientos.map(s => `<div class="follow-item">${s}</div>`).join("")
-            : `<div style="opacity:0.6;">Sin seguimientos pendientes</div>`;
+            new Chart(document.getElementById("graficoTipos"), {
+                type: "doughnut",
+                data: {
+                    labels: Object.keys(tiposObra),
+                    datasets: [{
+                        data: Object.values(tiposObra)
+                    }]
+                }
+            });
 
-        new Chart(document.getElementById("graficoTipos"), {
-            type: "doughnut",
-            data: {
-                labels: Object.keys(tiposObra),
-                datasets: [{
-                    data: Object.values(tiposObra)
-                }]
-            }
-        });
+            new Chart(document.getElementById("graficoPotenciales"), {
+                type: "bar",
+                data: {
+                    labels: ["Obras Potenciales"],
+                    datasets: [{
+                        label: "Total",
+                        data: [obrasPotenciales]
+                    }]
+                }
+            });
+        }
 
-        new Chart(document.getElementById("graficoPotenciales"), {
-            type: "bar",
-            data: {
-                labels: ["Obras Potenciales"],
-                datasets: [{
-                    label: "Total",
-                    data: [obrasPotenciales]
-                }]
-            }
-        });
-    }
-
-    cargarDashboard();
-
-    window.go = function(ruta) {
-        window.location.href = ruta;
-    };
-</script>
+        cargarDashboard();
+    </script>
 
 </body>
 </html>
