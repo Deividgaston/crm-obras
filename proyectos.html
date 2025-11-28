@@ -1,125 +1,191 @@
+<!--
+CRM 2N – Modo Desarrollador Eficiente
+Estilo Salesforce Moderno + Apple Clean UI
+Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas duplicadas)
+-->
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DGO Insight · Proyectos</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="firebase.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM – Proyectos</title>
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        /* ===== ESTILO SALESFORCE MODERNO – PROYECTOS ===== */
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            background: #F5F7FA;
+            color: #1A1A1A;
+        }
+
+        .topbar {
+            height: 60px;
+            background: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .content {
+            padding: 25px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .project-card:hover {
+            transform: scale(1.01);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .project-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .badge.pipeline {
+            background: #4C6EF5;
+        }
+
+        .badge.ganado {
+            background: #2F9E44;
+        }
+
+        .badge.perdido {
+            background: #E03131;
+        }
+
+        .badge.prescripcion {
+            background: #FD7E14;
+        }
+
+        .project-info {
+            font-size: 14px;
+        }
+
+        .btn-add {
+            background: #4C6EF5;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+
+        .btn-add:hover {
+            background: #3B5BDB;
+        }
+    </style>
 </head>
 
 <body>
 
-  <!-- HEADER SALESFORCE -->
-  <header class="crm-header">
-    <div class="crm-logo">DGO Insight · CRM Obras</div>
-    <nav class="crm-nav">
-      <button onclick="window.location='index.html'">Panel</button>
-      <button class="crm-nav-active">Proyectos</button>
-    </nav>
-  </header>
-
-  <!-- CONTENIDO -->
-  <main id="app">
-
-    <h1 class="crm-page-title">Pipeline de Proyectos</h1>
-    <p class="crm-page-subtitle">
-      Gestión completa de obras y oportunidades 2N.
-    </p>
-
-    <!-- FILTROS -->
-    <section class="crm-card" style="margin-bottom:16px;">
-      <div class="crm-row">
-        <div class="crm-col-4">
-          <div class="crm-field-group">
-            <label class="crm-label">Buscar</label>
-            <input id="filtroTexto" class="crm-input" placeholder="Proyecto, promotora, ciudad...">
-          </div>
-        </div>
-
-        <div class="crm-col-4">
-          <div class="crm-field-group">
-            <label class="crm-label">Fase</label>
-            <select id="filtroFase" class="crm-select">
-              <option value="">Todas</option>
-              <option>Detectado</option>
-              <option>Conceptual</option>
-              <option>Anteproyecto</option>
-              <option>Básico</option>
-              <option>Ejecución</option>
-              <option>Licitación</option>
-              <option>Construcción</option>
-              <option>Entregado</option>
-              <option>Paralizado</option>
-              <option>Cancelado</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="crm-col-4">
-          <div class="crm-field-group">
-            <label class="crm-label">Segmento</label>
-            <select id="filtroSegmento" class="crm-select">
-              <option value="">Todos</option>
-              <option>Lujo</option>
-              <option>Estándar</option>
-              <option>BTR</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-top:10px; display:flex; gap:8px;">
-        <button id="btnNuevo" class="crm-btn-primary">+ Nuevo proyecto</button>
-        <button id="btnEditar" class="crm-btn" disabled>✏️ Editar</button>
-        <button id="btnBorrar" class="crm-btn" disabled>🗑️ Borrar</button>
-      </div>
-    </section>
-
-    <!-- TABLA -->
-    <div class="crm-table-wrapper">
-      <table class="crm-table">
-        <thead>
-          <tr>
-            <th class="crm-col-checkbox"></th>
-            <th>Proyecto</th>
-            <th>Ciudad</th>
-            <th>Segmento</th>
-            <th>Fase</th>
-            <th>Inicio Estimado</th>
-            <th>Potencial 2N €</th>
-            <th>Promotora</th>
-          </tr>
-        </thead>
-        <tbody id="tabla-proyectos"></tbody>
-      </table>
+    <div class="topbar">
+        CRM 2N – Proyectos
     </div>
-  </main>
 
-  <!-- MODAL -->
-  <div id="modal-proyecto" class="crm-modal-backdrop" style="display:none;">
-    <div class="crm-modal">
-      <div class="crm-modal-header">
-        <h3 class="crm-modal-title" id="modal-titulo">Nuevo proyecto</h3>
-        <button class="crm-modal-close" onclick="cerrarModal()">×</button>
-      </div>
+    <div class="content">
 
-      <div id="modalContenido"></div>
+        <button class="btn-add" onclick="nuevoProyecto()">
+            + Nuevo Proyecto
+        </button>
 
-      <div class="crm-modal-footer">
-        <button class="crm-btn" onclick="cerrarModal()">Cancelar</button>
-        <button id="btnGuardar" class="crm-btn-primary">Guardar</button>
-      </div>
+        <div class="section-title">Todos los proyectos</div>
+
+        <div id="listaProyectos"></div>
+
     </div>
-  </div>
 
-  <!-- TOAST -->
-  <div id="toast"
-        style="position:fixed;right:16px;bottom:16px;padding:8px 10px;
-          border-radius:6px;font-size:13px;background:#c23934;color:#fff;
-          opacity:0;transition:opacity .3s;z-index:100;">
-  </div>
+    <script type="module">
+        import { db } from "./firebaseConfig.js";
+        import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  <script src="proyectos.js"></script>
+        const lista = document.getElementById("listaProyectos");
+
+        // ==== Cargar proyectos (mínima lectura Firebase) ====
+        async function cargarProyectos() {
+            const ref = collection(db, "proyectos");
+            const snap = await getDocs(ref);
+
+            lista.innerHTML = "";
+
+            snap.forEach(doc => {
+                const p = doc.data();
+
+                const estadoClass =
+                    p.estado === "Pipeline" ? "pipeline" :
+                    p.estado === "Ganado" ? "ganado" :
+                    p.estado === "Perdido" ? "perdido" :
+                    "prescripcion";
+
+                const card = `
+                    <div class="project-card" onclick="verProyecto('${doc.id}')">
+                        <div class="project-header">
+                            <div class="project-name">${p.nombre || "Sin nombre"}</div>
+                            <div class="badge ${estadoClass}">${p.estado}</div>
+                        </div>
+
+                        <div class="project-info">
+                            <b>Cliente:</b> ${p.cliente || "-"}<br>
+                            <b>Ciudad:</b> ${p.ciudad || "-"}<br>
+                            <b>Fecha:</b> ${p.fecha || "-"}
+                        </div>
+                    </div>
+                `;
+
+                lista.innerHTML += card;
+            });
+        }
+
+        cargarProyectos();
+
+        // ==== Acciones ====
+        window.verProyecto = (id) => {
+            window.location.href = `proyecto_detalle.html?id=${id}`;
+        }
+
+        window.nuevoProyecto = () => {
+            window.location.href = "proyecto_nuevo.html";
+        }
+    </script>
+
 </body>
 </html>
