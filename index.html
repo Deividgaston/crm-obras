@@ -24,7 +24,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             color: #1A1A1A;
         }
 
-        /* ===== BARRA SUPERIOR TIPO SALESFORCE ===== */
+        /* ===== NAV SUPERIOR ===== */
         .topnav {
             height: 56px;
             background: #FFFFFF;
@@ -111,27 +111,6 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             cursor: pointer;
         }
 
-        /* Botones de acceso rápido */
-        .quick-row {
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .btn-quick {
-            background: #FFFFFF;
-            border-radius: 999px;
-            border: 1px solid #D1D5DB;
-            padding: 8px 14px;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        .btn-quick:hover {
-            background: #F1F3F5;
-        }
-
         .columns {
             margin-top: 32px;
             display: grid;
@@ -206,14 +185,6 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
                 <div id="cardTareas" class="card-value">–</div>
                 <div class="card-link" onclick="go('tareas.html')">Ver tareas →</div>
             </div>
-        </div>
-
-        <!-- ACCESOS RÁPIDOS -->
-        <div class="quick-row">
-            <button class="btn-quick" onclick="go('proyectos.html')">📁 Ir a Proyectos</button>
-            <button class="btn-quick" onclick="go('pipeline.html')">📊 Ver Pipeline</button>
-            <button class="btn-quick" onclick="go('clientes.html')">👥 Ver Clientes</button>
-            <button class="btn-quick" onclick="go('tareas.html')">✅ Ver Tareas</button>
         </div>
 
         <!-- TAREAS / SEGUIMIENTOS -->
