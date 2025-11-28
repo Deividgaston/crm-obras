@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRM 2N – Buscar obras</title>
+  <title>CRM 2N – Scouting / Buscar obras</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -22,401 +22,306 @@
       <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
     </div>
 
-    <input type="text" class="search-box" placeholder="Buscar global (no funcional aún)" />
+    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
   </div>
 
   <main class="content">
-    <!-- Card introductoria -->
+    <!-- Intro -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="text-transform:none;opacity:0.8;">Scouting</div>
-      <div style="font-size:18px;font-weight:600;margin-top:2px;margin-bottom:4px;">
-        Buscar oportunidades de prescripción
+      <div style="font-size:11px;text-transform:uppercase;color:#6B7280;font-weight:600;letter-spacing:.06em;">
+        Scouting de oportunidades
       </div>
-      <p style="font-size:13px;color:#5A6872;margin:0;">
-        Utiliza los filtros rápidos para localizar proyectos por ciudad, tipo, prioridad y estado,
-        o escribe un prompt en lenguaje natural para que el CRM traduzca tu intención en filtros
-        automáticos sobre la base de datos.
+      <div style="font-size:18px;font-weight:600;margin-top:2px;margin-bottom:4px;color:#111827;">
+        Generador de prompt para buscar obras en Internet
+      </div>
+      <p style="font-size:13px;color:#4B5563;margin:0;">
+        Rellena los campos y el CRM te generará un prompt listo para copiar y pegar en ChatGPT / Gemini.
+        Ese prompt buscará proyectos de obra nueva y devolverá una tabla que luego podrás importar
+        en el apartado <b>Proyectos</b>.
       </p>
     </div>
 
-    <!-- Tabs -->
-    <div class="card" style="padding:0;">
-      <div style="display:flex;border-bottom:1px solid #E5E7EB;">
-        <button id="tabFiltrosBtn"
-                style="flex:1;padding:10px 12px;border:none;background:#FFFFFF;
-                       border-bottom:2px solid #4C6EF5;font-size:13px;font-weight:600;cursor:pointer;">
-          🔍 Búsqueda por filtros
-        </button>
-        <button id="tabPromptBtn"
-                style="flex:1;padding:10px 12px;border:none;background:#F9FAFB;
-                       font-size:13px;font-weight:500;cursor:pointer;">
-          🤖 Búsqueda por prompt
-        </button>
-      </div>
+    <!-- Formulario -->
+    <div class="card">
+      <div class="card-title">Configurar búsqueda</div>
 
-      <!-- Contenido búsqueda por filtros -->
-      <div id="tabFiltros" style="padding:16px 18px;">
-        <div class="filters-row">
-          <select id="fCiudad" class="select-input">
-            <option value="Todas">Ciudad: todas</option>
-          </select>
-
-          <select id="fTipo" class="select-input">
-            <option value="Todos">Tipo: todos</option>
-          </select>
-
-          <select id="fPrioridad" class="select-input">
-            <option value="Todas">Prioridad: todas</option>
-          </select>
-
-          <select id="fEstado" class="select-input">
-            <option value="Todos">Estado: todos</option>
-          </select>
-
-          <select id="fCliente" class="select-input">
-            <option value="Todos">Cliente: todos</option>
-          </select>
+      <div class="form-grid">
+        <!-- Zonas -->
+        <div class="form-group">
+          <label for="zonas">Zonas / provincias objetivo</label>
+          <input id="zonas" placeholder="Ej: Madrid, Málaga, Valencia, Barcelona, Mallorca" />
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-          <div style="flex:1;">
-            <input id="fPotencialMin" class="search-input" type="number" min="0" step="50000"
-                   placeholder="Potencial mínimo (€)" />
+        <!-- Tipo de activo -->
+        <div class="form-group">
+          <label>Tipo de activo</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
+            <label><input type="checkbox" class="chk-tipo" value="Residencial BTR" /> Residencial BTR</label>
+            <label><input type="checkbox" class="chk-tipo" value="Residencial BTS" /> Residencial BTS</label>
+            <label><input type="checkbox" class="chk-tipo" value="Coliving" /> Coliving</label>
+            <label><input type="checkbox" class="chk-tipo" value="Hoteles" /> Hoteles</label>
+            <label><input type="checkbox" class="chk-tipo" value="Oficinas" /> Oficinas</label>
+            <label><input type="checkbox" class="chk-tipo" value="Retail" /> Retail</label>
+            <label><input type="checkbox" class="chk-tipo" value="Mixto" /> Mixto</label>
           </div>
-          <button id="btnBuscarFiltros" class="btn-primary">Aplicar filtros</button>
         </div>
 
-        <div id="resultFiltrosMeta"
-             style="margin-top:10px;font-size:12px;color:#6B7280;"></div>
+        <!-- Segmento -->
+        <div class="form-group">
+          <label for="segmento">Segmento</label>
+          <select id="segmento">
+            <option value="">Cualquiera</option>
+            <option value="lujo">Lujo / high-end</option>
+            <option value="premium">Premium</option>
+            <option value="core">Core / residencial estándar</option>
+          </select>
+        </div>
 
-        <div id="tablaFiltrosWrapper" style="margin-top:10px;"></div>
-        <div id="tablaFiltrosEmpty" class="empty-state" style="display:none;">
-          No hay resultados con los criterios seleccionados.
+        <!-- Ticket mínimo -->
+        <div class="form-group">
+          <label for="ticketMin">Ticket mínimo por proyecto (estimado)</label>
+          <input id="ticketMin" type="number" min="0" step="50000" placeholder="Ej: 3000000" />
+          <div style="font-size:11px;color:#6B7280;margin-top:2px;">
+            Importe en euros (€). Se pedirá que muestres proyectos con inversión/obra igual o superior.
+          </div>
+        </div>
+
+        <!-- Estado / fase -->
+        <div class="form-group">
+          <label>Estado / fase del proyecto</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
+            <label><input type="checkbox" class="chk-fase" value="suelo" /> Suelo / compra de suelo</label>
+            <label><input type="checkbox" class="chk-fase" value="licencia" /> Proyecto / licencia</label>
+            <label><input type="checkbox" class="chk-fase" value="construccion" /> En construcción</label>
+            <label><input type="checkbox" class="chk-fase" value="llave en mano" /> Llave en mano / entrega próxima</label>
+          </div>
+        </div>
+
+        <!-- Perfiles objetivo -->
+        <div class="form-group">
+          <label>Perfiles / players objetivo</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
+            <label><input type="checkbox" class="chk-player" value="promotoras" /> Promotoras</label>
+            <label><input type="checkbox" class="chk-player" value="constructoras" /> Constructoras</label>
+            <label><input type="checkbox" class="chk-player" value="estudios de arquitectura" /> Arquitecturas</label>
+            <label><input type="checkbox" class="chk-player" value="ingenierías" /> Ingenierías</label>
+            <label><input type="checkbox" class="chk-player" value="fondos" /> Fondos / socimis</label>
+            <label><input type="checkbox" class="chk-player" value="family offices" /> Family offices</label>
+          </div>
+        </div>
+
+        <!-- Horizonte temporal -->
+        <div class="form-group">
+          <label for="horizonte">Horizonte temporal</label>
+          <select id="horizonte">
+            <option value="">Cualquiera</option>
+            <option value="corto">Corto plazo (0–2 años)</option>
+            <option value="medio">Medio plazo (2–5 años)</option>
+            <option value="largo">Largo plazo (+5 años)</option>
+          </select>
+        </div>
+
+        <!-- Notas -->
+        <div class="form-group" style="grid-column:1/-1;">
+          <label for="notasExtra">Notas adicionales (palabras clave, cadenas, operadores, etc.)</label>
+          <textarea id="notasExtra" rows="3"
+            placeholder="Ej: solo build-to-rent, foco en vistas al mar, proyectos emblemáticos, etc."></textarea>
         </div>
       </div>
 
-      <!-- Contenido búsqueda por prompt -->
-      <div id="tabPrompt" style="padding:16px 18px;display:none;">
-        <p style="font-size:13px;color:#5A6872;margin-top:0;">
-          Escribe lo que quieres encontrar, por ejemplo:
-        </p>
-        <ul style="font-size:13px;color:#5A6872;margin-top:-8px;">
-          <li>“obras residenciales de lujo en Madrid con potencial 300k”</li>
-          <li>“proyectos en negociación en Málaga con prioridad alta”</li>
-          <li>“hoteles en Barcelona ganados de más de 500k”</li>
-        </ul>
+      <!-- Botones -->
+      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
+        <button id="btnLimpiar" class="btn-secondary" type="button">Limpiar</button>
+        <button id="btnGenerar" class="btn-primary" type="button">Generar prompt</button>
+      </div>
+    </div>
 
-        <textarea id="promptInput" rows="4"
-                  style="width:100%;margin-top:4px;border-radius:8px;border:1px solid #D1D5DB;
-                         padding:8px 10px;font-size:13px;resize:vertical;">
-Obras residenciales de lujo en Madrid con potencial 300k
-        </textarea>
+    <!-- Prompt generado -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">Prompt generado</div>
+      <p style="font-size:12px;color:#6B7280;margin-top:0;">
+        Copia y pega este prompt en ChatGPT / Gemini. El modelo hará una búsqueda intensa en Internet
+        y devolverá una tabla de proyectos que luego podrás importar en <b>Proyectos</b>.
+      </p>
 
-        <div style="margin-top:10px;display:flex;justify-content:flex-end;">
-          <button id="btnBuscarPrompt" class="btn-primary">🔎 Buscar</button>
-        </div>
+      <textarea id="promptGenerado" rows="12"
+        style="width:100%;border-radius:8px;border:1px solid #D1D5DB;padding:8px 10px;font-size:12px;"></textarea>
 
-        <div id="promptExplicacion"
-             style="margin-top:8px;font-size:12px;color:#374151;"></div>
-
-        <div id="tablaPromptWrapper" style="margin-top:10px;"></div>
-        <div id="tablaPromptEmpty" class="empty-state" style="display:none;">
-          No hay resultados para ese prompt.
-        </div>
+      <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+        <button id="btnCopiar" class="btn-secondary" type="button">Copiar prompt</button>
       </div>
     </div>
   </main>
 
-  <script type="module">
-    import { db } from "./firebase.js";
-    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  <script>
+    const zonasInput = document.getElementById("zonas");
+    const chkTipo = document.querySelectorAll(".chk-tipo");
+    const segmentoSel = document.getElementById("segmento");
+    const ticketMinInput = document.getElementById("ticketMin");
+    const chkFase = document.querySelectorAll(".chk-fase");
+    const chkPlayer = document.querySelectorAll(".chk-player");
+    const horizonteSel = document.getElementById("horizonte");
+    const notasExtra = document.getElementById("notasExtra");
 
-    // ---- Estado global ----
-    let proyectos = [];
-    let proyectosFiltros = [];
-    let proyectosPrompt = [];
+    const btnGenerar = document.getElementById("btnGenerar");
+    const btnLimpiar = document.getElementById("btnLimpiar");
+    const btnCopiar = document.getElementById("btnCopiar");
+    const promptGenerado = document.getElementById("promptGenerado");
 
-    // ---- Referencias DOM ----
-    const tabFiltrosBtn = document.getElementById("tabFiltrosBtn");
-    const tabPromptBtn = document.getElementById("tabPromptBtn");
-    const tabFiltros = document.getElementById("tabFiltros");
-    const tabPrompt = document.getElementById("tabPrompt");
-
-    const fCiudad = document.getElementById("fCiudad");
-    const fTipo = document.getElementById("fTipo");
-    const fPrioridad = document.getElementById("fPrioridad");
-    const fEstado = document.getElementById("fEstado");
-    const fCliente = document.getElementById("fCliente");
-    const fPotencialMin = document.getElementById("fPotencialMin");
-    const btnBuscarFiltros = document.getElementById("btnBuscarFiltros");
-    const resultFiltrosMeta = document.getElementById("resultFiltrosMeta");
-    const tablaFiltrosWrapper = document.getElementById("tablaFiltrosWrapper");
-    const tablaFiltrosEmpty = document.getElementById("tablaFiltrosEmpty");
-
-    const promptInput = document.getElementById("promptInput");
-    const btnBuscarPrompt = document.getElementById("btnBuscarPrompt");
-    const promptExplicacion = document.getElementById("promptExplicacion");
-    const tablaPromptWrapper = document.getElementById("tablaPromptWrapper");
-    const tablaPromptEmpty = document.getElementById("tablaPromptEmpty");
-
-    // ---- Tabs ----
-    tabFiltrosBtn.addEventListener("click", () => {
-      tabFiltrosBtn.style.background = "#FFFFFF";
-      tabFiltrosBtn.style.borderBottom = "2px solid #4C6EF5";
-      tabPromptBtn.style.background = "#F9FAFB";
-      tabPromptBtn.style.borderBottom = "2px solid transparent";
-      tabFiltros.style.display = "block";
-      tabPrompt.style.display = "none";
-    });
-
-    tabPromptBtn.addEventListener("click", () => {
-      tabPromptBtn.style.background = "#FFFFFF";
-      tabPromptBtn.style.borderBottom = "2px solid #4C6EF5";
-      tabFiltrosBtn.style.background = "#F9FAFB";
-      tabFiltrosBtn.style.borderBottom = "2px solid transparent";
-      tabFiltros.style.display = "none";
-      tabPrompt.style.display = "block";
-    });
-
-    // ---- Carga de proyectos desde Firestore ----
-    async function cargarProyectos() {
-      try {
-        const ref = collection(db, "proyectos");
-        const snap = await getDocs(ref);
-        proyectos = [];
-        snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
-        inicializarFiltros();
-        aplicarFiltros();
-      } catch (err) {
-        console.error("Error cargando proyectos:", err);
-        tablaFiltrosWrapper.innerHTML =
-          "<div style='padding:12px;color:#c92a2a;font-size:14px;'>Error cargando Firestore.</div>";
-      }
+    function getCheckedValues(nodeList) {
+      return Array.from(nodeList)
+        .filter(el => el.checked)
+        .map(el => el.value);
     }
 
-    // ---- Inicializar selects de filtros ----
-    function inicializarFiltros() {
-      const ciudades = [...new Set(proyectos.map(p => p.ciudad).filter(Boolean))].sort();
-      const tipos = [...new Set(proyectos.map(p => p.tipo || p.tipo_proyecto).filter(Boolean))].sort();
-      const prioridades = [...new Set(proyectos.map(p => p.prioridad).filter(Boolean))].sort();
-      const estados = [...new Set(proyectos.map(p => p.estado).filter(Boolean))].sort();
-      const clientes = [...new Set(proyectos.map(p => p.cliente_principal).filter(Boolean))].sort();
+    function generarPrompt() {
+      const zonas = zonasInput.value.trim();
+      const tipos = getCheckedValues(chkTipo);
+      const segmento = segmentoSel.value;
+      const ticketMin = ticketMinInput.value.trim();
+      const fases = getCheckedValues(chkFase);
+      const players = getCheckedValues(chkPlayer);
+      const horizonte = horizonteSel.value;
+      const notas = notasExtra.value.trim();
 
-      fCiudad.innerHTML = '<option value="Todas">Ciudad: todas</option>' +
-        ciudades.map(c => `<option value="${c}">${c}</option>`).join("");
+      let partes = [];
 
-      fTipo.innerHTML = '<option value="Todos">Tipo: todos</option>' +
-        tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+      partes.push(
+        "Actúa como un analista sénior de mercado inmobiliario especializado en obra nueva en España."
+      );
 
-      fPrioridad.innerHTML = '<option value="Todas">Prioridad: todas</option>' +
-        prioridades.map(p => `<option value="${p}">${p}</option>`).join("");
-
-      fEstado.innerHTML = '<option value="Todos">Estado: todos</option>' +
-        estados.map(e => `<option value="${e}">${e}</option>`).join("");
-
-      fCliente.innerHTML = '<option value="Todos">Cliente: todos</option>' +
-        clientes.map(cl => `<option value="${cl}">${cl}</option>`).join("");
-    }
-
-    // ---- Búsqueda por filtros ----
-    function aplicarFiltros() {
-      const ciudad = fCiudad.value;
-      const tipo = fTipo.value;
-      const prioridad = fPrioridad.value;
-      const estado = fEstado.value;
-      const cliente = fCliente.value;
-      const potMin = Number(fPotencialMin.value || 0);
-
-      proyectosFiltros = proyectos.filter(p => {
-        let ok = true;
-        if (ciudad !== "Todas") ok = ok && p.ciudad === ciudad;
-        const tipoVal = p.tipo || p.tipo_proyecto;
-        if (tipo !== "Todos") ok = ok && tipoVal === tipo;
-        if (prioridad !== "Todas") ok = ok && p.prioridad === prioridad;
-        if (estado !== "Todos") ok = ok && p.estado === estado;
-        if (cliente !== "Todos") ok = ok && p.cliente_principal === cliente;
-        if (potMin && p.potencial_eur != null) {
-          ok = ok && Number(p.potencial_eur) >= potMin;
-        } else if (potMin && (p.potencial_eur == null || p.potencial_eur === "")) {
-          ok = false;
-        }
-        return ok;
-      });
-
-      resultFiltrosMeta.textContent =
-        `Resultados: ${proyectosFiltros.length} proyecto(s) encontrados.`;
-
-      pintarTabla(proyectosFiltros, tablaFiltrosWrapper, tablaFiltrosEmpty);
-    }
-
-    btnBuscarFiltros.addEventListener("click", aplicarFiltros);
-
-    // ---- Helpers tabla ----
-    function pintarTabla(data, contenedor, emptyDiv) {
-      if (!data.length) {
-        contenedor.innerHTML = "";
-        emptyDiv.style.display = "block";
-        return;
-      }
-      emptyDiv.style.display = "none";
-
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>Proyecto</th>
-              <th>Cliente</th>
-              <th>Ciudad</th>
-              <th>Provincia</th>
-              <th>Estado</th>
-              <th>Prioridad</th>
-              <th>Tipo</th>
-              <th>Potencial (€)</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      data.forEach(p => {
-        const pot = p.potencial_eur
-          ? Number(p.potencial_eur).toLocaleString("es-ES")
-          : "–";
-        const tipoVal = p.tipo || p.tipo_proyecto || "";
-        html += `
-          <tr>
-            <td>${p.nombre_obra || ""}</td>
-            <td>${p.cliente_principal || ""}</td>
-            <td>${p.ciudad || ""}</td>
-            <td>${p.provincia || ""}</td>
-            <td>${p.estado || ""}</td>
-            <td>${p.prioridad || ""}</td>
-            <td>${tipoVal}</td>
-            <td>${pot}</td>
-          </tr>
-        `;
-      });
-      html += "</tbody></table>";
-      contenedor.innerHTML = html;
-    }
-
-    // ---- Búsqueda por prompt (versión ligera del Python) ----
-
-    function extraerUmbralPotencial(text) {
-      const t = text.toLowerCase().replace(/\./g, "");
-      const m = t.match(/(\d+)\s*(k|m|millones)?/);
-      if (!m) return null;
-      let cantidad = parseFloat(m[1]);
-      const sufijo = m[2];
-      if (sufijo === "k") cantidad *= 1000;
-      else if (sufijo === "m" || sufijo === "millones") cantidad *= 1000000;
-      return cantidad;
-    }
-
-    function matchValor(text, valores) {
-      const t = text.toLowerCase();
-      for (const v of valores) {
-        if (typeof v !== "string") continue;
-        if (t.includes(v.toLowerCase())) return v;
-      }
-      return null;
-    }
-
-    function normalizarEstado(prompt) {
-      const p = prompt.toLowerCase();
-      if (p.includes("ganad")) return "Ganado";
-      if (p.includes("perdid")) return "Perdido";
-      if (p.includes("negoci")) return "Negociación";
-      if (p.includes("oferta")) return "Oferta Enviada";
-      if (p.includes("prescrip")) return "En Prescripción";
-      if (p.includes("detect")) return "Detectado";
-      return null;
-    }
-
-    function filtrarPorPrompt(prompt) {
-      let df = [...proyectos];
-      const explicacion = [];
-      const p = prompt.trim();
-      if (!p) return { data: df, explicacion };
-
-      // Ciudad
-      const ciudades = [...new Set(df.map(x => x.ciudad).filter(Boolean))];
-      const ciudad = matchValor(p, ciudades);
-      if (ciudad) {
-        df = df.filter(x => x.ciudad === ciudad);
-        explicacion.push(`Ciudad = <b>${ciudad}</b>`);
-      }
-
-      // Provincia
-      const provincias = [...new Set(df.map(x => x.provincia).filter(Boolean))];
-      const provincia = matchValor(p, provincias);
-      if (provincia && df.length) {
-        df = df.filter(x => x.provincia === provincia);
-        explicacion.push(`Provincia = <b>${provincia}</b>`);
-      }
-
-      // Tipo
-      const tipos = [...new Set(df.map(x => x.tipo || x.tipo_proyecto).filter(Boolean))];
-      const tipo = matchValor(p, tipos);
-      if (tipo && df.length) {
-        df = df.filter(x => (x.tipo || x.tipo_proyecto) === tipo);
-        explicacion.push(`Tipo de proyecto = <b>${tipo}</b>`);
-      }
-
-      // Prioridad (alta/media/baja)
-      const prioridades = [...new Set(df.map(x => x.prioridad).filter(Boolean))];
-      for (const [key, val] of [["alta","Alta"],["media","Media"],["baja","Baja"]]) {
-        if (p.toLowerCase().includes(key) && prioridades.includes(val)) {
-          df = df.filter(x => x.prioridad === val);
-          explicacion.push(`Prioridad = <b>${val}</b>`);
-          break;
-        }
-      }
-
-      // Estado
-      const estados = [...new Set(df.map(x => x.estado).filter(Boolean))];
-      const est = normalizarEstado(p);
-      if (est && estados.includes(est)) {
-        df = df.filter(x => x.estado === est);
-        explicacion.push(`Estado = <b>${est}</b>`);
-      }
-
-      // Cliente principal
-      const clientes = [...new Set(df.map(x => x.cliente_principal).filter(Boolean))];
-      const cliente = matchValor(p, clientes);
-      if (cliente && df.length) {
-        df = df.filter(x => x.cliente_principal === cliente);
-        explicacion.push(`Cliente principal = <b>${cliente}</b>`);
-      }
-
-      // Potencial
-      const umbral = extraerUmbralPotencial(p);
-      if (umbral && df.length) {
-        df = df.filter(x => Number(x.potencial_eur || 0) >= umbral);
-        explicacion.push(
-          `Potencial ≥ <b>${umbral.toLocaleString("es-ES", { maximumFractionDigits: 0 })} €</b>`
+      // Zonas
+      if (zonas) {
+        partes.push(
+          `Quiero que identifiques proyectos de obra nueva en las siguientes zonas: ${zonas}.`
+        );
+      } else {
+        partes.push(
+          "Quiero que identifiques proyectos de obra nueva en las principales zonas urbanas y de costa de España."
         );
       }
 
-      return { data: df, explicacion };
-    }
-
-    btnBuscarPrompt.addEventListener("click", () => {
-      const prompt = promptInput.value || "";
-      const { data, explicacion } = filtrarPorPrompt(prompt);
-
-      if (explicacion.length) {
-        promptExplicacion.innerHTML =
-          "Filtros detectados a partir del prompt: " + explicacion.join(", ");
-      } else {
-        promptExplicacion.textContent =
-          "No se ha detectado ningún filtro concreto, se muestran todos los proyectos.";
+      // Tipos
+      if (tipos.length) {
+        partes.push(
+          `El foco debe estar en activos de tipo: ${tipos.join(", ")}.`
+        );
       }
 
-      proyectosPrompt = data;
-      pintarTabla(proyectosPrompt, tablaPromptWrapper, tablaPromptEmpty);
-    });
+      // Segmento
+      if (segmento === "lujo") {
+        partes.push(
+          "Prioriza proyectos de segmento lujo / high-end, con posicionamiento diferencial."
+        );
+      } else if (segmento === "premium") {
+        partes.push(
+          "Prioriza proyectos de segmento premium, de buena calidad y enfoque aspiracional."
+        );
+      } else if (segmento === "core") {
+        partes.push(
+          "Puedes incluir proyectos de segmento core / residencial estándar siempre que tengan cierto volumen."
+        );
+      }
 
-    // ---- Init ----
-    cargarProyectos();
+      // Ticket mínimo
+      if (ticketMin) {
+        partes.push(
+          `Filtra proyectos con un ticket estimado de obra o inversión igual o superior a ${ticketMin} € (si no hay dato exacto, utiliza una estimación razonable).`
+        );
+      }
+
+      // Fases
+      if (fases.length) {
+        partes.push(
+          `Interesan proyectos en las siguientes fases: ${fases.join(", ")}.`
+        );
+      } else {
+        partes.push(
+          "Se pueden incluir proyectos en fase de suelo, proyecto/licencia y en construcción."
+        );
+      }
+
+      // Players
+      if (players.length) {
+        partes.push(
+          `Me interesa conocer los principales players implicados: ${players.join(", ")}.`
+        );
+      } else {
+        partes.push(
+          "Incluye siempre que sea posible los datos de promotora, constructora, estudio de arquitectura, ingeniería y, si aplica, fondo o family office."
+        );
+      }
+
+      // Horizonte
+      if (horizonte === "corto") {
+        partes.push(
+          "Prioriza proyectos con entrega o desarrollo previsto en el corto plazo (0–2 años)."
+        );
+      } else if (horizonte === "medio") {
+        partes.push(
+          "Prioriza proyectos con entrega o desarrollo previsto en el medio plazo (2–5 años)."
+        );
+      } else if (horizonte === "largo") {
+        partes.push(
+          "Puedes incluir también proyectos a más largo plazo (+5 años) si son relevantes."
+        );
+      }
+
+      if (notas) {
+        partes.push(`Ten en cuenta además lo siguiente: ${notas}`);
+      }
+
+      // Formato de salida
+      partes.push(
+        "Devuélveme el resultado en una tabla (markdown) con una fila por proyecto y al menos las siguientes columnas:"
+      );
+      partes.push(
+        "- Ciudad / Zona\n" +
+        "- Nombre del proyecto o promoción\n" +
+        "- Tipo de activo (BTR, BTS, hotel, coliving, oficinas, etc.)\n" +
+        "- Nº aproximado de unidades / habitaciones\n" +
+        "- Segmento (lujo, premium, core, etc.)\n" +
+        "- Estado / fase (suelo, licencia, construcción, llave en mano, etc.)\n" +
+        "- Promotora / Propiedad\n" +
+        "- Estudio de arquitectura\n" +
+        "- Ingeniería (si aplica)\n" +
+        "- Constructora\n" +
+        "- Ticket estimado de obra o inversión (€)\n" +
+        "- Año/fecha estimada de entrega\n" +
+        "- Enlace a la fuente principal (web de la promotora, nota de prensa, portal inmobiliario, etc.)"
+      );
+
+      partes.push(
+        "Si no encuentras alguno de los datos para un proyecto, deja la celda en blanco pero mantén la fila igualmente."
+      );
+
+      promptGenerado.value = partes.join("\n\n");
+    }
+
+    function limpiarFormulario() {
+      zonasInput.value = "";
+      chkTipo.forEach(c => (c.checked = false));
+      segmentoSel.value = "";
+      ticketMinInput.value = "";
+      chkFase.forEach(c => (c.checked = false));
+      chkPlayer.forEach(c => (c.checked = false));
+      horizonteSel.value = "";
+      notasExtra.value = "";
+      promptGenerado.value = "";
+    }
+
+    btnGenerar.addEventListener("click", generarPrompt);
+    btnLimpiar.addEventListener("click", limpiarFormulario);
+
+    btnCopiar.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(promptGenerado.value || "");
+        btnCopiar.textContent = "Copiado ✔";
+        setTimeout(() => (btnCopiar.textContent = "Copiar prompt"), 1200);
+      } catch {
+        alert("No se ha podido copiar al portapapeles.");
+      }
+    });
   </script>
 </body>
 </html>
