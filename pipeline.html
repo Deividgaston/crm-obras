@@ -30,6 +30,7 @@
     <div style="font-size:12px;color:#5A6872;margin-bottom:10px;">
       Todos los proyectos empiezan en <b>Detectado</b>. Arrastra las obras entre columnas para cambiar el estado
       (Detectado → Prescripción → Oferta → Negociación → Ganado / Perdido / Paralizado).
+      En la columna <b>Seguimiento</b> puedes editar las fechas y comentarios de seguimiento/tarea.
     </div>
 
     <!-- FILTRO RÁPIDO ARRIBA -->
@@ -50,17 +51,56 @@
       <input id="fTexto" class="search-input" style="max-width:220px;" placeholder="Buscar por nombre / cliente..." />
     </div>
 
-    <!-- COLUMNS KANBAN -->
+    <!-- COLUMNS KANBAN (7 estados + columna Seguimiento) -->
     <div id="kanbanBoard" style="
         display:grid;
-        grid-template-columns:repeat(7,minmax(0,1fr));
+        grid-template-columns:repeat(8,minmax(0,1fr));
         gap:8px;
         align-items:flex-start;
         overflow-x:auto;
       ">
-      <!-- Las columnas se rellenan por JS -->
+      <!-- Se rellena vía JS -->
     </div>
   </main>
+
+  <!-- DIALOGO EDICIÓN SEGUIMIENTO / TAREA (como en index) -->
+  <dialog id="seguimientoDialog">
+    <div class="modal-header">Editar seguimiento / tarea</div>
+    <form id="seguimientoForm" method="dialog">
+      <input type="hidden" id="segProjId" />
+
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:600;color:#111827;">Proyecto</label>
+        <div id="segNombreObra" style="font-size:12px;color:#374151;padding:6px 8px;border-radius:6px;background:#F9FAFB;border:1px solid #E5E7EB;"></div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="segFecha" style="font-size:11.5px;font-weight:600;color:#111827;">Fecha seguimiento</label>
+          <input id="segFecha" type="date" />
+        </div>
+        <div class="form-group">
+          <label for="tareaFecha" style="font-size:11.5px;font-weight:600;color:#111827;">Fecha tarea</label>
+          <input id="tareaFecha" type="date" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="segComentario" style="font-size:11.5px;font-weight:600;color:#111827;">Comentario seguimiento</label>
+        <textarea id="segComentario" rows="3"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="tareaComentario" style="font-size:11.5px;font-weight:600;color:#111827;">Descripción tarea</label>
+        <textarea id="tareaComentario" rows="3"></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="window.closeSegDialog()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
 
   <script type="module">
     import { db } from "./firebase.js";
@@ -80,11 +120,22 @@
       "Perdido",
       "Paralizado"
     ];
+    const COLUMNAS = [...ESTADOS, "Seguimiento"];
 
     const encajeFilter = document.getElementById("fEncaje2N");
     const prioridadFilter = document.getElementById("fPrioridad");
     const textoFilter = document.getElementById("fTexto");
     const kanbanBoard = document.getElementById("kanbanBoard");
+
+    // Diálogo seguimiento
+    const segDialog = document.getElementById("seguimientoDialog");
+    const segForm = document.getElementById("seguimientoForm");
+    const segProjId = document.getElementById("segProjId");
+    const segNombreObra = document.getElementById("segNombreObra");
+    const segFecha = document.getElementById("segFecha");
+    const tareaFecha = document.getElementById("tareaFecha");
+    const segComentario = document.getElementById("segComentario");
+    const tareaComentario = document.getElementById("tareaComentario");
 
     let proyectos = [];
     let proyectosFiltrados = [];
@@ -94,7 +145,6 @@
       const raw = (p.estado || "").toString().trim();
       if (!raw) return "Detectado";
       if (ESTADOS.includes(raw)) return raw;
-      // Si viene de Construdata o texto raro → empieza en Detectado
       return "Detectado";
     }
 
@@ -189,12 +239,16 @@
     function pintarKanban() {
       kanbanBoard.innerHTML = "";
 
-      ESTADOS.forEach(estadoCol => {
-        const colProyectos = proyectosFiltrados.filter(p => estadoNormalizado(p) === estadoCol);
+      COLUMNAS.forEach(colName => {
+        const isSeguimientoCol = colName === "Seguimiento";
+
+        const colProyectos = isSeguimientoCol
+          ? proyectosFiltrados.filter(p => p.seguimiento_fecha)
+          : proyectosFiltrados.filter(p => estadoNormalizado(p) === colName);
 
         const col = document.createElement("div");
         col.className = "kanban-column";
-        col.dataset.estado = estadoCol;
+        col.dataset.estado = colName;
         col.style.background = "#F9FAFB";
         col.style.border = "1px solid #E5E7EB";
         col.style.borderRadius = "10px";
@@ -207,7 +261,7 @@
         col.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <div style="font-size:11px;font-weight:600;color:#111827;">
-              ${estadoCol}
+              ${colName}
             </div>
             <div style="font-size:10px;color:#6B7280;">
               ${colProyectos.length}
@@ -222,61 +276,72 @@
         dropZone.style.flexDirection = "column";
         dropZone.style.gap = "6px";
 
-        dropZone.addEventListener("dragover", (e) => {
-          e.preventDefault();
-          dropZone.style.background = "#EFF6FF";
-        });
+        if (!isSeguimientoCol) {
+          // Columnas normales → droppable para cambiar estado
+          dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.style.background = "#EFF6FF";
+          });
 
-        dropZone.addEventListener("dragleave", () => {
-          dropZone.style.background = "transparent";
-        });
+          dropZone.addEventListener("dragleave", () => {
+            dropZone.style.background = "transparent";
+          });
 
-        dropZone.addEventListener("drop", async (e) => {
-          e.preventDefault();
-          dropZone.style.background = "transparent";
-          if (!dragId) return;
+          dropZone.addEventListener("drop", async (e) => {
+            e.preventDefault();
+            dropZone.style.background = "transparent";
+            if (!dragId) return;
 
-          const newEstado = col.dataset.estado;
-          const proyecto = proyectos.find(p => p.id === dragId);
-          if (!proyecto) return;
+            const newEstado = col.dataset.estado;
+            const proyecto = proyectos.find(p => p.id === dragId);
+            if (!proyecto) return;
 
-          const estadoActualNormalizado = estadoNormalizado(proyecto);
-          if (estadoActualNormalizado === newEstado) {
-            dragId = null;
-            return;
-          }
+            const estadoActualNormalizado = estadoNormalizado(proyecto);
+            if (estadoActualNormalizado === newEstado) {
+              dragId = null;
+              return;
+            }
 
-          try {
-            await updateDoc(doc(db, "proyectos", dragId), { estado: newEstado });
-            proyecto.estado = newEstado;
-            aplicarFiltros();
-          } catch (err) {
-            console.error("❌ Error cambiando estado:", err);
-            alert("Error actualizando el estado del proyecto.");
-          } finally {
-            dragId = null;
-          }
-        });
+            try {
+              await updateDoc(doc(db, "proyectos", dragId), { estado: newEstado });
+              proyecto.estado = newEstado;
+              aplicarFiltros();
+            } catch (err) {
+              console.error("❌ Error cambiando estado:", err);
+              alert("Error actualizando el estado del proyecto.");
+            } finally {
+              dragId = null;
+            }
+          });
+        }
 
         colProyectos.forEach(p => {
           const card = document.createElement("div");
           card.className = "kanban-card";
-          card.draggable = true;
           card.dataset.id = p.id;
           card.style.borderRadius = "8px";
           card.style.border = "1px solid #E5E7EB";
           card.style.background = "#FFFFFF";
           card.style.padding = "6px 7px";
-          card.style.cursor = "grab";
           card.style.fontSize = "11px";
           card.style.boxShadow = "0 1px 1px rgba(15,23,42,0.04)";
 
           const loc = [p.ciudad, p.provincia].filter(Boolean).join(" · ");
           const estNorm = estadoNormalizado(p);
 
+          if (!isSeguimientoCol) {
+            card.draggable = true;
+            card.style.cursor = "grab";
+          } else {
+            card.draggable = false;
+            card.style.cursor = "pointer";
+          }
+
+          const titleClass = isSeguimientoCol ? "seg-title" : "kanban-title";
+
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
-              <button class="kanban-title" data-id="${p.id}" style="
+              <button class="${titleClass}" data-id="${p.id}" style="
                   border:none;
                   background:none;
                   padding:0;
@@ -301,13 +366,15 @@
             </div>
           `;
 
-          card.addEventListener("dragstart", () => {
-            dragId = p.id;
-            card.style.opacity = "0.6";
-          });
-          card.addEventListener("dragend", () => {
-            card.style.opacity = "1";
-          });
+          if (!isSeguimientoCol) {
+            card.addEventListener("dragstart", () => {
+              dragId = p.id;
+              card.style.opacity = "0.6";
+            });
+            card.addEventListener("dragend", () => {
+              card.style.opacity = "1";
+            });
+          }
 
           dropZone.appendChild(card);
         });
@@ -316,14 +383,64 @@
         kanbanBoard.appendChild(col);
       });
 
-      // Click en la obra → ir a proyectos (edición desde tabla)
+      // Click en títulos de columnas normales → ir a proyectos (tabla)
       kanbanBoard.querySelectorAll(".kanban-title").forEach(btn => {
         btn.addEventListener("click", () => {
-          const id = btn.getAttribute("data-id");
           window.location.href = "proyectos.html";
         });
       });
+
+      // Click en títulos de columna Seguimiento → abrir modal de seguimiento
+      kanbanBoard.querySelectorAll(".seg-title").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          openSegDialog(id);
+        });
+      });
     }
+
+    function openSegDialog(id) {
+      const p = proyectos.find(x => x.id === id);
+      if (!p) return;
+
+      segProjId.value = p.id;
+      segNombreObra.textContent = p.nombre_obra || "";
+      segFecha.value = p.seguimiento_fecha || "";
+      tareaFecha.value = p.tarea_fecha || "";
+      segComentario.value = p.seguimiento_comentario || "";
+      tareaComentario.value = p.tarea_comentario || "";
+
+      segDialog.showModal();
+    }
+
+    window.closeSegDialog = function () {
+      segDialog.close();
+    };
+
+    segForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = segProjId.value;
+      if (!id) {
+        segDialog.close();
+        return;
+      }
+
+      const payload = {
+        seguimiento_fecha: segFecha.value || null,
+        seguimiento_comentario: segComentario.value.trim(),
+        tarea_fecha: tareaFecha.value || null,
+        tarea_comentario: tareaComentario.value.trim()
+      };
+
+      try {
+        await updateDoc(doc(db, "proyectos", id), payload);
+        segDialog.close();
+        await cargarProyectos();
+      } catch (err) {
+        console.error("❌ Error guardando seguimiento:", err);
+        alert("Error guardando el seguimiento/tarea.");
+      }
+    });
 
     encajeFilter.addEventListener("change", aplicarFiltros);
     prioridadFilter.addEventListener("change", aplicarFiltros);
