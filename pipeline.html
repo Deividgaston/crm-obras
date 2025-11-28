@@ -1,41 +1,31 @@
-<!-- CRM 2N – Pipeline (placeholder) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>CRM 2N – Pipeline</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont;background:#F5F7FA}
-        .topnav{height:56px;background:#fff;display:flex;align-items:center;padding:0 20px;box-shadow:0 2px 6px rgba(0,0,0,0.05);gap:20px}
-        .logo{font-size:18px;font-weight:700;color:#4C6EF5;margin-right:12px}
-        .nav-tabs{display:flex;gap:10px;flex:1}
-        .nav-item{padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;color:#333}
-        .nav-item:hover{background:#F1F3F5}
-        .nav-item.active{color:#4C6EF5;font-weight:600;border-bottom:3px solid #4C6EF5;padding-bottom:5px}
-        .content{padding:24px}
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div class="topnav">
     <div class="logo">CRM 2N</div>
+
     <div class="nav-tabs">
-        <div class="nav-item" onclick="go('index.html')">Dashboard</div>
-        <div class="nav-item" onclick="go('proyectos.html')">Proyectos</div>
-        <div class="nav-item active" onclick="go('pipeline.html')">Pipeline</div>
-        <div class="nav-item" onclick="go('clientes.html')">Clientes</div>
-        <div class="nav-item" onclick="go('tareas.html')">Tareas</div>
-        <div class="nav-item" onclick="go('reportes.html')">Reportes</div>
+        <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
+        <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+        <div class="nav-item active" onclick="location.href='pipeline.html'">Pipeline</div>
+        <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+        <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+        <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
     </div>
+
+    <input type="text" class="search-box" placeholder="Buscar..." />
 </div>
 
 <main class="content">
-    <h2>Pipeline (Kanban) – en construcción</h2>
-    <p>Luego aquí montamos las columnas tipo Salesforce: Pipeline, Prescripción, Ganado, Perdido.</p>
+    <h2>Pipeline</h2>
+    <p>En construcción.</p>
 </main>
 
-<script>
-    function go(ruta){ window.location.href = ruta; }
-</script>
 </body>
 </html>
