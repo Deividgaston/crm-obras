@@ -11,7 +11,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
     <title>CRM 2N – Proyectos</title>
 
     <link rel="stylesheet" href="style.css" />
-
     <!-- Librería para leer Excel en el navegador -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -209,8 +208,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             doc
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        console.log("CRM 2N – Proyectos cargado");
-
         const ESTADOS_PIPELINE = [
             "Detectado","En Prescripción","Oferta Enviada",
             "Negociación","Ganado","Perdido","Paralizado"
@@ -240,20 +237,14 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
         let selectedIds = [];
         let pendingDeleteIds = [];
 
-        /* ------------------------------
-           CARGA INICIAL PROYECTOS
-           ------------------------------ */
+        /* --------- CARGA INICIAL --------- */
 
         async function cargarProyectos() {
             try {
                 const ref = collection(db, "proyectos");
                 const snap = await getDocs(ref);
-
                 proyectos = [];
-                snap.forEach(d => {
-                    proyectos.push({ id: d.id, ...d.data() });
-                });
-
+                snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
                 inicializarFiltros();
                 aplicarFiltros();
             } catch (err) {
@@ -263,36 +254,25 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             }
         }
 
-        /* ------------------------------
-           FILTROS
-           ------------------------------ */
+        /* --------- FILTROS / KPI --------- */
 
         function inicializarFiltros() {
-            const ciudades = Array.from(new Set(
-                proyectos.map(p => p.ciudad).filter(Boolean)
-            )).sort();
-
+            const ciudades = [...new Set(proyectos.map(p => p.ciudad).filter(Boolean))].sort();
             fCiudad.innerHTML =
                 '<option value="Todas">Ciudad: todas</option>' +
                 ciudades.map(c => `<option value="${c}">${c}</option>`).join("");
 
-            const estados = Array.from(new Set(
-                proyectos.map(p => p.estado).filter(Boolean)
-            ));
+            const estados = [...new Set(proyectos.map(p => p.estado).filter(Boolean))];
             fEstado.innerHTML =
                 '<option value="Todos">Estado: todos</option>' +
                 estados.map(e => `<option value="${e}">${e}</option>`).join("");
 
-            const tipos = Array.from(new Set(
-                proyectos.map(p => p.tipo).filter(Boolean)
-            ));
+            const tipos = [...new Set(proyectos.map(p => p.tipo).filter(Boolean))];
             fTipo.innerHTML =
                 '<option value="Todos">Tipo: todos</option>' +
                 tipos.map(t => `<option value="${t}">${t}</option>`).join("");
 
-            const prioridades = Array.from(new Set(
-                proyectos.map(p => p.prioridad).filter(Boolean)
-            ));
+            const prioridades = [...new Set(proyectos.map(p => p.prioridad).filter(Boolean))];
             fPrioridad.innerHTML =
                 '<option value="Todas">Prioridad: todas</option>' +
                 prioridades.map(pr => `<option value="${pr}">${pr}</option>`).join("");
@@ -307,7 +287,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
 
             proyectosFiltrados = proyectos.filter(p => {
                 let ok = true;
-
                 if (ciudad !== "Todas") ok = ok && p.ciudad === ciudad;
                 if (estado !== "Todos") ok = ok && p.estado === estado;
                 if (tipo !== "Todos") ok = ok && p.tipo === tipo;
@@ -322,25 +301,19 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                     ].join(" ").toLowerCase();
                     ok = ok && blob.includes(texto);
                 }
-
                 return ok;
             });
 
-            pintarKPIs();
-            pintarTabla();
-        }
-
-        function pintarKPIs() {
             kpiTotal.textContent = proyectosFiltrados.length;
             kpiSeguimiento.textContent =
                 proyectosFiltrados.filter(p => p.estado && p.estado !== "Detectado").length;
             kpiGanados.textContent =
                 proyectosFiltrados.filter(p => p.estado === "Ganado").length;
+
+            pintarTabla();
         }
 
-        /* ------------------------------
-           TABLA
-           ------------------------------ */
+        /* --------- TABLA --------- */
 
         function badgeClass(estado) {
             if (!estado) return "badge detectado";
@@ -363,7 +336,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                 emptyState.style.display = "block";
                 return;
             }
-
             emptyState.style.display = "none";
 
             let html = `
@@ -431,9 +403,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             });
         }
 
-        /* ------------------------------
-           MODAL ALTA/EDICIÓN
-           ------------------------------ */
+        /* --------- MODAL ALTA/EDICIÓN --------- */
 
         function fillForm(p) {
             document.getElementById("projId").value = p?.id || "";
@@ -498,11 +468,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                 tarea_comentario: document.getElementById("tarea_comentario").value.trim()
             };
 
-            if (!payload.nombre_obra) {
-                alert("El nombre de la obra es obligatorio.");
-                return;
-            }
-
             try {
                 if (id) {
                     await updateDoc(doc(db, "proyectos", id), payload);
@@ -517,9 +482,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             }
         });
 
-        /* ------------------------------
-           BORRADO
-           ------------------------------ */
+        /* --------- BORRADO --------- */
 
         window.onDeleteSelected = function () {
             if (!selectedIds.length) {
@@ -549,12 +512,10 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             }
         };
 
-        /* ------------------------------
-           IMPORTAR DESDE EXCEL
-           ------------------------------ */
+        /* --------- IMPORTAR EXCEL --------- */
 
         window.openImport = function () {
-            fileInput.value = "";      // para poder importar dos veces seguidas
+            fileInput.value = "";
             fileInput.click();
         };
 
@@ -563,7 +524,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
         async function handleFileImport(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             if (!window.XLSX) {
                 alert("No se ha podido cargar la librería de Excel (XLSX).");
                 return;
@@ -575,7 +535,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                     alert("No se han encontrado filas en el Excel.");
                     return;
                 }
-
                 const toImport = rows.map(mapRowToProyecto).filter(p => p.nombre_obra);
                 if (!toImport.length) {
                     alert("No se ha podido mapear ningún proyecto (revisa los encabezados).");
@@ -586,7 +545,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                 for (const p of toImport) {
                     await addDoc(ref, p);
                 }
-
                 alert(`Importación completada. Proyectos creados: ${toImport.length}`);
                 cargarProyectos();
             } catch (err) {
@@ -615,20 +573,56 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             });
         }
 
-        // Mapeo de columnas Excel -> estructura Firestore
+        // Mapeo nombres de columna Excel -> campos del proyecto
         const HEADER_MAP = {
-            nombre_obra: ["nombre_obra", "Nombre_obra", "Nombre de la obra", "Proyecto"],
-            cliente_principal: ["cliente_principal", "Cliente_principal", "Cliente principal", "Cliente"],
-            ciudad: ["ciudad", "Ciudad"],
-            provincia: ["provincia", "Provincia"],
-            estado: ["estado", "Estado"],
-            prioridad: ["prioridad", "Prioridad"],
-            tipo: ["tipo", "Tipo", "Tipo de proyecto"],
-            potencial_eur: ["potencial_eur", "Potencial", "Potencial (€)", "Potencial eur"],
-            seguimiento_fecha: ["seguimiento_fecha", "Seguimiento_fecha", "Fecha seguimiento"],
-            seguimiento_comentario: ["seguimiento_comentario", "Comentario seguimiento"],
-            tarea_fecha: ["tarea_fecha", "Fecha tarea"],
-            tarea_comentario: ["tarea_comentario", "Descripción tarea", "Descripcion tarea"]
+            // Campos básicos
+            nombre_obra: ["nombre_obra","Nombre_obra","Nombre de la obra","Proyecto"],
+            cliente_principal: ["cliente_principal","Cliente_principal","Cliente principal","Cliente"],
+            ciudad: ["ciudad","Ciudad"],
+            provincia: ["provincia","Provincia"],
+            estado: ["estado","Estado"],
+            prioridad: ["prioridad","Prioridad"],
+            tipo: ["tipo","Tipo","Tipo de proyecto"],
+            potencial_eur: ["potencial_eur","Potencial","Potencial (€)","Potencial eur"],
+
+            // Seguimiento / tareas
+            seguimiento_fecha: ["seguimiento_fecha","Seguimiento_fecha","Fecha seguimiento"],
+            seguimiento_comentario: ["seguimiento_comentario","Comentario seguimiento"],
+            tarea_fecha: ["tarea_fecha","Fecha tarea"],
+            tarea_comentario: ["tarea_comentario","Descripción tarea","Descripcion tarea"],
+
+            // Promotora / constructora / arquitectura / ingeniería
+            promotora: ["promotora","Promotora","Promotor","Promotor/Propiedad"],
+            constructora: ["constructora","Constructora","Constructor"],
+            arquitectura: [
+                "arquitectura","Arquitectura","Arquitecto","Estudio arquitectura","Arquitecto/Estudio"
+            ],
+            ingenieria: ["ingenieria","Ingenieria","Ingeniería","Ingeniería/Instalaciones"],
+
+            // Contactos cliente
+            contacto_cliente: [
+                "contacto_cliente","Contacto cliente","Responsable cliente","Persona contacto cliente"
+            ],
+            telefono_cliente: [
+                "telefono_cliente","Teléfono cliente","Telefono cliente","Tlf cliente","Teléfono contacto"
+            ],
+            email_cliente: [
+                "email_cliente","Email cliente","Correo cliente","Mail cliente"
+            ],
+
+            // Contactos arquitectura
+            contacto_arquitectura: [
+                "contacto_arquitectura","Contacto arquitecto","Contacto arquitectura","Responsable arquitectura"
+            ],
+            telefono_arquitectura: [
+                "telefono_arquitectura","Teléfono arquitecto","Telefono arquitecto","Tlf arquitecto"
+            ],
+            email_arquitectura: [
+                "email_arquitectura","Email arquitecto","Correo arquitecto","Mail arquitecto"
+            ],
+
+            // Notas
+            notas: ["notas","Notas","Observaciones","Comentarios"]
         };
 
         function getCell(row, keys) {
@@ -643,25 +637,22 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
         function normalizeDate(value) {
             if (!value) return "";
             if (typeof value === "string") {
-                // Si ya parece ISO (yyyy-mm-dd) lo dejamos
                 if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
-                // Si es dd/mm/yyyy lo cambiamos
                 const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
                 if (m) {
-                    const d = m[1].padStart(2, "0");
-                    const mo = m[2].padStart(2, "0");
+                    const d = m[1].padStart(2,"0");
+                    const mo = m[2].padStart(2,"0");
                     return `${m[3]}-${mo}-${d}`;
                 }
                 return "";
             }
-            // Fechas de Excel como número
             if (typeof value === "number" && window.XLSX && XLSX.SSF) {
                 try {
                     const date = XLSX.SSF.parse_date_code(value);
                     if (date) {
                         const y = date.y;
-                        const m = String(date.m).padStart(2, "0");
-                        const d = String(date.d).padStart(2, "0");
+                        const m = String(date.m).padStart(2,"0");
+                        const d = String(date.d).padStart(2,"0");
                         return `${y}-${m}-${d}`;
                     }
                 } catch {}
@@ -670,7 +661,8 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
         }
 
         function mapRowToProyecto(row) {
-            const p = {
+            return {
+                // Básicos
                 nombre_obra: getCell(row, HEADER_MAP.nombre_obra).toString().trim(),
                 cliente_principal: getCell(row, HEADER_MAP.cliente_principal).toString().trim(),
                 ciudad: getCell(row, HEADER_MAP.ciudad).toString().trim(),
@@ -679,17 +671,35 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                 prioridad: getCell(row, HEADER_MAP.prioridad).toString().trim() || "Media",
                 tipo: getCell(row, HEADER_MAP.tipo).toString().trim() || "Residencial",
                 potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur) || 0),
+
+                // Seguimiento / tareas
                 seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha)),
                 seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario).toString().trim(),
                 tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha)),
-                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario).toString().trim()
+                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario).toString().trim(),
+
+                // Promotora / constructora / arquitectura / ingeniería
+                promotora: getCell(row, HEADER_MAP.promotora).toString().trim(),
+                constructora: getCell(row, HEADER_MAP.constructora).toString().trim(),
+                arquitectura: getCell(row, HEADER_MAP.arquitectura).toString().trim(),
+                ingenieria: getCell(row, HEADER_MAP.ingenieria).toString().trim(),
+
+                // Contactos cliente
+                contacto_cliente: getCell(row, HEADER_MAP.contacto_cliente).toString().trim(),
+                telefono_cliente: getCell(row, HEADER_MAP.telefono_cliente).toString().trim(),
+                email_cliente: getCell(row, HEADER_MAP.email_cliente).toString().trim(),
+
+                // Contactos arquitectura
+                contacto_arquitectura: getCell(row, HEADER_MAP.contacto_arquitectura).toString().trim(),
+                telefono_arquitectura: getCell(row, HEADER_MAP.telefono_arquitectura).toString().trim(),
+                email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura).toString().trim(),
+
+                // Notas
+                notas: getCell(row, HEADER_MAP.notas).toString().trim()
             };
-            return p;
         }
 
-        /* ------------------------------
-           LISTENERS FILTROS & INIT
-           ------------------------------ */
+        /* --------- LISTENERS & INIT --------- */
 
         [fCiudad, fEstado, fTipo, fPrioridad].forEach(el =>
             el.addEventListener("change", aplicarFiltros)
