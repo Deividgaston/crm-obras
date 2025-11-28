@@ -32,7 +32,7 @@
     <main class="content">
         <h2 style="margin-top:0; margin-bottom:4px; color:#16325C;">Proyectos</h2>
         <div style="font-size:12px;color:#5A6872;margin-bottom:14px;">
-            Vista general en tabla · Filtra, selecciona, edita, borra o importa proyectos desde Excel
+            Vista general en tabla · Filtra, selecciona, edita, borra o importa proyectos desde Excel (Prompt / Construdata)
         </div>
 
         <!-- FILTROS SUPERIORES -->
@@ -323,9 +323,9 @@
             if (!estado) return "badge detectado";
             const e = estado.toLowerCase();
             if (e === "detectado") return "badge detectado";
-            if (e.includes("prescripción")) return "badge prescripcion";
+            if (e.includes("prescripción") || e.includes("prescripcion")) return "badge prescripcion";
             if (e.includes("oferta")) return "badge oferta";
-            if (e.includes("negociación")) return "badge negociacion";
+            if (e.includes("negociación") || e.includes("negociacion")) return "badge negociacion";
             if (e === "ganado") return "badge ganado";
             if (e === "perdido") return "badge perdido";
             if (e === "paralizado") return "badge paralizado";
@@ -573,70 +573,156 @@
             });
         }
 
+        // ====== MAPEOS DE CABECERAS PARA DISTINTOS FORMATOS (PROMPT + CONSTRUDATA) ======
         const HEADER_MAP = {
-            nombre_obra: ["nombre_obra","Nombre_obra","Nombre de la obra","Proyecto"],
-            cliente_principal: ["cliente_principal","Cliente_principal","Cliente principal","Cliente"],
-            ciudad: ["ciudad","Ciudad"],
-            provincia: ["provincia","Provincia"],
-            estado: ["estado","Estado"],
-            prioridad: ["prioridad","Prioridad"],
-            tipo: ["tipo","Tipo","Tipo de proyecto"],
-            potencial_eur: ["potencial_eur","Potencial","Potencial (€)","Potencial eur"],
-
-            seguimiento_fecha: ["seguimiento_fecha","Seguimiento_fecha","Fecha seguimiento"],
-            seguimiento_comentario: ["seguimiento_comentario","Comentario seguimiento"],
-            tarea_fecha: ["tarea_fecha","Fecha tarea"],
-            tarea_comentario: ["tarea_comentario","Descripción tarea","Descripcion tarea"],
-
-            promotora: ["promotora","Promotora","Promotor","Promotor/Propiedad"],
-            constructora: ["constructora","Constructora","Constructor"],
-            arquitectura: [
-                "arquitectura","Arquitectura","Arquitecto","Estudio arquitectura","Arquitecto/Estudio"
+            nombre_obra: [
+                "nombre_obra", "Nombre_obra", "Nombre de la obra", "Nombre obra",
+                "Obra", "Proyecto", "Obra/Proyecto", "Titulo obra", "Título obra",
+                "Obra:Nombre"
             ],
-            ingenieria: ["ingenieria","Ingenieria","Ingeniería","Ingeniería/Instalaciones"],
+            cliente_principal: [
+                "cliente_principal", "Cliente_principal", "Cliente principal",
+                "Cliente", "Cliente/Propiedad", "Propietario", "Propiedad",
+                "Promotor", "Promotor1:Empresa"
+            ],
+            ciudad: [
+                "ciudad", "Ciudad", "Localidad", "Población", "Poblacion", "Municipio",
+                "Obra:Localidad"
+            ],
+            provincia: [
+                "provincia", "Provincia"
+            ],
+            estado: [
+                "estado", "Estado", "Estado proyecto", "Situación", "Situacion", "Fase",
+                "Obra:Hito"
+            ],
+            prioridad: [
+                "prioridad", "Prioridad"
+            ],
+            tipo: [
+                "tipo", "Tipo", "Tipo de proyecto", "Tipo de obra", "Tipologia", "Tipología",
+                "Obra:Tipo de obra", "Obra (Extras):Tipo de trabajo"
+            ],
+            potencial_eur: [
+                "potencial_eur", "Potencial (€)", "Potencial", "Presupuesto",
+                "Presupuesto (EUR)", "Presupuesto (€)", "Importe obra", "Presupuesto obra",
+                "Obra:Presupuesto"
+            ],
+
+            seguimiento_fecha: [
+                "seguimiento_fecha", "Seguimiento_fecha", "Fecha seguimiento",
+                "Próximo seguimiento", "Proximo seguimiento",
+                "Obra:Fecha hito actual"
+            ],
+            seguimiento_comentario: [
+                "seguimiento_comentario", "Comentario seguimiento",
+                "Notas seguimiento", "Notas seguimiento comercial",
+                "Obra:Descripcion Hito", "Obra:Descripción Hito", "Obra:Descripcion hito"
+            ],
+            tarea_fecha: [
+                "tarea_fecha", "Fecha tarea", "Fecha próxima tarea", "Fecha proxima tarea"
+            ],
+            tarea_comentario: [
+                "tarea_comentario", "Descripción tarea", "Descripcion tarea",
+                "Tarea", "Acción comercial", "Accion comercial",
+                "Gestiones:Eventos agendados"
+            ],
+
+            promotora: [
+                "promotora", "Promotora", "Promotor", "Promotora / Cliente", "Propiedad",
+                "Promotor1:Empresa"
+            ],
+            constructora: [
+                "constructora", "Constructora", "Constructor",
+                "Contratista1:Empresa"
+            ],
+            arquitectura: [
+                "arquitectura", "Arquitectura", "Arquitecto", "Estudio arquitectura",
+                "Estudio de arquitectura", "Arquitecto/Estudio",
+                "Arquitecto1:Empresa"
+            ],
+            ingenieria: [
+                "ingenieria", "Ingenieria", "Ingeniería", "Ingeniería/Instalaciones",
+                "Ingenieria/Instalaciones",
+                "Ingeniería 1:Empresa"
+            ],
 
             contacto_cliente: [
-                "contacto_cliente","Contacto cliente","Responsable cliente","Persona contacto cliente"
+                "contacto_cliente", "Contacto cliente", "Responsable cliente",
+                "Persona contacto cliente"
             ],
             telefono_cliente: [
-                "telefono_cliente","Teléfono cliente","Telefono cliente","Tlf cliente","Teléfono contacto"
+                "telefono_cliente", "Teléfono cliente", "Telefono cliente",
+                "Tlf cliente", "Teléfono contacto", "Telefono contacto",
+                "Promotor1:Telefonos"
             ],
             email_cliente: [
-                "email_cliente","Email cliente","Correo cliente","Mail cliente"
+                "email_cliente", "Email cliente", "Correo cliente", "Mail cliente",
+                "Promotor1:Email"
             ],
 
             contacto_arquitectura: [
-                "contacto_arquitectura","Contacto arquitecto","Contacto arquitectura","Responsable arquitectura"
+                "contacto_arquitectura", "Contacto arquitecto", "Contacto arquitectura",
+                "Responsable arquitectura"
             ],
             telefono_arquitectura: [
-                "telefono_arquitectura","Teléfono arquitecto","Telefono arquitecto","Tlf arquitecto"
+                "telefono_arquitectura", "Teléfono arquitecto", "Telefono arquitecto",
+                "Tlf arquitecto",
+                "Arquitecto1:Telefonos"
             ],
             email_arquitectura: [
-                "email_arquitectura","Email arquitecto","Correo arquitecto","Mail arquitecto"
+                "email_arquitectura", "Email arquitecto", "Correo arquitecto", "Mail arquitecto",
+                "Arquitecto1:Email"
             ],
 
-            notas: ["notas","Notas","Observaciones","Comentarios"],
+            notas: [
+                "notas", "Notas", "Observaciones", "Comentarios",
+                "Gestiones:Comentarios"
+            ],
 
             encaje_2n: [
-                "encaje_2n",
-                "Encaje soluciones 2N",
-                "Encaje 2N",
-                "Encaje soluciones 2n"
+                "encaje_2n", "Encaje soluciones 2N", "Encaje 2N",
+                "Encaje soluciones 2n", "Encaje potencial 2N"
             ],
             motivo_encaje_2n: [
-                "motivo_encaje_2n",
-                "Motivo del encaje 2N",
-                "Motivo encaje 2N",
-                "Motivo 2N"
+                "motivo_encaje_2n", "Motivo del encaje 2N", "Motivo encaje 2N",
+                "Motivo 2N", "Notas encaje 2N"
             ]
         };
 
-        function getCell(row, keys) {
-            for (const k of keys) {
-                if (Object.prototype.hasOwnProperty.call(row, k) && row[k] !== "") {
-                    return row[k];
+        // Normaliza cabeceras para encontrar coincidencias aunque cambien acentos/espacios
+        function normalizeHeaderKey(key) {
+            return key
+                .toString()
+                .toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quita acentos
+                .replace(/[^a-z0-9]/g, ""); // quita espacios y signos
+        }
+
+        // Pre-computamos las versiones normalizadas de todas las variantes
+        const HEADER_NORMALIZED = {};
+        for (const [field, variants] of Object.entries(HEADER_MAP)) {
+            HEADER_NORMALIZED[field] = variants.map(v => normalizeHeaderKey(v));
+        }
+
+        // row = objeto JSON de XLSX
+        function getCell(row, variants, fieldName) {
+            // 1) Intento por nombre exacto
+            for (const v of variants) {
+                if (Object.prototype.hasOwnProperty.call(row, v) && row[v] !== "") {
+                    return row[v];
                 }
             }
+
+            // 2) Intento por nombre normalizado
+            const targetNorms = HEADER_NORMALIZED[fieldName];
+            for (const key of Object.keys(row)) {
+                const nk = normalizeHeaderKey(key);
+                if (targetNorms.includes(nk) && row[key] !== "") {
+                    return row[key];
+                }
+            }
+
             return "";
         }
 
@@ -646,8 +732,8 @@
                 if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
                 const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
                 if (m) {
-                    const d = m[1].padStart(2,"0");
-                    const mo = m[2].padStart(2,"0");
+                    const d = m[1].padStart(2, "0");
+                    const mo = m[2].padStart(2, "0");
                     return `${m[3]}-${mo}-${d}`;
                 }
                 return "";
@@ -657,8 +743,8 @@
                     const date = XLSX.SSF.parse_date_code(value);
                     if (date) {
                         const y = date.y;
-                        const m = String(date.m).padStart(2,"0");
-                        const d = String(date.d).padStart(2,"0");
+                        const m = String(date.m).padStart(2, "0");
+                        const d = String(date.d).padStart(2, "0");
                         return `${y}-${m}-${d}`;
                     }
                 } catch {}
@@ -668,37 +754,37 @@
 
         function mapRowToProyecto(row) {
             return {
-                nombre_obra: getCell(row, HEADER_MAP.nombre_obra).toString().trim(),
-                cliente_principal: getCell(row, HEADER_MAP.cliente_principal).toString().trim(),
-                ciudad: getCell(row, HEADER_MAP.ciudad).toString().trim(),
-                provincia: getCell(row, HEADER_MAP.provincia).toString().trim(),
-                estado: getCell(row, HEADER_MAP.estado).toString().trim() || "Detectado",
-                prioridad: getCell(row, HEADER_MAP.prioridad).toString().trim() || "Media",
-                tipo: getCell(row, HEADER_MAP.tipo).toString().trim() || "Residencial",
-                potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur) || 0),
+                nombre_obra: getCell(row, HEADER_MAP.nombre_obra, "nombre_obra").toString().trim(),
+                cliente_principal: getCell(row, HEADER_MAP.cliente_principal, "cliente_principal").toString().trim(),
+                ciudad: getCell(row, HEADER_MAP.ciudad, "ciudad").toString().trim(),
+                provincia: getCell(row, HEADER_MAP.provincia, "provincia").toString().trim(),
+                estado: (getCell(row, HEADER_MAP.estado, "estado") || "Detectado").toString().trim(),
+                prioridad: (getCell(row, HEADER_MAP.prioridad, "prioridad") || "Media").toString().trim(),
+                tipo: (getCell(row, HEADER_MAP.tipo, "tipo") || "Residencial").toString().trim(),
+                potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur, "potencial_eur") || 0),
 
-                seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha)),
-                seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario).toString().trim(),
-                tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha)),
-                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario).toString().trim(),
+                seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha, "seguimiento_fecha")),
+                seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario, "seguimiento_comentario").toString().trim(),
+                tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha, "tarea_fecha")),
+                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario, "tarea_comentario").toString().trim(),
 
-                promotora: getCell(row, HEADER_MAP.promotora).toString().trim(),
-                constructora: getCell(row, HEADER_MAP.constructora).toString().trim(),
-                arquitectura: getCell(row, HEADER_MAP.arquitectura).toString().trim(),
-                ingenieria: getCell(row, HEADER_MAP.ingenieria).toString().trim(),
+                promotora: getCell(row, HEADER_MAP.promotora, "promotora").toString().trim(),
+                constructora: getCell(row, HEADER_MAP.constructora, "constructora").toString().trim(),
+                arquitectura: getCell(row, HEADER_MAP.arquitectura, "arquitectura").toString().trim(),
+                ingenieria: getCell(row, HEADER_MAP.ingenieria, "ingenieria").toString().trim(),
 
-                contacto_cliente: getCell(row, HEADER_MAP.contacto_cliente).toString().trim(),
-                telefono_cliente: getCell(row, HEADER_MAP.telefono_cliente).toString().trim(),
-                email_cliente: getCell(row, HEADER_MAP.email_cliente).toString().trim(),
+                contacto_cliente: getCell(row, HEADER_MAP.contacto_cliente, "contacto_cliente").toString().trim(),
+                telefono_cliente: getCell(row, HEADER_MAP.telefono_cliente, "telefono_cliente").toString().trim(),
+                email_cliente: getCell(row, HEADER_MAP.email_cliente, "email_cliente").toString().trim(),
 
-                contacto_arquitectura: getCell(row, HEADER_MAP.contacto_arquitectura).toString().trim(),
-                telefono_arquitectura: getCell(row, HEADER_MAP.telefono_arquitectura).toString().trim(),
-                email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura).toString().trim(),
+                contacto_arquitectura: getCell(row, HEADER_MAP.contacto_arquitectura, "contacto_arquitectura").toString().trim(),
+                telefono_arquitectura: getCell(row, HEADER_MAP.telefono_arquitectura, "telefono_arquitectura").toString().trim(),
+                email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura, "email_arquitectura").toString().trim(),
 
-                notas: getCell(row, HEADER_MAP.notas).toString().trim(),
+                notas: getCell(row, HEADER_MAP.notas, "notas").toString().trim(),
 
-                encaje_2n: getCell(row, HEADER_MAP.encaje_2n).toString().trim(),
-                motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n).toString().trim()
+                encaje_2n: getCell(row, HEADER_MAP.encaje_2n, "encaje_2n").toString().trim(),
+                motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n, "motivo_encaje_2n").toString().trim()
             };
         }
 
