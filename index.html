@@ -32,7 +32,7 @@
   <main class="content">
     <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Dashboard general</h2>
     <div style="font-size:12px;color:#5A6872;margin-bottom:16px;">
-      Vista rápida de proyectos, encaje 2N y seguimientos de la próxima semana.
+      Vista rápida de proyectos, encaje 2N y agenda de la próxima semana.
     </div>
 
     <!-- FILA KPIs -->
@@ -55,26 +55,9 @@
       </div>
     </div>
 
-    <!-- FILA PRINCIPAL: DONUT + SEGUIMIENTOS -->
-    <div style="display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:16px;align-items:flex-start;">
-      <!-- CARD DONUT ENCAJE 2N -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:#111827;">
-              Obras potenciales 2N (ALTO / MEDIO)
-            </div>
-            <div style="font-size:10.5px;color:#6B7280;">
-              Distribución por encaje 2N de todos los proyectos del CRM.
-            </div>
-          </div>
-        </div>
-        <div style="position:relative;height:220px;">
-          <canvas id="chartEncaje"></canvas>
-        </div>
-      </div>
-
-      <!-- CARD SEGUIMIENTOS PRÓXIMOS 7 DÍAS -->
+    <!-- FILA PRINCIPAL: SEGUIMIENTOS IZQ + GRAFICO + TAREAS DERECHA -->
+    <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:16px;align-items:flex-start;">
+      <!-- CARD SEGUIMIENTOS PRÓXIMOS 7 DÍAS (IZQUIERDA) -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
           <div>
@@ -89,12 +72,41 @@
 
         <div id="seguimientosList" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
+
+      <!-- CARD ENCAJE 2N + TAREAS (DERECHA) -->
+      <div class="card">
+        <!-- Encaje 2N -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#111827;">
+              Obras potenciales 2N (ALTO / MEDIO)
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;">
+              Distribución por encaje 2N de todos los proyectos del CRM.
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;height:200px;margin-bottom:10px;">
+          <canvas id="chartEncaje"></canvas>
+        </div>
+
+        <!-- Tareas próximas 7 días debajo del gráfico -->
+        <div style="border-top:1px solid #E5E7EB;padding-top:8px;margin-top:4px;">
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:2px;">
+            Tareas pendientes próximos 7 días
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;margin-bottom:6px;">
+            Acciones planificadas en proyectos con fecha de tarea en la próxima semana.
+          </div>
+          <div id="tareasList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
     </div>
   </main>
 
   <!-- DIALOGO EDICIÓN SEGUIMIENTO / TAREA -->
   <dialog id="seguimientoDialog">
-    <div class="modal-header">Editar seguimiento</div>
+    <div class="modal-header">Editar seguimiento / tarea</div>
     <form id="seguimientoForm" method="dialog">
       <input type="hidden" id="segProjId" />
 
@@ -149,6 +161,8 @@
     const kpiPerdidos = document.getElementById("kpiPerdidos");
 
     const seguimientosList = document.getElementById("seguimientosList");
+    const tareasList = document.getElementById("tareasList");
+
     const segDialog = document.getElementById("seguimientoDialog");
     const segForm = document.getElementById("seguimientoForm");
 
@@ -167,6 +181,7 @@
       renderKpis();
       renderEncajeChart();
       renderSeguimientos();
+      renderTareas();
     }
 
     function renderKpis() {
@@ -199,11 +214,8 @@
       const total = data.reduce((a, b) => a + b, 0);
 
       const ctx = document.getElementById("chartEncaje").getContext("2d");
-      if (chartEncaje) {
-        chartEncaje.destroy();
-      }
+      if (chartEncaje) chartEncaje.destroy();
 
-      // Registrar plugin de datalabels
       Chart.register(window.ChartDataLabels);
 
       chartEncaje = new Chart(ctx, {
@@ -224,9 +236,7 @@
           plugins: {
             legend: {
               position: "bottom",
-              labels: {
-                font: { size: 11 }
-              }
+              labels: { font: { size: 11 } }
             },
             tooltip: {
               callbacks: {
@@ -238,16 +248,13 @@
               }
             },
             datalabels: {
-              formatter: (value, ctx) => {
+              formatter: (value) => {
                 if (!total || !value) return "";
                 const pct = Math.round((value * 100) / total);
                 return pct ? pct + "%" : "";
               },
               color: "#111827",
-              font: {
-                weight: "700",
-                size: 11
-              }
+              font: { weight: "700", size: 11 }
             }
           },
           cutout: "55%"
@@ -290,14 +297,13 @@
         });
 
         const item = document.createElement("div");
-        item.className = "seguimiento-item";
         item.style.border = "1px solid #E5E7EB";
         item.style.borderRadius = "8px";
         item.style.padding = "6px 8px";
         item.style.background = "#F9FAFB";
 
         item.innerHTML = `
-          <div class="seguimiento-main" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
             <button class="link-like" data-id="${p.id}"
               style="border:none;background:none;padding:0;margin:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
               <span style="font-size:11px;color:#6B7280;">${fechaStr}</span>
@@ -307,7 +313,7 @@
               ${p.estado || ""}
             </div>
           </div>
-          <div class="seg-coment" style="font-size:11px;color:#4B5563;margin-top:4px;">
+          <div style="font-size:11px;color:#4B5563;margin-top:4px;">
             ${(p.seguimiento_comentario || "").slice(0, 140) || "Sin comentario de seguimiento."}
           </div>
         `;
@@ -315,8 +321,74 @@
         seguimientosList.appendChild(item);
       });
 
-      // Eventos de click para abrir diálogo
       seguimientosList.querySelectorAll("button.link-like").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          openSegDialog(id);
+        });
+      });
+    }
+
+    function renderTareas() {
+      tareasList.innerHTML = "";
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const limite = new Date(hoy);
+      limite.setDate(limite.getDate() + 7);
+      limite.setHours(23, 59, 59, 999);
+
+      const proximasTareas = proyectos
+        .filter(p => p.tarea_fecha)
+        .map(p => {
+          const d = new Date(p.tarea_fecha);
+          if (isNaN(d.getTime())) return null;
+          d.setHours(0, 0, 0, 0);
+          return { ...p, _tareaDate: d };
+        })
+        .filter(p => p && p._tareaDate >= hoy && p._tareaDate <= limite)
+        .sort((a, b) => a._tareaDate - b._tareaDate);
+
+      if (!proximasTareas.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No hay tareas pendientes en los próximos 7 días.";
+        tareasList.appendChild(empty);
+        return;
+      }
+
+      proximasTareas.forEach(p => {
+        const fechaStr = p._tareaDate.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "2-digit"
+        });
+
+        const item = document.createElement("div");
+        item.style.border = "1px solid #E5E7EB";
+        item.style.borderRadius = "8px";
+        item.style.padding = "6px 8px";
+        item.style.background = "#F9FAFB";
+
+        item.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <button class="link-like-tarea" data-id="${p.id}"
+              style="border:none;background:none;padding:0;margin:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:11px;color:#6B7280;">${fechaStr}</span>
+              <span style="font-size:12px;font-weight:600;color:#111827;">${p.nombre_obra || ""}</span>
+            </button>
+            <div style="font-size:10.5px;color:#6B7280;white-space:nowrap;">
+              ${p.estado || ""}
+            </div>
+          </div>
+          <div style="font-size:11px;color:#4B5563;margin-top:4px;">
+            ${(p.tarea_comentario || "").slice(0, 140) || "Sin descripción de tarea."}
+          </div>
+        `;
+
+        tareasList.appendChild(item);
+      });
+
+      tareasList.querySelectorAll("button.link-like-tarea").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-id");
           openSegDialog(id);
@@ -360,14 +432,13 @@
       try {
         await updateDoc(doc(db, "proyectos", id), payload);
         segDialog.close();
-        await cargarDashboard(); // recargar datos y volver a pintar
+        await cargarDashboard();
       } catch (err) {
         console.error("❌ Error guardando seguimiento:", err);
-        alert("Error guardando el seguimiento.");
+        alert("Error guardando el seguimiento/tarea.");
       }
     });
 
-    // Inicializar
     cargarDashboard();
   </script>
 </body>
