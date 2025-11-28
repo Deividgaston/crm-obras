@@ -33,6 +33,10 @@
 
     <!-- FILTROS Y ACCIONES LISTA CLIENTES -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+      <select id="fZonaCliente" class="select-input" style="max-width:180px;">
+        <option value="Todas">Zonas: todas</option>
+      </select>
+
       <select id="fTipoCliente" class="select-input" style="max-width:180px;">
         <option value="Todos">Tipo: todos</option>
         <option value="Promotora">Promotora</option>
@@ -43,6 +47,7 @@
         <option value="Property / Gestor">Property / Gestor</option>
         <option value="Otro">Otro</option>
       </select>
+
       <select id="fSegmentoCliente" class="select-input" style="max-width:200px;">
         <option value="Todos">Segmento: todos</option>
         <option value="Residencial">Residencial</option>
@@ -51,9 +56,14 @@
         <option value="Telecom / IT">Telecom / IT</option>
         <option value="Mixto">Mixto</option>
       </select>
+
       <input id="fTextoCliente" class="search-input" style="max-width:240px;" placeholder="Buscar por nombre / ciudad..." />
 
       <div style="flex:1;"></div>
+
+      <button id="btnOpenScoutingClientes" class="btn-icon" type="button" title="Scouting / búsqueda avanzada de clientes">
+        🔎
+      </button>
 
       <button id="btnNuevoCliente" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
         + Nuevo cliente (simple)
@@ -83,13 +93,76 @@
         <div id="graficoClientes" style="font-size:11px;color:#4B5563;"></div>
       </div>
     </div>
+  </main>
 
-    <!-- BLOQUE SCOUTING CLIENTES -->
-    <div class="card" style="margin-top:4px;">
+  <!-- DIALOGO NUEVO CLIENTE SIMPLE -->
+  <dialog id="clienteDialog">
+    <div class="modal-header">Nuevo cliente rápido</div>
+    <form id="clienteForm" method="dialog">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="cliNombre">Nombre</label>
+          <input id="cliNombre" required />
+        </div>
+        <div class="form-group">
+          <label for="cliTipo">Tipo</label>
+          <select id="cliTipo">
+            <option>Promotora</option>
+            <option>Arquitectura</option>
+            <option>Ingeniería</option>
+            <option>Fondo / SOCIMI</option>
+            <option>Integrador / Instalador</option>
+            <option>Property / Gestor</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cliSegmento">Segmento</label>
+          <select id="cliSegmento">
+            <option>Residencial</option>
+            <option>Terciario</option>
+            <option>Seguridad / CCTV</option>
+            <option>Telecom / IT</option>
+            <option>Mixto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cliCiudad">Ciudad</label>
+          <input id="cliCiudad" />
+        </div>
+        <div class="form-group">
+          <label for="cliProvincia">Provincia</label>
+          <input id="cliProvincia" />
+        </div>
+        <div class="form-group">
+          <label for="cliTelefono">Teléfono</label>
+          <input id="cliTelefono" />
+        </div>
+        <div class="form-group">
+          <label for="cliWeb">Web</label>
+          <input id="cliWeb" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="window.closeClienteDialog()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- DIALOGO SCOUTING CLIENTES -->
+  <dialog id="scoutingClientesDialog" style="max-width:900px;width:95%;">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>🛰️ Scouting · Buscar clientes</span>
+      <button type="button" class="btn-icon" onclick="window.closeScoutingClientes()">✖</button>
+    </div>
+
+    <div class="card" style="margin-top:4px;box-shadow:none;border:none;padding:0;">
       <div style="display:flex;justify-content:space-between;align-items-center;margin-bottom:8px;">
         <div>
           <div style="font-size:12px;font-weight:600;color:#111827;display:flex;align-items:center;gap:6px;">
-            <span>🛰️ Scouting · Buscar clientes</span>
+            <span>Generador de prompt para localizar clientes clave</span>
           </div>
           <div style="font-size:10.5px;color:#6B7280;margin-top:2px;">
             Genera un <b>prompt de investigador</b> para localizar promotoras, arquitecturas, ingenierías,
@@ -154,64 +227,8 @@
       </div>
 
       <textarea id="promptClientes" rows="14"
-        style="width:100%;border-radius:10px;border:1px solid #D1D5DB;padding:8px 10px;font-size:11.5px;font-family:Menlo,Consolas,monospace;"></textarea>
+        style="width:100%;border-radius:10px;border:1px solid:#D1D5DB;padding:8px 10px;font-size:11.5px;font-family:Menlo,Consolas,monospace;"></textarea>
     </div>
-  </main>
-
-  <!-- DIALOGO NUEVO CLIENTE SIMPLE -->
-  <dialog id="clienteDialog">
-    <div class="modal-header">Nuevo cliente rápido</div>
-    <form id="clienteForm" method="dialog">
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="cliNombre">Nombre</label>
-          <input id="cliNombre" required />
-        </div>
-        <div class="form-group">
-          <label for="cliTipo">Tipo</label>
-          <select id="cliTipo">
-            <option>Promotora</option>
-            <option>Arquitectura</option>
-            <option>Ingeniería</option>
-            <option>Fondo / SOCIMI</option>
-            <option>Integrador / Instalador</option>
-            <option>Property / Gestor</option>
-            <option>Otro</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="cliSegmento">Segmento</label>
-          <select id="cliSegmento">
-            <option>Residencial</option>
-            <option>Terciario</option>
-            <option>Seguridad / CCTV</option>
-            <option>Telecom / IT</option>
-            <option>Mixto</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="cliCiudad">Ciudad</label>
-          <input id="cliCiudad" />
-        </div>
-        <div class="form-group">
-          <label for="cliProvincia">Provincia</label>
-          <input id="cliProvincia" />
-        </div>
-        <div class="form-group">
-          <label for="cliTelefono">Teléfono</label>
-          <input id="cliTelefono" />
-        </div>
-        <div class="form-group">
-          <label for="cliWeb">Web</label>
-          <input id="cliWeb" placeholder="https://..." />
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="window.closeClienteDialog()">Cancelar</button>
-        <button type="submit" class="btn-primary">Guardar</button>
-      </div>
-    </form>
   </dialog>
 
   <script type="module">
@@ -227,16 +244,20 @@
     let proyectos = [];
     let clientesView = [];
 
-    const fTipoCliente = document.getElementById("fTipoCliente");
+    const fZonaCliente     = document.getElementById("fZonaCliente");
+    const fTipoCliente     = document.getElementById("fTipoCliente");
     const fSegmentoCliente = document.getElementById("fSegmentoCliente");
-    const fTextoCliente = document.getElementById("fTextoCliente");
+    const fTextoCliente    = document.getElementById("fTextoCliente");
 
     const clientesTableWrapper = document.getElementById("clientesTableWrapper");
-    const clientesEmpty = document.getElementById("clientesEmpty");
-    const graficoClientes = document.getElementById("graficoClientes");
+    const clientesEmpty        = document.getElementById("clientesEmpty");
+    const graficoClientes      = document.getElementById("graficoClientes");
 
     const clienteDialog = document.getElementById("clienteDialog");
-    const clienteForm = document.getElementById("clienteForm");
+    const clienteForm   = document.getElementById("clienteForm");
+
+    const scoutingDialog = document.getElementById("scoutingClientesDialog");
+    const btnOpenScoutingClientes = document.getElementById("btnOpenScoutingClientes");
 
     // --------- CARGA DATOS ---------
     async function cargarClientesYProyectos() {
@@ -253,6 +274,7 @@
         proySnap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
 
         recalcularVinculaciones();
+        inicializarFiltroZonasClientes();
         aplicarFiltrosClientes();
       } catch (err) {
         console.error("❌ Error cargando clientes/proyectos:", err);
@@ -286,28 +308,47 @@
 
     function recalcularVinculaciones() {
       clientesView = clientes.map(c => {
-        const numObras = contarObrasParaCliente(c.nombre || c.nombre_cliente);
-        return { ...c, num_obras: numObras };
+        const nombre = c.nombre || c.nombre_cliente;
+        const numObras = contarObrasParaCliente(nombre);
+        return { ...c, nombre_display: nombre, num_obras: numObras };
       });
+    }
+
+    function inicializarFiltroZonasClientes() {
+      const zonasSet = new Set();
+      clientesView.forEach(c => {
+        if (c.ciudad) zonasSet.add(c.ciudad);
+        if (c.provincia) zonasSet.add(c.provincia);
+      });
+      const zonas = [...zonasSet].sort((a,b) => a.localeCompare(b,"es"));
+
+      fZonaCliente.innerHTML =
+        '<option value="Todas">Zonas: todas</option>' +
+        zonas.map(z => `<option value="${z}">${z}</option>`).join("");
     }
 
     // --------- FILTROS Y PINTADO LISTA ---------
     function aplicarFiltrosClientes() {
-      const tipo = fTipoCliente.value;
-      const seg = fSegmentoCliente.value;
+      const zona  = fZonaCliente.value;
+      const tipo  = fTipoCliente.value;
+      const seg   = fSegmentoCliente.value;
       const texto = normalizarTexto(fTextoCliente.value);
 
       let lista = clientesView.slice();
 
       lista = lista.filter(c => {
         let ok = true;
+
+        if (zona !== "Todas") {
+          ok = ok && (c.ciudad === zona || c.provincia === zona);
+        }
+
         if (tipo !== "Todos") ok = ok && (c.tipo === tipo);
-        if (seg !== "Todos") ok = ok && (c.segmento === seg);
+        if (seg  !== "Todos") ok = ok && (c.segmento === seg);
 
         if (texto) {
           const blob = [
-            c.nombre,
-            c.nombre_cliente,
+            c.nombre_display,
             c.ciudad,
             c.provincia,
             c.tipo,
@@ -357,7 +398,7 @@
       lista.forEach(c => {
         html += `
           <tr>
-            <td>${c.nombre || c.nombre_cliente || ""}</td>
+            <td>${c.nombre_display || ""}</td>
             <td>${c.tipo || ""}</td>
             <td>${c.segmento || ""}</td>
             <td>${c.ciudad || ""}</td>
@@ -389,7 +430,7 @@
           <div>
             <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:2px;">
               <span style="max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                ${c.nombre || c.nombre_cliente || ""}
+                ${c.nombre_display || ""}
               </span>
               <span style="color:#4B5563;">${c.num_obras || 0} obras</span>
             </div>
@@ -416,14 +457,14 @@
     clienteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const payload = {
-        nombre: document.getElementById("cliNombre").value.trim(),
-        tipo: document.getElementById("cliTipo").value,
+        nombre:   document.getElementById("cliNombre").value.trim(),
+        tipo:     document.getElementById("cliTipo").value,
         segmento: document.getElementById("cliSegmento").value,
-        ciudad: document.getElementById("cliCiudad").value.trim(),
-        provincia: document.getElementById("cliProvincia").value.trim(),
+        ciudad:   document.getElementById("cliCiudad").value.trim(),
+        provincia:document.getElementById("cliProvincia").value.trim(),
         telefono: document.getElementById("cliTelefono").value.trim(),
-        web: document.getElementById("cliWeb").value.trim(),
-        fuente: "manual"
+        web:      document.getElementById("cliWeb").value.trim(),
+        fuente:   "manual"
       };
       try {
         await addDoc(collection(db, "clientes"), payload);
@@ -436,11 +477,11 @@
     });
 
     // --------- SCOUTING / PROMPT CLIENTES ---------
-    const cliZonas     = document.getElementById("cliZonas");
-    const chkCliTipo   = document.querySelectorAll(".chk-cli-tipo");
-    const chkCliSeg    = document.querySelectorAll(".chk-cli-seg");
-    const cliTicket    = document.getElementById("cliTicket");
-    const cliNotas     = document.getElementById("cliNotas");
+    const cliZonas      = document.getElementById("cliZonas");
+    const chkCliTipo    = document.querySelectorAll(".chk-cli-tipo");
+    const chkCliSeg     = document.querySelectorAll(".chk-cli-seg");
+    const cliTicket     = document.getElementById("cliTicket");
+    const cliNotas      = document.getElementById("cliNotas");
     const promptClientes = document.getElementById("promptClientes");
     const btnCopiarPromptClientes = document.getElementById("btnCopiarPromptClientes");
 
@@ -451,11 +492,11 @@
     }
 
     function generarPromptClientes() {
-      const zonas = cliZonas.value.trim();
-      const tipos = getCheckedValues(chkCliTipo);
-      const segmentos = getCheckedValues(chkCliSeg);
-      const ticket = cliTicket.value.trim();
-      const notas = cliNotas.value.trim();
+      const zonas      = cliZonas.value.trim();
+      const tipos      = getCheckedValues(chkCliTipo);
+      const segmentos  = getCheckedValues(chkCliSeg);
+      const ticket     = cliTicket.value.trim();
+      const notas      = cliNotas.value.trim();
 
       const partes = [];
 
@@ -566,9 +607,19 @@
     });
 
     // Filtros lista clientes
+    fZonaCliente.addEventListener("change", aplicarFiltrosClientes);
     fTipoCliente.addEventListener("change", aplicarFiltrosClientes);
     fSegmentoCliente.addEventListener("change", aplicarFiltrosClientes);
     fTextoCliente.addEventListener("input", aplicarFiltrosClientes);
+
+    // Scouting dialog
+    btnOpenScoutingClientes.addEventListener("click", () => {
+      scoutingDialog.showModal();
+    });
+
+    window.closeScoutingClientes = function () {
+      scoutingDialog.close();
+    };
 
     // Carga inicial
     cargarClientesYProyectos();
