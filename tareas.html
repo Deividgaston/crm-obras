@@ -5,6 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tareas · CRM 2N</title>
   <link rel="stylesheet" href="style.css" />
+
+  <!-- ESTILO EXCLUSIVO PARA ESTA PÁGINA (NO TOCA style.css) -->
+  <style>
+    .kanban-column-body {
+      min-height: 260px;
+      padding: 6px;
+      border-radius: 12px;
+      transition: 0.2s;
+    }
+
+    .kanban-column-body:hover {
+      background: #F8FAFC;
+    }
+
+    .pipeline-card {
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 8px;
+      border: 1px solid #E5E7EB;
+      cursor: grab;
+      transition: 0.15s;
+    }
+
+    .pipeline-card:hover {
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+
+    .pipeline-card:active {
+      cursor: grabbing;
+    }
+
+    .kanban-column-body.drag-over {
+      background: #EEF2FF !important;
+      border: 1px dashed #4C6EF5;
+    }
+  </style>
 </head>
 
 <body>
@@ -49,7 +87,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div>
             <div class="panel-title">Kanban tareas</div>
-            <div class="panel-subtitle">Arrastra entre columnas.</div>
+            <div class="panel-subtitle">Organiza seguimientos, recurrentes y notas rápidas.</div>
           </div>
 
           <div style="display:flex;gap:8px;">
@@ -95,7 +133,7 @@
 
       <aside class="panel">
         <div class="panel-title">Notas rápidas</div>
-        <div class="panel-subtitle">Ideas, things-to-do rápidas.</div>
+        <div class="panel-subtitle">Ideas y recordatorios inmediatos.</div>
 
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <input id="notaRapidaTexto" type="text" class="search-input" placeholder="Escribe una nota..." />
@@ -204,9 +242,7 @@
     const collTareas = collection(db, "tareas");
     const collProyectos = collection(db, "proyectos");
 
-    const kpiTareasTotal = document.getElementById("kpiTareasTotal");
-    const kpiTareasHoy = document.getElementById("kpiTareasHoy");
-    const kpiTareasUrgentes = document.getElementById("kpiTareasUrgentes");
+    const listaProyectosHTML = document.getElementById("listaProyectos");
 
     const filtroTipo = document.getElementById("filtroTipo");
     const buscadorTareas = document.getElementById("buscadorTareas");
@@ -216,8 +252,6 @@
 
     const tareaDialog = document.getElementById("tareaDialog");
     const tareaForm = document.getElementById("tareaForm");
-
-    const listaProyectosHTML = document.getElementById("listaProyectos");
 
     const tareaId = document.getElementById("tareaId");
     const tareaTitulo = document.getElementById("tareaTitulo");
@@ -262,29 +296,25 @@
     }
 
     function renderKpis() {
-      const hoyStr = new Date().toISOString().slice(0, 10);
-      kpiTareasTotal.textContent = tareas.length;
-      kpiTareasHoy.textContent = tareas.filter(t => t.fecha === hoyStr).length;
-      kpiTareasUrgentes.textContent = tareas.filter(t => t.prioridad === "alta").length;
+      const hoy = new Date().toISOString().slice(0, 10);
+      document.getElementById("kpiTareasTotal").textContent = tareas.length;
+      document.getElementById("kpiTareasHoy").textContent = tareas.filter(t => t.fecha === hoy).length;
+      document.getElementById("kpiTareasUrgentes").textContent = tareas.filter(t => t.prioridad === "alta").length;
     }
 
     function filtrar() {
-      const f = filtroTipo.value;
+      const t = filtroTipo.value;
       const q = buscadorTareas.value.toLowerCase();
 
-      return tareas.filter(t => {
-        if (f && t.tipo !== f) return false;
-        const blob = (t.titulo || "") + " " + (t.proyecto || "") + " " + (t.descripcion || "");
+      return tareas.filter(x => {
+        if (t && x.tipo !== t) return false;
+        const blob = (x.titulo || "") + " " + (x.proyecto || "") + " " + (x.descripcion || "");
         return blob.toLowerCase().includes(q);
       });
     }
 
     function renderKanban() {
-      const est = {
-        pendiente: [],
-        proceso: [],
-        hecho: []
-      };
+      const est = { pendiente: [], proceso: [], hecho: [] };
 
       filtrar().forEach(t => est[t.estado || "pendiente"].push(t));
 
@@ -332,7 +362,7 @@
 
         <div style="font-size:10px;color:#6B7280;margin-top:6px;display:flex;justify-content:space-between;">
           <span>${t.fecha || ""}</span>
-          <span>${t.tipo || ""}</span>
+          <span>${t.tipo}</span>
         </div>
       `;
 
@@ -354,8 +384,13 @@
       });
 
       cols.forEach(col => {
-        col.addEventListener("dragover", e => e.preventDefault());
+        col.addEventListener("dragover", e => {
+          e.preventDefault();
+          col.classList.add("drag-over");
+        });
+        col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
         col.addEventListener("drop", e => {
+          col.classList.remove("drag-over");
           const id = e.dataTransfer.getData("id");
           mover(id, col.dataset.estado);
         });
@@ -464,7 +499,7 @@
       const hoy = new Date().toISOString().slice(0, 10);
 
       await addDoc(collTareas, {
-        titulo: texto.slice(0, 60),
+        titulo: texto,
         proyecto: "",
         fecha: hoy,
         estado: "pendiente",
@@ -472,7 +507,7 @@
         tipo: "nota",
         es_recurrente: false,
         recurrente_dias: null,
-        descripcion: texto
+        descripcion: texto   /* CORREGIDO → no duplicar */
       });
 
       document.getElementById("notaRapidaTexto").value = "";
