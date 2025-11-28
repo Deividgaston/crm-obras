@@ -290,7 +290,76 @@
     const inputImportClientes = document.getElementById("inputImportClientes");
     const btnImportarClientes = document.getElementById("btnImportarClientes");
 
+    // =========================
+    // HELPERS
+    // =========================
+    function normalizar(txt) {
+      return (txt || "").toString().trim().toLowerCase();
+    }
+
+    // Normaliza nombres de columnas
+    function normCol(s) {
+      return (s || "")
+        .toString()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
+    // Mapeo flexible de columnas → campos CRM
+    const MAPEO_CLIENTES = {
+      nombre:      ["cliente","nombre","empresa","compania","razon social","nombre_cliente"],
+      tipo:        ["tipo","tipo_cliente","categoria"],
+      segmento:    ["segmento","actividad","sector","segmento_principal"],
+      telefono:    ["telefono","tel","movil","mobile","phone"],
+      email:       ["email","correo","mail"],
+      persona_contacto: ["contacto","persona","persona_contacto","responsable"],
+      cargo_contacto:   ["cargo","puesto","rol","cargo_contacto"],
+      telefono_contacto:["telefono_contacto","tel_contacto","movil_contacto"],
+      email_contacto:   ["email_contacto","correo_contacto","mail_contacto"],
+      web:         ["web","url","pagina","sitio_web"],
+      direccion:   ["direccion","dir","calle"],
+      ciudad:      ["ciudad","localidad","poblacion","town"],
+      provincia:   ["provincia","region","estado","county"],
+      pais:        ["pais","country"],
+      linkedin_empresa: ["linkedin","linkedin_empresa"],
+      linkedin_contacto: ["linkedin_contacto","linkedin_persona"],
+      proyectos_relevantes_resumen: ["proyectos","proyectos relevantes","resumen_proyectos"],
+      volumen_estimado_proyectos:   ["volumen","volumen_estimado","facturacion"],
+      encaje_2n_cliente: ["encaje","encaje_2n","fit_2n"],
+      motivo_encaje_2n: ["motivo","motivo_encaje","razon_encaje","motivo_encaje_2n"],
+      fuente:      ["fuente","origen","source"]
+    };
+
+    function extraerFlex(row, campo) {
+      const posibles = MAPEO_CLIENTES[campo];
+      if (!posibles) return "";
+      for (const candidato of posibles) {
+        for (const col in row) {
+          if (normCol(col).includes(normCol(candidato))) {
+            return row[col] || "";
+          }
+        }
+      }
+      return "";
+    }
+
+    // Key para duplicados: nombre + web
+    function buildClienteKey(obj) {
+      const nombre = normalizar(obj.nombre || obj.nombre_cliente || "");
+      const web = normalizar(obj.web || "");
+      return `${nombre}|${web}`;
+    }
+
+    function buildClientesKeySet() {
+      const set = new Set();
+      clientes.forEach(c => set.add(buildClienteKey(c)));
+      return set;
+    }
+
+    // =========================
     // CARGA (1 sola lectura clientes + 1 sola lectura proyectos)
+    // =========================
     async function cargarClientesYProyectos() {
       const [cliSnap, proySnap] = await Promise.all([
         getDocs(collection(db, "clientes")),
@@ -303,10 +372,6 @@
       recalcularVinculaciones();
       inicializarFiltroZonasClientes();
       aplicarFiltrosClientes();
-    }
-
-    function normalizar(txt) {
-      return (txt || "").toString().trim().toLowerCase();
     }
 
     function contarObrasCliente(nombreCliente) {
@@ -352,7 +417,9 @@
         zonas.map(z => `<option value="${z}">${z}</option>`).join("");
     }
 
+    // =========================
     // FILTROS
+    // =========================
     function aplicarFiltrosClientes() {
       const zona = fZonaCliente.value;
       const tipo = fTipoCliente.value;
@@ -442,7 +509,6 @@
       html += `</tbody></table>`;
       clientesTableWrapper.innerHTML = html;
 
-      // Eventos tabla
       const chkAll = document.getElementById("chkClientesAll");
       if (chkAll) {
         chkAll.addEventListener("change", () => {
@@ -463,26 +529,28 @@
     function renderGraficoClientes(lista) {
       if (!lista.length) {
         graficoClientes.innerHTML = "<div style='font-size:11px;color:#9CA3AF;'>Sin datos.</div>";
-      } else {
-        const top = lista.slice(0, 8);
-        const max = Math.max(...top.map(c => c.num_obras || 0)) || 1;
-        graficoClientes.innerHTML = top.map(c => {
-          const pct = ((c.num_obras || 0) / max) * 100;
-          return `
-            <div>
-              <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:2px;">
-                <span style="max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                  ${c.nombre_display || ""}
-                </span>
-                <span style="color:#4B5563;">${c.num_obras || 0} obras</span>
-              </div>
-              <div style="width:100%;background:#E5E7EB;border-radius:999px;overflow:hidden;height:8px;">
-                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#4F46E5,#22C55E);"></div>
-              </div>
-            </div>
-          `;
-        }).join("");
+        return;
       }
+
+      const top = lista.slice(0, 8);
+      const max = Math.max(...top.map(c => c.num_obras || 0)) || 1;
+
+      graficoClientes.innerHTML = top.map(c => {
+        const pct = ((c.num_obras || 0) / max) * 100;
+        return `
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:2px;">
+              <span style="max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                ${c.nombre_display || ""}
+              </span>
+              <span style="color:#4B5563;">${c.num_obras || 0} obras</span>
+            </div>
+            <div style="width:100%;background:#E5E7EB;border-radius:999px;overflow:hidden;height:8px;">
+              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#4F46E5,#22C55E);"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
     }
 
     function renderObrasCliente(nombreCliente) {
@@ -666,20 +734,8 @@
       setTimeout(() => (btnCopiarPromptClientes.textContent = "Copiar prompt"), 1200);
     });
 
-    // IMPORTAR CLIENTES (CSV / XLSX) – con mensaje SIEMPRE
+    // IMPORTAR CLIENTES (CSV / XLSX) FLEXIBLE
     btnImportarClientes.addEventListener("click", () => inputImportClientes.click());
-
-    function buildClienteKey(obj) {
-      const nombre = normalizar(obj.nombre_cliente || obj.nombre || "");
-      const web = normalizar(obj.web || "");
-      return `${nombre}|${web}`;
-    }
-
-    function buildClientesKeySet() {
-      const set = new Set();
-      clientes.forEach(c => set.add(buildClienteKey(c)));
-      return set;
-    }
 
     inputImportClientes.addEventListener("change", async (e) => {
       const file = e.target.files[0];
@@ -710,7 +766,7 @@
         alert(`Importación completada.\nAñadidos: ${added}\nDuplicados ignorados: ${skipped}`);
       } catch (err) {
         console.error("Error importando clientes:", err);
-        alert("Ha ocurrido un error durante la importación. Revisa que el archivo tenga las columnas correctas.");
+        alert("Ha ocurrido un error durante la importación. Revisa que el archivo tenga datos válidos.");
       } finally {
         inputImportClientes.value = "";
       }
@@ -729,13 +785,12 @@
         const row = {};
         headers.forEach((h, idx) => row[h] = values[idx] || "");
 
-        const key = buildClienteKey(row);
-        if (existingKeys.has(key)) {
-          skipped++;
-          continue;
-        }
+        const payload = mapRowFlexible(row, "scouting_csv");
+        if (!payload.nombre) continue;
 
-        const payload = mapRowToClientePayload(row, "scouting_csv");
+        const key = buildClienteKey(payload);
+        if (existingKeys.has(key)) { skipped++; continue; }
+
         const ref = await addDoc(collection(db, "clientes"), payload);
         clientes.push({ id: ref.id, ...payload });
         existingKeys.add(key);
@@ -749,7 +804,6 @@
       if (typeof XLSX === "undefined") {
         throw new Error("Librería XLSX no cargada");
       }
-
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheet = workbook.Sheets["Clientes"] || workbook.Sheets[workbook.SheetNames[0]];
@@ -758,13 +812,12 @@
       let added = 0, skipped = 0;
 
       for (const row of json) {
-        const key = buildClienteKey(row);
-        if (existingKeys.has(key)) {
-          skipped++;
-          continue;
-        }
+        const payload = mapRowFlexible(row, "scouting_excel");
+        if (!payload.nombre) continue;
 
-        const payload = mapRowToClientePayload(row, "scouting_excel");
+        const key = buildClienteKey(payload);
+        if (existingKeys.has(key)) { skipped++; continue; }
+
         const ref = await addDoc(collection(db, "clientes"), payload);
         clientes.push({ id: ref.id, ...payload });
         existingKeys.add(key);
@@ -774,29 +827,35 @@
       return { a: added, s: skipped };
     }
 
-    function mapRowToClientePayload(row, fuentePorDefecto) {
+    function mapRowFlexible(row, fuenteDefault) {
       return {
-        nombre: row.nombre_cliente || row.nombre || "",
-        tipo: row.tipo_cliente || "",
-        segmento: row.segmento_principal || "",
-        telefono: row.telefono || "",
-        email: row.email || "",
-        persona_contacto: row.persona_contacto || "",
-        cargo_contacto: row.cargo_contacto || "",
-        telefono_contacto: row.telefono_contacto || "",
-        email_contacto: row.email_contacto || "",
-        web: row.web || "",
-        direccion: row.direccion || "",
-        ciudad: row.ciudad || "",
-        provincia: row.provincia || "",
-        pais: row.pais || "",
-        linkedin_empresa: row.linkedin_empresa || "",
-        linkedin_contacto: row.linkedin_contacto || "",
-        proyectos_relevantes_resumen: row.proyectos_relevantes_resumen || "",
-        volumen_estimado_proyectos: row.volumen_estimado_proyectos || "",
-        encaje_2n_cliente: row.encaje_2n_cliente || "",
-        motivo_encaje_2n: row.motivo_encaje_2n || "",
-        fuente: row.fuente_principal || fuentePorDefecto
+        nombre:      extraerFlex(row, "nombre"),
+        tipo:        extraerFlex(row, "tipo"),
+        segmento:    extraerFlex(row, "segmento"),
+        telefono:    extraerFlex(row, "telefono"),
+        email:       extraerFlex(row, "email"),
+
+        persona_contacto: extraerFlex(row, "persona_contacto"),
+        cargo_contacto:   extraerFlex(row, "cargo_contacto"),
+        telefono_contacto:extraerFlex(row, "telefono_contacto"),
+        email_contacto:   extraerFlex(row, "email_contacto"),
+
+        web:         extraerFlex(row, "web"),
+        direccion:   extraerFlex(row, "direccion"),
+        ciudad:      extraerFlex(row, "ciudad"),
+        provincia:   extraerFlex(row, "provincia"),
+        pais:        extraerFlex(row, "pais"),
+
+        linkedin_empresa: extraerFlex(row, "linkedin_empresa"),
+        linkedin_contacto: extraerFlex(row, "linkedin_contacto"),
+
+        proyectos_relevantes_resumen: extraerFlex(row, "proyectos_relevantes_resumen"),
+        volumen_estimado_proyectos:   extraerFlex(row, "volumen_estimado_proyectos"),
+
+        encaje_2n_cliente: extraerFlex(row, "encaje_2n_cliente"),
+        motivo_encaje_2n: extraerFlex(row, "motivo_encaje_2n"),
+
+        fuente: extraerFlex(row, "fuente") || fuenteDefault
       };
     }
 
