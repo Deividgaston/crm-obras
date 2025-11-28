@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CRM 2N – Buscar proyectos</title>
+    <title>CRM 2N – Buscar</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -25,176 +25,143 @@
         <input type="text" class="search-box" placeholder="Buscar..." />
     </div>
 
-    <main class="content">
-        <h2 style="margin:0;color:#16325C;">Scouting de obras</h2>
+    <main class="content" style="max-width:900px;margin:auto;">
+        <h2 style="margin:0;color:#16325C;">Scouting de obras (IA)</h2>
         <div style="font-size:12px;color:#5A6872;margin-bottom:16px;">
-            Genera un prompt para el modelo de IA, obtén un CSV y descárgalo listo para importar en <b>Proyectos</b>.
+            Genera un prompt perfecto para scouting y obtén un CSV listo para importar.
         </div>
 
-        <!-- CARD PRINCIPAL PROMPT -->
-        <div class="panel" style="max-width:960px;margin-bottom:16px;">
-            <div class="panel-title">1 · Define el scouting</div>
-            <div style="font-size:12px;color:#6B7280;margin-bottom:10px;">
-                Ajusta zonas, tipo de activo y criterios. Luego pulsa <b>Copiar prompt</b> y pégalo en tu modelo de IA.
-            </div>
+        <!-- PANEL SCOUTING (diseño compacto original) -->
+        <div class="panel" style="margin-bottom:20px;">
+            <div class="panel-title">Generar prompt de scouting</div>
 
-            <div class="form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;">
-                <div class="form-group">
-                    <label for="zonas">Zonas objetivo</label>
-                    <input id="zonas" placeholder="Madrid, Málaga, Valencia..." value="Comunidad de Madrid, Provincia de Málaga, Valencia, Alicante, Barcelona, Mallorca" />
-                </div>
-                <div class="form-group">
-                    <label for="segmento">Segmento</label>
-                    <input id="segmento" placeholder="Residencial, villas, oficinas..." value="Residencial de obra nueva, villas, residenciales de lujo, edificios en altura, oficinas prime" />
-                </div>
-                <div class="form-group">
-                    <label for="horizonte">Horizonte temporal</label>
-                    <input id="horizonte" placeholder="En diseño, en construcción..." value="Proyectos en diseño, licitación o construcción en los próximos 3-5 años" />
-                </div>
+            <div class="form-group">
+                <label for="zonas">Zonas objetivo</label>
+                <input id="zonas" value="Madrid, Málaga, Valencia, Alicante, Barcelona, Mallorca" />
             </div>
 
             <div class="form-group">
-                <label for="criterios_extra">Criterios extra (opcional)</label>
-                <input id="criterios_extra" placeholder="BTR, >80 viviendas, operador institucional..." />
-            </div>
-
-            <div class="form-group" style="margin-top:12px;">
-                <label for="promptText">Prompt generado</label>
-                <textarea id="promptText" rows="10" class="textarea-input"></textarea>
-            </div>
-
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                <button class="btn-primary" onclick="generarPrompt()">Actualizar prompt</button>
-                <button class="btn-secondary" onclick="copiarPrompt()">Copiar prompt</button>
-            </div>
-        </div>
-
-        <!-- CARD RESULTADO CSV -->
-        <div class="panel" style="max-width:960px;">
-            <div class="panel-title">2 · Pega aquí el resultado en CSV y descárgalo</div>
-            <div style="font-size:12px;color:#6B7280;margin-bottom:8px;">
-                Pega la salida <b>CSV o tabla separada por punto y coma</b> que te devuelva la IA. Después usa
-                <b>Descargar CSV</b> y cárgalo en la página <b>Proyectos → Importar</b>.
+                <label for="segmento">Segmento</label>
+                <input id="segmento" value="Residencial obra nueva, villas, lujo, oficinas" />
             </div>
 
             <div class="form-group">
-                <label for="csvInput">Resultado IA (CSV)</label>
-                <textarea id="csvInput" rows="10" class="textarea-input" placeholder="nombre_obra;cliente_principal;ciudad;provincia;tipo;segmento;num_unidades;estado;promotora;constructora;arquitectura;ingenieria;potencial_eur;telefono_cliente;email_cliente;url_obra;encaje_2n;motivo_encaje_2n&#10;..."></textarea>
+                <label for="horizonte">Horizonte</label>
+                <input id="horizonte" value="En diseño, licitación o construcción (3-5 años)" />
             </div>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                <button class="btn-primary" onclick="descargarCSV()">Descargar CSV</button>
+            <div class="form-group">
+                <label for="extra">Criterios extra</label>
+                <input id="extra" placeholder="BTR, >80 viviendas, operador institucional..." />
             </div>
+
+            <div class="form-group">
+                <label>Prompt generado</label>
+                <textarea id="prompt" rows="10" class="textarea-input"></textarea>
+            </div>
+
+            <button class="btn-primary" onclick="generarPrompt()">Generar prompt</button>
+            <button class="btn-secondary" onclick="copiarPrompt()">Copiar</button>
+        </div>
+
+        <!-- PANEL RESULTADO CSV (diseño original compacto) -->
+        <div class="panel">
+            <div class="panel-title">Pegar CSV y descargar</div>
+
+            <div class="form-group">
+                <label>Resultado IA (CSV)</label>
+                <textarea id="csvInput" rows="8" class="textarea-input"></textarea>
+            </div>
+
+            <button class="btn-primary" onclick="descargarCSV()">Descargar CSV</button>
         </div>
     </main>
 
     <script>
-        const promptTextarea = document.getElementById("promptText");
-        const zonasInput = document.getElementById("zonas");
-        const segmentoInput = document.getElementById("segmento");
-        const horizonteInput = document.getElementById("horizonte");
-        const criteriosExtraInput = document.getElementById("criterios_extra");
+        function generarPrompt() {
+            const zonas = document.getElementById("zonas").value;
+            const segmento = document.getElementById("segmento").value;
+            const horizonte = document.getElementById("horizonte").value;
+            const extra = document.getElementById("extra").value;
 
-        function buildPrompt() {
-            const zonas = zonasInput.value || "Comunidad de Madrid, Provincia de Málaga, Valencia, Alicante, Barcelona, Mallorca";
-            const segmento = segmentoInput.value || "Residencial de obra nueva, villas, residenciales de lujo, edificios en altura, oficinas prime";
-            const horizonte = horizonteInput.value || "Proyectos en diseño, licitación o construcción en los próximos 3-5 años";
-            const extra = criteriosExtraInput.value || "";
-
-            return `
-Actúa como un analista de mercado inmobiliario especializado en proyectos de nueva construcción y como un asistente de *scouting* para un fabricante de videoporteros y control de accesos IP llamado 2N.
+            document.getElementById("prompt").value = `
+Actúa como un analista experto en mercado inmobiliario + asistente de scouting para la empresa 2N (videoporteros IP y control de accesos).
 
 Objetivo:
-- Detectar obras y proyectos relevantes para soluciones de videoportero y control de accesos IP de alta gama en España.
-- Priorizar proyectos donde tenga sentido instalar videoportero IP, control de accesos en portales, garajes, zonas comunes, oficinas o espacios terciarios.
+- Detectar obras relevantes para soluciones de acceso IP.
+- Priorizar proyectos donde existan: portales, garajes, zonas comunes, oficinas, accesos múltiples o edificios premium.
 
-Alcance de búsqueda (investigación profunda):
-- Zonas objetivo: ${zonas}.
-- Segmento: ${segmento}.
-- Horizonte temporal: ${horizonte}.
-${extra ? "- Criterios adicionales: " + extra + "." : ""}
-- Busca información en portales inmobiliarios profesionales, notas de prensa, webs de promotoras y constructoras, revistas de arquitectura, licitaciones y fuentes similares.
+Criterios:
+- Zonas: ${zonas}
+- Segmento: ${segmento}
+- Horizonte: ${horizonte}
+${extra ? "- Extra: " + extra : ""}
 
-Para cada proyecto relevante, devuelve una tabla en formato CSV (separado por punto y coma) con las siguientes columnas EXACTAS:
+Formato de salida:
+Devuelve SOLO una tabla CSV separada por punto y coma con estas columnas EXACTAS:
 
-nombre_obra
-cliente_principal
-ciudad
-provincia
-tipo
-segmento
-num_unidades
-estado
-promotora
-constructora
-arquitectura
-ingenieria
-potencial_eur
-telefono_cliente
-email_cliente
-url_obra
-encaje_2n
+nombre_obra;
+cliente_principal;
+ciudad;
+provincia;
+tipo;
+segmento;
+num_unidades;
+estado;
+promotora;
+constructora;
+arquitectura;
+ingenieria;
+potencial_eur;
+telefono_cliente;
+email_cliente;
+url_obra;
+encaje_2n;
 motivo_encaje_2n
 
-Definición de campos:
-- nombre_obra: nombre comercial de la promoción o edificio.
-- cliente_principal: cliente clave para la decisión (fondo, SOCIMI, family office, etc. si aplica).
-- ciudad / provincia: localización principal del proyecto.
-- tipo: residencial, residencial de lujo, villas, oficinas, mixto, hotelero, coliving, etc.
-- segmento: breve descripción (por ejemplo, "BTR residencial", "Villas de lujo", "Oficinas prime", "Residencial en altura").
-- num_unidades: nº aproximado de viviendas, habitaciones o unidades relevantes.
-- estado: fase del proyecto (por ejemplo, "En diseño", "En construcción", "En comercialización").
-- promotora: empresa promotora o propietaria.
-- constructora: empresa constructora, si se conoce.
-- arquitectura: estudio de arquitectura principal.
-- ingenieria: ingeniería o consultora técnica, si aparece.
-- potencial_eur: estimación aproximada del presupuesto o volumen de inversión de la obra (en euros). Si no hay dato fiable, dejar en blanco o 0.
-- telefono_cliente / email_cliente: datos de contacto del promotor o responsable comercial si aparecen; si no, dejar vacío.
-- url_obra: URL visible de la promoción o proyecto. 
-  · Priorizar la web específica de la promoción o edificio. 
-  · Si no existe, usar la página del proyecto en la web de la promotora, la página de la constructora o la fuente principal donde se describe el proyecto.
-  · Debe ser una URL completa empezando por http o https.
-- encaje_2n: ALTO, MEDIO o BAJO en función del potencial para soluciones de videoportero y control de accesos 2N (portales, garajes, zonas comunes, oficinas, etc.).
-- motivo_encaje_2n: breve explicación del por qué del encaje (por ejemplo "Residencial de 150 viviendas con garaje y varias entradas peatonales, ideal para videoportero IP y control de accesos").
+Instrucciones sobre URL:
+- url_obra debe ser SIEMPRE una página web real.
+- Prioriza página oficial de la promoción.  
+- Si no existe → página del promotor, constructora o noticia oficial.
+- Debe empezar por http o https.
 
-Instrucciones de formato:
-- Devuelve SOLO la tabla en CSV, sin texto adicional ni comentarios.
-- Usa el punto y coma (;) como separador.
-- Una fila por proyecto.
-- No incluyas comillas alrededor de los campos salvo que sea estrictamente necesario.
-            `.trim();
-        }
+Definición rápida encaje 2N:
+- ALTO → Residencial + zonas comunes + garaje + varios accesos.
+- MEDIO → Residencial sin garaje o oficinas medianas.
+- BAJO → Obra pequeña sin accesos relevantes.
 
-        function generarPrompt() {
-            promptTextarea.value = buildPrompt();
+Devuelve SOLO la tabla CSV.            
+`.trim();
         }
 
         function copiarPrompt() {
-            promptTextarea.select();
+            const txt = document.getElementById("prompt");
+            txt.select();
             document.execCommand("copy");
-            alert("Prompt copiado al portapapeles.");
+            alert("Prompt copiado");
         }
 
         function descargarCSV() {
             const contenido = document.getElementById("csvInput").value.trim();
             if (!contenido) {
-                alert("Pega primero el CSV devuelto por la IA.");
+                alert("Pega primero el CSV generado por la IA.");
                 return;
             }
+
             const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
+            const fecha = new Date().toISOString().slice(0, 10);
+
             a.href = url;
-            const fecha = new Date().toISOString().slice(0,10);
-            a.download = `scouting_obras_${fecha}.csv`;
+            a.download = `scouting_2n_${fecha}.csv`;
             document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            a.remove();
         }
 
-        // Inicializamos al cargar
-        generarPrompt();
+        window.onload = generarPrompt;
     </script>
+
 </body>
 </html>
