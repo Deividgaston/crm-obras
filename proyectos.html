@@ -6,12 +6,10 @@
     <title>CRM 2N – Proyectos</title>
 
     <link rel="stylesheet" href="style.css" />
-    <!-- Librería para leer Excel en el navegador -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
-
     <!-- NAV SUPERIOR -->
     <div class="topnav">
         <div class="logo">CRM 2N</div>
@@ -35,24 +33,20 @@
             Vista general en tabla · Filtra, selecciona, edita, borra o importa proyectos desde Excel (Prompt / Construdata)
         </div>
 
-        <!-- FILTROS SUPERIORES -->
+        <!-- FILTROS -->
         <div class="filters-row">
             <select id="fCiudad" class="select-input">
                 <option value="Todas">Ciudad: todas</option>
             </select>
-
             <select id="fEstado" class="select-input">
                 <option value="Todos">Estado: todos</option>
             </select>
-
             <select id="fTipo" class="select-input">
                 <option value="Todos">Tipo: todos</option>
             </select>
-
             <select id="fPrioridad" class="select-input">
                 <option value="Todas">Prioridad: todas</option>
             </select>
-
             <select id="fEncaje2N" class="select-input">
                 <option value="Todos">Encaje 2N: todos</option>
                 <option value="ALTO">Encaje 2N: ALTO</option>
@@ -60,27 +54,17 @@
                 <option value="BAJO">Encaje 2N: BAJO</option>
                 <option value="SIN">Encaje 2N: sin dato</option>
             </select>
-
             <input id="fTexto" class="search-input" placeholder="Buscar texto libre..." />
         </div>
 
         <!-- KPIs -->
         <div class="kpi-row">
-            <div class="kpi-card">
-                <div class="kpi-label">Total</div>
-                <div id="kpiTotal" class="kpi-value">–</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Seguimiento</div>
-                <div id="kpiSeguimiento" class="kpi-value">–</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Ganados</div>
-                <div id="kpiGanados" class="kpi-value">–</div>
-            </div>
+            <div class="kpi-card"><div class="kpi-label">Total</div><div id="kpiTotal" class="kpi-value">–</div></div>
+            <div class="kpi-card"><div class="kpi-label">Seguimiento</div><div id="kpiSeguimiento" class="kpi-value">–</div></div>
+            <div class="kpi-card"><div class="kpi-label">Ganados</div><div id="kpiGanados" class="kpi-value">–</div></div>
         </div>
 
-        <!-- TOOLBAR TABLA -->
+        <!-- TOOLBAR -->
         <div class="toolbar-table">
             <button class="btn-primary" onclick="openNewProject()">+ Nuevo proyecto</button>
             <button class="btn-icon" onclick="onEditSelected()" title="Editar proyecto seleccionado">✏️</button>
@@ -96,7 +80,7 @@
         </div>
     </main>
 
-    <!-- MODAL EDICIÓN / ALTA -->
+    <!-- MODAL PROYECTO -->
     <dialog id="projectDialog">
         <div class="modal-header" id="dialogTitle">Proyecto</div>
         <form id="projectForm" method="dialog">
@@ -108,22 +92,18 @@
                     <label for="nombre_obra">Nombre de la obra</label>
                     <input id="nombre_obra" required />
                 </div>
-
                 <div class="form-group">
                     <label for="cliente_principal">Cliente principal</label>
                     <input id="cliente_principal" />
                 </div>
-
                 <div class="form-group">
                     <label for="ciudad">Ciudad</label>
                     <input id="ciudad" />
                 </div>
-
                 <div class="form-group">
                     <label for="provincia">Provincia</label>
                     <input id="provincia" />
                 </div>
-
                 <div class="form-group">
                     <label for="estado">Estado</label>
                     <select id="estado">
@@ -136,7 +116,6 @@
                         <option>Paralizado</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label for="prioridad">Prioridad</label>
                     <select id="prioridad">
@@ -145,7 +124,6 @@
                         <option>Baja</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label for="tipo">Tipo de proyecto</label>
                     <select id="tipo">
@@ -154,7 +132,6 @@
                         <option>Mixto</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label for="potencial_eur">Potencial (€)</label>
                     <input id="potencial_eur" type="number" min="0" step="10000" />
@@ -169,17 +146,14 @@
                     <label for="seguimiento_fecha">Fecha seguimiento</label>
                     <input id="seguimiento_fecha" type="date" />
                 </div>
-
                 <div class="form-group">
                     <label for="seguimiento_comentario">Comentario seguimiento</label>
                     <textarea id="seguimiento_comentario"></textarea>
                 </div>
-
                 <div class="form-group">
                     <label for="tarea_fecha">Fecha tarea</label>
                     <input id="tarea_fecha" type="date" />
                 </div>
-
                 <div class="form-group">
                     <label for="tarea_comentario">Descripción tarea</label>
                     <textarea id="tarea_comentario"></textarea>
@@ -193,7 +167,7 @@
         </form>
     </dialog>
 
-    <!-- DIALOG BORRADO -->
+    <!-- MODAL BORRADO -->
     <dialog id="deleteDialog">
         <div class="modal-header">Confirmar borrado</div>
         <p id="deleteText"></p>
@@ -294,11 +268,8 @@
 
                 const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
                 if (encajeFiltro !== "Todos") {
-                    if (encajeFiltro === "SIN") {
-                        ok = ok && !enc;
-                    } else {
-                        ok = ok && enc === encajeFiltro;
-                    }
+                    if (encajeFiltro === "SIN") ok = ok && !enc;
+                    else ok = ok && enc === encajeFiltro;
                 }
 
                 if (texto) {
@@ -498,11 +469,9 @@
             };
 
             try {
-                if (id) {
-                    await updateDoc(doc(db, "proyectos", id), payload);
-                } else {
-                    await addDoc(collection(db, "proyectos"), payload);
-                }
+                if (id) await updateDoc(doc(db, "proyectos", id), payload);
+                else await addDoc(collection(db, "proyectos"), payload);
+
                 projectDialog.close();
                 cargarProyectos();
             } catch (err) {
@@ -561,7 +530,6 @@
                     return;
                 }
 
-                // 1) Mapear filas a proyectos y detectar fuente (Prompt / Construdata)
                 const mapped = rows
                     .map(row => {
                         const p = mapRowToProyecto(row);
@@ -576,12 +544,8 @@
                     return;
                 }
 
-                // 2) Claves existentes en Firestore
-                const existingKeys = new Set(
-                    proyectos.map(p => makeKey(p))
-                );
+                const existingKeys = new Set(proyectos.map(p => makeKey(p)));
 
-                // 3) Detección de duplicados
                 const batchKeys = new Set();
                 const toImport = [];
                 const duplicates = [];
@@ -604,16 +568,12 @@
                     return;
                 }
 
-                // 4) Alta en Firestore
                 const ref = collection(db, "proyectos");
                 for (const p of toImport) {
                     await addDoc(ref, p);
                 }
 
-                const namesDup = duplicates
-                    .map(p => p.nombre_obra)
-                    .filter(Boolean);
-
+                const namesDup = duplicates.map(p => p.nombre_obra).filter(Boolean);
                 const summaryNames = namesDup.slice(0, 10).join(", ");
                 const extra = namesDup.length > 10
                     ? `, y ${namesDup.length - 10} más...`
@@ -657,19 +617,13 @@
             });
         }
 
-        // ==== CLAVE DE DUPLICADO: nombre_obra + ciudad + (cliente_principal o promotora) ====
         function makeKey(p) {
             const nombre = (p.nombre_obra || "").toString().toLowerCase().trim();
             const ciudad = (p.ciudad || "").toString().toLowerCase().trim();
-            const cliente = (
-                p.cliente_principal ||
-                p.promotora ||
-                ""
-            ).toString().toLowerCase().trim();
+            const cliente = (p.cliente_principal || p.promotora || "").toString().toLowerCase().trim();
             return [nombre, ciudad, cliente].join("|");
         }
 
-        // Detecta si una fila viene de Construdata o del Prompt
         function detectSource(row) {
             const normKeys = Object.keys(row).map(k => normalizeHeaderKey(k));
             const isConstrudata =
@@ -679,7 +633,6 @@
             return isConstrudata ? "construdata" : "prompt";
         }
 
-        // ====== MAPEOS DE CABECERAS PARA DISTINTOS FORMATOS (PROMPT + CONSTRUDATA) ======
         const HEADER_MAP = {
             nombre_obra: [
                 "nombre_obra", "Nombre_obra", "Nombre de la obra", "Nombre obra",
@@ -718,7 +671,6 @@
                 "url_obra", "Url obra", "URL obra", "Enlace obra",
                 "Obra:Url (Enlace Obra)", "Obra:Url", "Obra:URL"
             ],
-
             seguimiento_fecha: [
                 "seguimiento_fecha", "Seguimiento_fecha", "Fecha seguimiento",
                 "Próximo seguimiento", "Proximo seguimiento",
@@ -737,7 +689,6 @@
                 "Tarea", "Acción comercial", "Accion comercial",
                 "Gestiones:Eventos agendados"
             ],
-
             promotora: [
                 "promotora", "Promotora", "Promotor", "Promotora / Cliente", "Propiedad",
                 "Promotor1:Empresa"
@@ -756,7 +707,6 @@
                 "Ingenieria/Instalaciones",
                 "Ingeniería 1:Empresa"
             ],
-
             contacto_cliente: [
                 "contacto_cliente", "Contacto cliente", "Responsable cliente",
                 "Persona contacto cliente"
@@ -770,7 +720,6 @@
                 "email_cliente", "Email cliente", "Correo cliente", "Mail cliente",
                 "Promotor1:Email"
             ],
-
             contacto_arquitectura: [
                 "contacto_arquitectura", "Contacto arquitecto", "Contacto arquitectura",
                 "Responsable arquitectura"
@@ -784,12 +733,10 @@
                 "email_arquitectura", "Email arquitecto", "Correo arquitecto", "Mail arquitecto",
                 "Arquitecto1:Email"
             ],
-
             notas: [
                 "notas", "Notas", "Observaciones", "Comentarios",
                 "Gestiones:Comentarios"
             ],
-
             encaje_2n: [
                 "encaje_2n", "Encaje soluciones 2N", "Encaje 2N",
                 "Encaje soluciones 2n", "Encaje potencial 2N"
@@ -800,7 +747,6 @@
             ]
         };
 
-        // Normaliza cabeceras
         function normalizeHeaderKey(key) {
             return key
                 .toString()
@@ -816,19 +762,13 @@
 
         function getCell(row, variants, fieldName) {
             for (const v of variants) {
-                if (Object.prototype.hasOwnProperty.call(row, v) && row[v] !== "") {
-                    return row[v];
-                }
+                if (Object.prototype.hasOwnProperty.call(row, v) && row[v] !== "") return row[v];
             }
-
             const targetNorms = HEADER_NORMALIZED[fieldName];
             for (const key of Object.keys(row)) {
                 const nk = normalizeHeaderKey(key);
-                if (targetNorms.includes(nk) && row[key] !== "") {
-                    return row[key];
-                }
+                if (targetNorms.includes(nk) && row[key] !== "") return row[key];
             }
-
             return "";
         }
 
@@ -869,27 +809,21 @@
                 tipo: (getCell(row, HEADER_MAP.tipo, "tipo") || "Residencial").toString().trim(),
                 potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur, "potencial_eur") || 0),
                 url_obra: getCell(row, HEADER_MAP.url_obra, "url_obra").toString().trim(),
-
                 seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha, "seguimiento_fecha")),
                 seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario, "seguimiento_comentario").toString().trim(),
                 tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha, "tarea_fecha")),
                 tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario, "tarea_comentario").toString().trim(),
-
                 promotora: getCell(row, HEADER_MAP.promotora, "promotora").toString().trim(),
                 constructora: getCell(row, HEADER_MAP.constructora, "constructora").toString().trim(),
                 arquitectura: getCell(row, HEADER_MAP.arquitectura, "arquitectura").toString().trim(),
                 ingenieria: getCell(row, HEADER_MAP.ingenieria, "ingenieria").toString().trim(),
-
                 contacto_cliente: getCell(row, HEADER_MAP.contacto_cliente, "contacto_cliente").toString().trim(),
                 telefono_cliente: getCell(row, HEADER_MAP.telefono_cliente, "telefono_cliente").toString().trim(),
                 email_cliente: getCell(row, HEADER_MAP.email_cliente, "email_cliente").toString().trim(),
-
                 contacto_arquitectura: getCell(row, HEADER_MAP.contacto_arquitectura, "contacto_arquitectura").toString().trim(),
                 telefono_arquitectura: getCell(row, HEADER_MAP.telefono_arquitectura, "telefono_arquitectura").toString().trim(),
                 email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura, "email_arquitectura").toString().trim(),
-
                 notas: getCell(row, HEADER_MAP.notas, "notas").toString().trim(),
-
                 encaje_2n: getCell(row, HEADER_MAP.encaje_2n, "encaje_2n").toString().trim(),
                 motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n, "motivo_encaje_2n").toString().trim()
             };
