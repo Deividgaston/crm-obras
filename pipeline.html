@@ -1,31 +1,314 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>CRM 2N – Pipeline</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Pipeline</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
 
-<div class="topnav">
+<body>
+  <!-- NAV SUPERIOR -->
+  <div class="topnav">
     <div class="logo">CRM 2N</div>
 
     <div class="nav-tabs">
-        <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
-        <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
-        <div class="nav-item active" onclick="location.href='pipeline.html'">Pipeline</div>
-        <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
-        <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
-        <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
+      <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
+      <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+      <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
+      <div class="nav-item active" onclick="location.href='pipeline.html'">Pipeline</div>
+      <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+      <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+      <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
     </div>
 
-    <input type="text" class="search-box" placeholder="Buscar..." />
-</div>
+    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+  </div>
 
-<main class="content">
-    <h2>Pipeline</h2>
-    <p>En construcción.</p>
-</main>
+  <main class="content">
+    <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Pipeline de proyectos</h2>
+    <div style="font-size:12px;color:#5A6872;margin-bottom:10px;">
+      Arrastra las obras entre columnas para cambiar el estado (Detectado → Prescripción → Oferta → Negociación → Ganado / Perdido).
+    </div>
 
+    <!-- FILTRO RÁPIDO ARRIBA -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <select id="fEncaje2N" class="select-input" style="max-width:170px;">
+        <option value="Todos">Encaje 2N: todos</option>
+        <option value="ALTO">Encaje 2N: ALTO</option>
+        <option value="MEDIO">Encaje 2N: MEDIO</option>
+        <option value="BAJO">Encaje 2N: BAJO</option>
+        <option value="SIN">Encaje 2N: sin dato</option>
+      </select>
+      <select id="fPrioridad" class="select-input" style="max-width:150px;">
+        <option value="Todas">Prioridad: todas</option>
+        <option value="Alta">Prioridad: Alta</option>
+        <option value="Media">Prioridad: Media</option>
+        <option value="Baja">Prioridad: Baja</option>
+      </select>
+      <input id="fTexto" class="search-input" style="max-width:220px;" placeholder="Buscar por nombre / cliente..." />
+    </div>
+
+    <!-- COLUMNS KANBAN -->
+    <div id="kanbanBoard" style="
+        display:grid;
+        grid-template-columns:repeat(7,minmax(0,1fr));
+        gap:8px;
+        align-items:flex-start;
+        overflow-x:auto;
+      ">
+      <!-- Las columnas se rellenan por JS -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import {
+      collection,
+      getDocs,
+      updateDoc,
+      doc
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const ESTADOS = [
+      "Detectado",
+      "En Prescripción",
+      "Oferta Enviada",
+      "Negociación",
+      "Ganado",
+      "Perdido",
+      "Paralizado"
+    ];
+
+    const encajeFilter = document.getElementById("fEncaje2N");
+    const prioridadFilter = document.getElementById("fPrioridad");
+    const textoFilter = document.getElementById("fTexto");
+    const kanbanBoard = document.getElementById("kanbanBoard");
+
+    let proyectos = [];
+    let proyectosFiltrados = [];
+    let dragId = null;
+
+    async function cargarProyectos() {
+      const snap = await getDocs(collection(db, "proyectos"));
+      proyectos = [];
+      snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+      aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+      const enc = encajeFilter.value;
+      const prio = prioridadFilter.value;
+      const texto = (textoFilter.value || "").toLowerCase();
+
+      proyectosFiltrados = proyectos.filter(p => {
+        let ok = true;
+
+        const encaje = (p.encaje_2n || "").toString().toUpperCase().trim();
+        if (enc !== "Todos") {
+          if (enc === "SIN") ok = ok && !encaje;
+          else ok = ok && encaje === enc;
+        }
+
+        if (prio !== "Todas") {
+          ok = ok && (p.prioridad || "") === prio;
+        }
+
+        if (texto) {
+          const blob = [
+            p.nombre_obra,
+            p.cliente_principal,
+            p.ciudad,
+            p.provincia
+          ]
+            .join(" ")
+            .toLowerCase();
+          ok = ok && blob.includes(texto);
+        }
+
+        return ok;
+      });
+
+      pintarKanban();
+    }
+
+    function badgeEstado(estado) {
+      if (!estado) return "badge detectado";
+      const e = estado.toLowerCase();
+      if (e === "detectado") return "badge detectado";
+      if (e.includes("prescripción") || e.includes("prescripcion")) return "badge prescripcion";
+      if (e.includes("oferta")) return "badge oferta";
+      if (e.includes("negociación") || e.includes("negociacion")) return "badge negociacion";
+      if (e === "ganado") return "badge ganado";
+      if (e === "perdido") return "badge perdido";
+      if (e === "paralizado") return "badge paralizado";
+      return "badge detectado";
+    }
+
+    function badgeEncaje(encaje) {
+      const e = (encaje || "").toString().toUpperCase().trim();
+      if (e === "ALTO") return '<span class="badge ganado">ALTO</span>';
+      if (e === "MEDIO") return '<span class="badge oferta">MEDIO</span>';
+      if (e === "BAJO") return '<span class="badge perdido">BAJO</span>';
+      return '<span class="badge detectado">SIN</span>';
+    }
+
+    function pillPrioridad(p) {
+      const pr = (p.prioridad || "").toLowerCase();
+      let color = "#E5E7EB";
+      let text = p.prioridad || "–";
+      if (pr === "alta") color = "#FCA5A5";
+      else if (pr === "media") color = "#FCD34D";
+      else if (pr === "baja") color = "#BBF7D0";
+
+      return `<span style="
+          display:inline-block;
+          padding:1px 6px;
+          border-radius:999px;
+          font-size:10px;
+          background:${color};
+          color:#111827;
+        ">${text}</span>`;
+    }
+
+    function pintarKanban() {
+      kanbanBoard.innerHTML = "";
+
+      ESTADOS.forEach(estado => {
+        const colProyectos = proyectosFiltrados.filter(p => (p.estado || "Detectado") === estado);
+
+        const col = document.createElement("div");
+        col.className = "kanban-column";
+        col.dataset.estado = estado;
+        col.style.background = "#F9FAFB";
+        col.style.border = "1px solid #E5E7EB";
+        col.style.borderRadius = "10px";
+        col.style.padding = "6px";
+        col.style.minHeight = "260px";
+        col.style.display = "flex";
+        col.style.flexDirection = "column";
+        col.style.gap = "6px";
+
+        col.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:600;color:#111827;">
+              ${estado}
+            </div>
+            <div style="font-size:10px;color:#6B7280;">
+              ${colProyectos.length}
+            </div>
+          </div>
+        `;
+
+        const dropZone = document.createElement("div");
+        dropZone.className = "kanban-dropzone";
+        dropZone.style.flex = "1";
+        dropZone.style.display = "flex";
+        dropZone.style.flexDirection = "column";
+        dropZone.style.gap = "6px";
+
+        dropZone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          dropZone.style.background = "#EFF6FF";
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+          dropZone.style.background = "transparent";
+        });
+
+        dropZone.addEventListener("drop", async (e) => {
+          e.preventDefault();
+          dropZone.style.background = "transparent";
+          if (!dragId) return;
+
+          const newEstado = col.dataset.estado;
+          const proyecto = proyectos.find(p => p.id === dragId);
+          if (!proyecto || (proyecto.estado || "Detectado") === newEstado) return;
+
+          try {
+            await updateDoc(doc(db, "proyectos", dragId), { estado: newEstado });
+            proyecto.estado = newEstado;
+            aplicarFiltros();
+          } catch (err) {
+            console.error("❌ Error cambiando estado:", err);
+            alert("Error actualizando el estado del proyecto.");
+          } finally {
+            dragId = null;
+          }
+        });
+
+        colProyectos.forEach(p => {
+          const card = document.createElement("div");
+          card.className = "kanban-card";
+          card.draggable = true;
+          card.dataset.id = p.id;
+          card.style.borderRadius = "8px";
+          card.style.border = "1px solid #E5E7EB";
+          card.style.background = "#FFFFFF";
+          card.style.padding = "6px 7px";
+          card.style.cursor = "grab";
+          card.style.fontSize = "11px";
+          card.style.boxShadow = "0 1px 1px rgba(15,23,42,0.04)";
+
+          const loc = [p.ciudad, p.provincia].filter(Boolean).join(" · ");
+
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+              <button class="kanban-title" data-id="${p.id}" style="
+                  border:none;
+                  background:none;
+                  padding:0;
+                  margin:0;
+                  text-align:left;
+                  cursor:pointer;
+                  font-size:11.5px;
+                  font-weight:600;
+                  color:#111827;
+                  flex:1;
+                ">
+                ${p.nombre_obra || "(Sin nombre)"}
+              </button>
+              ${pillPrioridad(p)}
+            </div>
+            <div style="font-size:10px;color:#6B7280;margin-top:2px;">
+              ${p.cliente_principal || ""}${loc ? " · " + loc : ""}
+            </div>
+            <div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
+              <span class="${badgeEstado(p.estado)}" style="font-size:9.5px;">${p.estado || "Detectado"}</span>
+              ${badgeEncaje(p.encaje_2n)}
+            </div>
+          `;
+
+          card.addEventListener("dragstart", () => {
+            dragId = p.id;
+            card.style.opacity = "0.6";
+          });
+          card.addEventListener("dragend", () => {
+            card.style.opacity = "1";
+          });
+
+          dropZone.appendChild(card);
+        });
+
+        col.appendChild(dropZone);
+        kanbanBoard.appendChild(col);
+      });
+
+      // Click para abrir edición rápida (usará el mismo diálogo que index si lo quieres más adelante)
+      kanbanBoard.querySelectorAll(".kanban-title").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          // De momento solo navego a proyectos.html; si quieres, siguiente fase = modal aquí también
+          window.location.href = "proyectos.html";
+        });
+      });
+    }
+
+    encajeFilter.addEventListener("change", aplicarFiltros);
+    prioridadFilter.addEventListener("change", aplicarFiltros);
+    textoFilter.addEventListener("input", aplicarFiltros);
+
+    cargarProyectos();
+  </script>
 </body>
 </html>
