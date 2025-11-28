@@ -6,7 +6,7 @@
   <title>CRM 2N – Clientes</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Librería para leer Excel en el navegador -->
+  <!-- Librería para leer Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
@@ -36,13 +36,10 @@
 
     <!-- FILTROS Y ACCIONES -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
-
-      <!-- Filtro zona -->
       <select id="fZonaCliente" class="select-input" style="max-width:180px;">
         <option value="Todas">Zonas: todas</option>
       </select>
 
-      <!-- Filtro tipo -->
       <select id="fTipoCliente" class="select-input" style="max-width:180px;">
         <option value="Todos">Tipo: todos</option>
         <option value="Promotora">Promotora</option>
@@ -54,7 +51,6 @@
         <option value="Otro">Otro</option>
       </select>
 
-      <!-- Filtro segmento -->
       <select id="fSegmentoCliente" class="select-input" style="max-width:200px;">
         <option value="Todos">Segmento: todos</option>
         <option value="Residencial">Residencial</option>
@@ -64,28 +60,27 @@
         <option value="Mixto">Mixto</option>
       </select>
 
-      <!-- Filtro texto -->
       <input id="fTextoCliente" class="search-input" style="max-width:240px;" placeholder="Buscar por nombre / ciudad..." />
 
       <div style="flex:1;"></div>
 
-      <!-- BOTÓN scouting -->
+      <!-- scouting -->
       <button id="btnOpenScoutingClientes" class="btn-icon" title="Scouting / búsqueda avanzada de clientes">
         🔎
       </button>
 
-      <!-- BOTÓN importar -->
+      <!-- importar -->
       <button id="btnImportarClientes" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
         📥 Importar clientes
       </button>
-      <input type="file" id="inputImportClientes" accept=".csv, .xlsx" style="display:none;" />
+      <input type="file" id="inputImportClientes" accept=".csv,.xlsx" style="display:none;" />
 
-      <!-- BOTÓN eliminar selección -->
+      <!-- eliminar -->
       <button id="btnEliminarClientes" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
         🗑 Eliminar seleccionados
       </button>
 
-      <!-- Botón nuevo -->
+      <!-- nuevo -->
       <button id="btnNuevoCliente" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
         + Nuevo cliente
       </button>
@@ -93,8 +88,6 @@
 
     <!-- TABLA + GRAFICO -->
     <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-bottom:12px;">
-
-      <!-- TABLA -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
           <div style="font-size:12px;font-weight:600;color:#111827;">Clientes y obras vinculadas</div>
@@ -105,7 +98,6 @@
         </div>
       </div>
 
-      <!-- GRAFICO -->
       <div class="card">
         <div style="font-size:12px;font-weight:600;margin-bottom:6px;">TOP clientes por nº de obras</div>
         <div id="graficoClientes" style="font-size:11px;color:#4B5563;"></div>
@@ -168,13 +160,12 @@
         </div>
       </div>
 
-      <!-- OBRAS VINCULADAS -->
       <div id="clienteObrasContainer" style="margin-top:12px;">
         <div style="font-size:11px;font-weight:600;color:#111827;margin-bottom:4px;">
           Obras vinculadas
         </div>
         <div id="clienteObrasLista"
-          style="max-height:160px;overflow:auto;font-size:11px;color:#4B5563;border:1px solid #E5E7EB;border-radius:6px;padding:6px;">
+             style="max-height:160px;overflow:auto;font-size:11px;color:#4B5563;border:1px solid #E5E7EB;border-radius:6px;padding:6px;">
           <span style="color:#9CA3AF;">Sin obras vinculadas todavía.</span>
         </div>
       </div>
@@ -256,7 +247,7 @@
       deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // ESTADO
+    // ======= ESTADO =======
     let clientes = [];
     let proyectos = [];
     let clientesView = [];
@@ -284,21 +275,18 @@
     const cliNotas = document.getElementById("cliNotas");
     const promptClientes = document.getElementById("promptClientes");
     const chkCliTipo = document.querySelectorAll(".chk-cli-tipo");
-    const chkCliSeg = document.querySelectorAll(".chk-cli-seg");
     const btnCopiarPromptClientes = document.getElementById("btnCopiarPromptClientes");
 
     const inputImportClientes = document.getElementById("inputImportClientes");
     const btnImportarClientes = document.getElementById("btnImportarClientes");
 
-    // =========================
-    // HELPERS
-    // =========================
+    // ======= HELPERS =======
     function normalizar(txt) {
       return (txt || "").toString().trim().toLowerCase();
     }
 
-    // Normaliza nombres de columnas
-    function normCol(s) {
+    // normaliza string (quita acentos y pasa a minúsculas)
+    function norm(s) {
       return (s || "")
         .toString()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -306,45 +294,21 @@
         .trim();
     }
 
-    // Mapeo flexible de columnas → campos CRM
-    const MAPEO_CLIENTES = {
-      nombre:      ["cliente","nombre","empresa","compania","razon social","nombre_cliente"],
-      tipo:        ["tipo","tipo_cliente","categoria"],
-      segmento:    ["segmento","actividad","sector","segmento_principal"],
-      telefono:    ["telefono","tel","movil","mobile","phone"],
-      email:       ["email","correo","mail"],
-      persona_contacto: ["contacto","persona","persona_contacto","responsable"],
-      cargo_contacto:   ["cargo","puesto","rol","cargo_contacto"],
-      telefono_contacto:["telefono_contacto","tel_contacto","movil_contacto"],
-      email_contacto:   ["email_contacto","correo_contacto","mail_contacto"],
-      web:         ["web","url","pagina","sitio_web"],
-      direccion:   ["direccion","dir","calle"],
-      ciudad:      ["ciudad","localidad","poblacion","town"],
-      provincia:   ["provincia","region","estado","county"],
-      pais:        ["pais","country"],
-      linkedin_empresa: ["linkedin","linkedin_empresa"],
-      linkedin_contacto: ["linkedin_contacto","linkedin_persona"],
-      proyectos_relevantes_resumen: ["proyectos","proyectos relevantes","resumen_proyectos"],
-      volumen_estimado_proyectos:   ["volumen","volumen_estimado","facturacion"],
-      encaje_2n_cliente: ["encaje","encaje_2n","fit_2n"],
-      motivo_encaje_2n: ["motivo","motivo_encaje","razon_encaje","motivo_encaje_2n"],
-      fuente:      ["fuente","origen","source"]
-    };
-
-    function extraerFlex(row, campo) {
-      const posibles = MAPEO_CLIENTES[campo];
-      if (!posibles) return "";
-      for (const candidato of posibles) {
-        for (const col in row) {
-          if (normCol(col).includes(normCol(candidato))) {
-            return row[col] || "";
+    // busca un campo en la fila usando varios nombres posibles
+    function getField(row, candidates) {
+      const entries = Object.entries(row);
+      for (const cand of candidates) {
+        const nc = norm(cand);
+        for (const [key, value] of entries) {
+          if (norm(key).includes(nc)) {
+            return value ?? "";
           }
         }
       }
       return "";
     }
 
-    // Key para duplicados: nombre + web
+    // key duplicados: nombre + web
     function buildClienteKey(obj) {
       const nombre = normalizar(obj.nombre || obj.nombre_cliente || "");
       const web = normalizar(obj.web || "");
@@ -357,9 +321,7 @@
       return set;
     }
 
-    // =========================
-    // CARGA (1 sola lectura clientes + 1 sola lectura proyectos)
-    // =========================
+    // ======= CARGA (1 lectura clientes + 1 lectura proyectos) =======
     async function cargarClientesYProyectos() {
       const [cliSnap, proySnap] = await Promise.all([
         getDocs(collection(db, "clientes")),
@@ -377,8 +339,8 @@
     function contarObrasCliente(nombreCliente) {
       const target = normalizar(nombreCliente);
       if (!target) return 0;
-
       let contador = 0;
+
       proyectos.forEach(p => {
         if (
           normalizar(p.cliente_principal) === target ||
@@ -417,9 +379,7 @@
         zonas.map(z => `<option value="${z}">${z}</option>`).join("");
     }
 
-    // =========================
-    // FILTROS
-    // =========================
+    // ======= FILTROS =======
     function aplicarFiltrosClientes() {
       const zona = fZonaCliente.value;
       const tipo = fTipoCliente.value;
@@ -430,9 +390,7 @@
 
       lista = lista.filter(c => {
         let ok = true;
-        if (zona !== "Todas") {
-          ok = ok && (c.ciudad === zona || c.provincia === zona);
-        }
+        if (zona !== "Todas") ok = ok && (c.ciudad === zona || c.provincia === zona);
         if (tipo !== "Todos") ok = ok && (c.tipo === tipo);
         if (seg !== "Todos") ok = ok && (c.segmento === seg);
 
@@ -456,7 +414,7 @@
 
     function renderWeb(url) {
       if (!url) return "";
-      const href = url.startsWith("http") ? url : "https://" + url;
+      const href = url.toString().startsWith("http") ? url : "https://" + url;
       return `<a href="${href}" target="_blank">🔗</a>`;
     }
 
@@ -591,7 +549,7 @@
         .join("");
     }
 
-    // NUEVO / EDITAR CLIENTE
+    // ======= NUEVO / EDITAR CLIENTE =======
     btnNuevoCliente.addEventListener("click", () => {
       clienteEditandoId = null;
       clienteForm.reset();
@@ -647,7 +605,7 @@
       clienteDialog.close();
     });
 
-    // ELIMINAR SELECCIONADOS
+    // ======= ELIMINAR SELECCIONADOS =======
     btnEliminarClientes.addEventListener("click", async () => {
       const marcados = Array.from(document.querySelectorAll(".chk-cliente-row:checked"));
       if (!marcados.length) {
@@ -666,7 +624,7 @@
       aplicarFiltrosClientes();
     });
 
-    // SCOUTING: PROMPT
+    // ======= SCOUTING: PROMPT =======
     function getCheckedValues(nodeList) {
       return Array.from(nodeList).filter(el => el.checked).map(el => el.value);
     }
@@ -674,7 +632,6 @@
     function generarPromptClientes() {
       const zonas = cliZonas.value.trim();
       const tipos = getCheckedValues(chkCliTipo);
-      const segmentos = getCheckedValues(chkCliSeg);
       const ticket = cliTicket.value.trim();
       const notas = cliNotas.value.trim();
 
@@ -690,7 +647,6 @@
 
       if (zonas) partes.push(`Zonas objetivo: ${zonas}.`);
       if (tipos.length) partes.push(`Tipos de cliente prioritarios: ${tipos.join(", ")}.`);
-      if (segmentos.length) partes.push(`Segmentos de actividad prioritarios: ${segmentos.join(", ")}.`);
       if (ticket) partes.push(`Perfil de proyectos / ticket típico: ${ticket}.`);
       if (notas) partes.push(`Notas adicionales: ${notas}.`);
 
@@ -720,13 +676,11 @@
     [cliZonas, cliTicket, cliNotas].forEach(el =>
       el.addEventListener("input", generarPromptClientes)
     );
-    [...chkCliTipo, ...chkCliSeg].forEach(ch =>
+    [...chkCliTipo].forEach(ch =>
       ch.addEventListener("change", generarPromptClientes)
     );
 
-    btnOpenScoutingClientes.addEventListener("click", () => {
-      scoutingDialog.showModal();
-    });
+    btnOpenScoutingClientes.addEventListener("click", () => scoutingDialog.showModal());
 
     btnCopiarPromptClientes.addEventListener("click", async () => {
       await navigator.clipboard.writeText(promptClientes.value || "");
@@ -734,7 +688,7 @@
       setTimeout(() => (btnCopiarPromptClientes.textContent = "Copiar prompt"), 1200);
     });
 
-    // IMPORTAR CLIENTES (CSV / XLSX) FLEXIBLE
+    // ======= IMPORTAR (CSV / XLSX) =======
     btnImportarClientes.addEventListener("click", () => inputImportClientes.click());
 
     inputImportClientes.addEventListener("change", async (e) => {
@@ -772,6 +726,46 @@
       }
     });
 
+    function mapRowClientes(row, fuenteDefault) {
+      const nombre = (getField(row, [
+        "nombre_cliente","cliente","nombre","empresa","compañia","compania"
+      ]) || "").toString().trim();
+
+      if (!nombre) return null;
+
+      const payload = {
+        nombre,
+        tipo: (getField(row, ["tipo_cliente","tipo","categoria"]) || "").toString().trim(),
+        segmento: (getField(row, ["segmento_principal","segmento","actividad","sector"]) || "").toString().trim(),
+        telefono: (getField(row, ["telefono","tel","phone"]) || "").toString().trim(),
+        email: (getField(row, ["email","correo"]) || "").toString().trim(),
+
+        persona_contacto: (getField(row, ["persona_contacto","contacto"]) || "").toString().trim(),
+        cargo_contacto: (getField(row, ["cargo_contacto","cargo","puesto"]) || "").toString().trim(),
+        telefono_contacto: (getField(row, ["telefono_contacto","tel_contacto"]) || "").toString().trim(),
+        email_contacto: (getField(row, ["email_contacto","correo_contacto"]) || "").toString().trim(),
+
+        web: (getField(row, ["web","url","pagina"]) || "").toString().trim(),
+        direccion: (getField(row, ["direccion"]) || "").toString().trim(),
+        ciudad: (getField(row, ["ciudad","localidad"]) || "").toString().trim(),
+        provincia: (getField(row, ["provincia","region"]) || "").toString().trim(),
+        pais: (getField(row, ["pais","country"]) || "España").toString().trim(),
+
+        linkedin_empresa: (getField(row, ["linkedin_empresa"]) || "").toString().trim(),
+        linkedin_contacto: (getField(row, ["linkedin_contacto"]) || "").toString().trim(),
+
+        proyectos_relevantes_resumen: (getField(row, ["proyectos_relevantes_resumen"]) || "").toString().trim(),
+        volumen_estimado_proyectos: (getField(row, ["volumen_estimado_proyectos"]) || "").toString().trim(),
+
+        encaje_2n_cliente: (getField(row, ["encaje_2n_cliente","encaje_2n"]) || "").toString().trim(),
+        motivo_encaje_2n: (getField(row, ["motivo_encaje_2n"]) || "").toString().trim(),
+
+        fuente: (getField(row, ["fuente_principal","fuente","origen"]) || fuenteDefault).toString().trim()
+      };
+
+      return payload;
+    }
+
     async function importarCSVClientes(file, existingKeys) {
       const text = await file.text();
       const lines = text.split("\n").map(l => l.trim()).filter(l => l);
@@ -781,25 +775,20 @@
       let added = 0, skipped = 0;
 
       for (let i = 1; i < lines.length; i++) {
-        try {
-          const values = lines[i].split(";");
-          const row = {};
-          headers.forEach((h, idx) => row[h] = values[idx] || "");
+        const values = lines[i].split(";");
+        const row = {};
+        headers.forEach((h, idx) => row[h] = values[idx] || "");
 
-          const payload = mapRowFlexible(row, "scouting_csv");
-          if (!payload.nombre) continue;
+        const payload = mapRowClientes(row, "scouting_csv");
+        if (!payload) continue;
 
-          const key = buildClienteKey(payload);
-          if (existingKeys.has(key)) { skipped++; continue; }
+        const key = buildClienteKey(payload);
+        if (existingKeys.has(key)) { skipped++; continue; }
 
-          const ref = await addDoc(collection(db, "clientes"), payload);
-          clientes.push({ id: ref.id, ...payload });
-          existingKeys.add(key);
-          added++;
-        } catch (err) {
-          console.warn("Fila CSV ignorada por error:", err);
-          continue;
-        }
+        const ref = await addDoc(collection(db, "clientes"), payload);
+        clientes.push({ id: ref.id, ...payload });
+        existingKeys.add(key);
+        added++;
       }
 
       return { a: added, s: skipped };
@@ -807,7 +796,7 @@
 
     async function importarXLSXClientes(file, existingKeys) {
       if (typeof XLSX === "undefined") {
-        alert("La librería de Excel (XLSX) no se ha cargado correctamente. Exporta el archivo como CSV e impórtalo.");
+        alert("La librería de Excel (XLSX) no se ha cargado. Exporta como CSV e impórtalo.");
         return { a: 0, s: 0 };
       }
       const data = await file.arrayBuffer();
@@ -818,59 +807,22 @@
       let added = 0, skipped = 0;
 
       for (const row of json) {
-        try {
-          const payload = mapRowFlexible(row, "scouting_excel");
-          if (!payload.nombre) continue;
+        const payload = mapRowClientes(row, "scouting_excel");
+        if (!payload) continue;
 
-          const key = buildClienteKey(payload);
-          if (existingKeys.has(key)) { skipped++; continue; }
+        const key = buildClienteKey(payload);
+        if (existingKeys.has(key)) { skipped++; continue; }
 
-          const ref = await addDoc(collection(db, "clientes"), payload);
-          clientes.push({ id: ref.id, ...payload });
-          existingKeys.add(key);
-          added++;
-        } catch (err) {
-          console.warn("Fila XLSX ignorada por error:", err);
-          continue;
-        }
+        const ref = await addDoc(collection(db, "clientes"), payload);
+        clientes.push({ id: ref.id, ...payload });
+        existingKeys.add(key);
+        added++;
       }
 
       return { a: added, s: skipped };
     }
 
-    function mapRowFlexible(row, fuenteDefault) {
-      return {
-        nombre:      extraerFlex(row, "nombre"),
-        tipo:        extraerFlex(row, "tipo"),
-        segmento:    extraerFlex(row, "segmento"),
-        telefono:    extraerFlex(row, "telefono"),
-        email:       extraerFlex(row, "email"),
-
-        persona_contacto: extraerFlex(row, "persona_contacto"),
-        cargo_contacto:   extraerFlex(row, "cargo_contacto"),
-        telefono_contacto:extraerFlex(row, "telefono_contacto"),
-        email_contacto:   extraerFlex(row, "email_contacto"),
-
-        web:         extraerFlex(row, "web"),
-        direccion:   extraerFlex(row, "direccion"),
-        ciudad:      extraerFlex(row, "ciudad"),
-        provincia:   extraerFlex(row, "provincia"),
-        pais:        extraerFlex(row, "pais"),
-
-        linkedin_empresa: extraerFlex(row, "linkedin_empresa"),
-        linkedin_contacto: extraerFlex(row, "linkedin_contacto"),
-
-        proyectos_relevantes_resumen: extraerFlex(row, "proyectos_relevantes_resumen"),
-        volumen_estimado_proyectos:   extraerFlex(row, "volumen_estimado_proyectos"),
-
-        encaje_2n_cliente: extraerFlex(row, "encaje_2n_cliente"),
-        motivo_encaje_2n: extraerFlex(row, "motivo_encaje_2n"),
-
-        fuente: extraerFlex(row, "fuente") || fuenteDefault
-      };
-    }
-
-    // EVENTOS FILTROS
+    // ======= EVENTOS FILTROS =======
     fZonaCliente.addEventListener("change", aplicarFiltrosClientes);
     fTipoCliente.addEventListener("change", aplicarFiltrosClientes);
     fSegmentoCliente.addEventListener("change", aplicarFiltrosClientes);
