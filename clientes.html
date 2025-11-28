@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM 2N – Clientes</title>
   <link rel="stylesheet" href="style.css" />
-  
-  <!-- Librería para importar Excel -->
+
+  <!-- Librería para leer Excel en el navegador -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
@@ -31,7 +31,7 @@
   <main class="content">
     <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Clientes</h2>
     <div style="font-size:12px;color:#5A6872;margin-bottom:10px;">
-      Mapa de promotoras, arquitecturas, ingenierías, fondos, integradores, etc. vinculados a tus obras.
+      Promotoras, arquitecturas, ingenierías, fondos, integradores, etc. vinculados a tus obras.
     </div>
 
     <!-- FILTROS Y ACCIONES -->
@@ -80,11 +80,15 @@
       </button>
       <input type="file" id="inputImportClientes" accept=".csv, .xlsx" style="display:none;" />
 
+      <!-- BOTÓN eliminar selección -->
+      <button id="btnEliminarClientes" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
+        🗑 Eliminar seleccionados
+      </button>
+
       <!-- Botón nuevo -->
       <button id="btnNuevoCliente" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
         + Nuevo cliente
       </button>
-
     </div>
 
     <!-- TABLA + GRAFICO -->
@@ -104,17 +108,16 @@
       <!-- GRAFICO -->
       <div class="card">
         <div style="font-size:12px;font-weight:600;margin-bottom:6px;">TOP clientes por nº de obras</div>
-        <div id="graficoClientes"></div>
+        <div id="graficoClientes" style="font-size:11px;color:#4B5563;"></div>
       </div>
     </div>
   </main>
 
-  <!-- DIALOG: NUEVO CLIENTE -->
+  <!-- DIALOG: NUEVO / EDITAR CLIENTE -->
   <dialog id="clienteDialog">
-    <div class="modal-header">Nuevo cliente rápido</div>
+    <div class="modal-header">Cliente</div>
     <form id="clienteForm" method="dialog">
       <div class="form-grid">
-
         <div class="form-group">
           <label for="cliNombre">Nombre</label>
           <input id="cliNombre" required />
@@ -165,8 +168,19 @@
         </div>
       </div>
 
+      <!-- OBRAS VINCULADAS -->
+      <div id="clienteObrasContainer" style="margin-top:12px;">
+        <div style="font-size:11px;font-weight:600;color:#111827;margin-bottom:4px;">
+          Obras vinculadas
+        </div>
+        <div id="clienteObrasLista"
+          style="max-height:160px;overflow:auto;font-size:11px;color:#4B5563;border:1px solid #E5E7EB;border-radius:6px;padding:6px;">
+          <span style="color:#9CA3AF;">Sin obras vinculadas todavía.</span>
+        </div>
+      </div>
+
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="clienteDialog.close()">Cancelar</button>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('clienteDialog').close()">Cancelar</button>
         <button class="btn-primary" type="submit">Guardar</button>
       </div>
     </form>
@@ -176,10 +190,9 @@
   <dialog id="scoutingClientesDialog" style="max-width:900px;width:95%;">
     <div class="modal-header" style="display:flex;justify-content:space-between;">
       <span>🛰️ Scouting · Buscar clientes</span>
-      <button type="button" class="btn-icon" onclick="scoutingClientesDialog.close()">✖</button>
+      <button type="button" class="btn-icon" onclick="document.getElementById('scoutingClientesDialog').close()">✖</button>
     </div>
 
-    <!-- BLOQUE scouting entero -->
     <div class="card" style="margin-top:4px;box-shadow:none;border:none;padding:0;">
       <div style="display:flex;justify-content:space-between;align-items-center;margin-bottom:8px;">
         <div>
@@ -193,10 +206,8 @@
         </button>
       </div>
 
-      <!-- Configuración -->
       <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-bottom:10px;">
         <div style="display:flex;flex-direction:column;gap:8px;">
-
           <div class="form-group">
             <label>📍 Zonas objetivo</label>
             <input id="cliZonas" placeholder="Ej: Madrid, Málaga, Barcelona, Lisboa" />
@@ -224,7 +235,6 @@
               <label class="chip"><input type="checkbox" class="chk-cli-seg" value="Mixto"> Mixto</label>
             </div>
           </div>
-
         </div>
 
         <div style="display:flex;flex-direction:column;gap:8px;">
@@ -245,20 +255,23 @@
     </div>
   </dialog>
 
-  <!-- ====================== -->
   <!-- SCRIPT PRINCIPAL -->
-  <!-- ====================== -->
   <script type="module">
     import { db } from "./firebase.js";
-    import { collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import {
+      collection,
+      getDocs,
+      addDoc,
+      doc,
+      updateDoc,
+      deleteDoc
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-
-    /* ====================================================
-           ESTADO
-    ==================================================== */
+    // ESTADO
     let clientes = [];
     let proyectos = [];
     let clientesView = [];
+    let clienteEditandoId = null;
 
     const fZonaCliente = document.getElementById("fZonaCliente");
     const fTipoCliente = document.getElementById("fTipoCliente");
@@ -269,14 +282,15 @@
     const clientesEmpty = document.getElementById("clientesEmpty");
     const graficoClientes = document.getElementById("graficoClientes");
 
+    const clienteDialog = document.getElementById("clienteDialog");
+    const clienteForm = document.getElementById("clienteForm");
+    const btnNuevoCliente = document.getElementById("btnNuevoCliente");
+    const btnEliminarClientes = document.getElementById("btnEliminarClientes");
+
     const scoutingDialog = document.getElementById("scoutingClientesDialog");
-    document.getElementById("btnOpenScoutingClientes").onclick = () => scoutingDialog.showModal();
+    const btnOpenScoutingClientes = document.getElementById("btnOpenScoutingClientes");
 
-
-
-    /* ====================================================
-           CARGAR CLIENTES Y PROYECTOS (1 sola lectura)
-    ==================================================== */
+    // CARGA (1 sola lectura clientes + 1 sola lectura proyectos)
     async function cargarClientesYProyectos() {
       const [cliSnap, proySnap] = await Promise.all([
         getDocs(collection(db, "clientes")),
@@ -291,93 +305,95 @@
       aplicarFiltrosClientes();
     }
 
-
-    /* ====================================================
-           RELACIONAR CLIENTES ↔ PROYECTOS
-    ==================================================== */
     function normalizar(txt) {
-      return (txt || "").trim().toLowerCase();
+      return (txt || "").toString().trim().toLowerCase();
     }
 
-    function contarObras(cliente) {
-      const target = normalizar(cliente);
-      return proyectos.filter(p => (
-        normalizar(p.cliente_principal) === target ||
-        normalizar(p.promotora) === target ||
-        normalizar(p.constructora) === target ||
-        normalizar(p.arquitectura) === target ||
-        normalizar(p.ingenieria) === target
-      )).length;
+    function contarObrasCliente(nombreCliente) {
+      const target = normalizar(nombreCliente);
+      if (!target) return 0;
+
+      let contador = 0;
+      proyectos.forEach(p => {
+        if (
+          normalizar(p.cliente_principal) === target ||
+          normalizar(p.promotora) === target ||
+          normalizar(p.constructora) === target ||
+          normalizar(p.arquitectura) === target ||
+          normalizar(p.ingenieria) === target
+        ) {
+          contador++;
+        }
+      });
+      return contador;
     }
 
     function recalcularVinculaciones() {
-      clientesView = clientes.map(c => ({
-        ...c,
-        nombre_display: c.nombre || c.nombre_cliente,
-        num_obras: contarObras(c.nombre || c.nombre_cliente)
-      }));
+      clientesView = clientes.map(c => {
+        const nombre = c.nombre || c.nombre_cliente || "";
+        return {
+          ...c,
+          nombre_display: nombre,
+          num_obras: contarObrasCliente(nombre)
+        };
+      });
     }
 
     function inicializarFiltroZonasClientes() {
-      const zonas = new Set();
-
+      const zonasSet = new Set();
       clientesView.forEach(c => {
-        if (c.ciudad) zonas.add(c.ciudad);
-        if (c.provincia) zonas.add(c.provincia);
+        if (c.ciudad) zonasSet.add(c.ciudad);
+        if (c.provincia) zonasSet.add(c.provincia);
       });
+      const zonas = [...zonasSet].sort((a, b) => a.localeCompare(b, "es"));
 
-      fZonaCliente.innerHTML = `<option value="Todas">Zonas: todas</option>` +
-        [...zonas].sort().map(z => `<option>${z}</option>`).join("");
+      fZonaCliente.innerHTML =
+        '<option value="Todas">Zonas: todas</option>' +
+        zonas.map(z => `<option value="${z}">${z}</option>`).join("");
     }
 
-
-    /* ====================================================
-           FILTROS
-    ==================================================== */
+    // FILTROS
     function aplicarFiltrosClientes() {
       const zona = fZonaCliente.value;
       const tipo = fTipoCliente.value;
       const seg = fSegmentoCliente.value;
       const txt = normalizar(fTextoCliente.value);
 
-      let lista = clientesView.filter(c => {
+      let lista = clientesView.slice();
+
+      lista = lista.filter(c => {
         let ok = true;
-
-        if (zona !== "Todas")
+        if (zona !== "Todas") {
           ok = ok && (c.ciudad === zona || c.provincia === zona);
+        }
+        if (tipo !== "Todos") ok = ok && (c.tipo === tipo);
+        if (seg !== "Todos") ok = ok && (c.segmento === seg);
 
-        if (tipo !== "Todos")
-          ok = ok && (c.tipo === tipo);
-
-        if (seg !== "Todos")
-          ok = ok && (c.segmento === seg);
-
-        if (txt)
-          ok = ok && (
-            normalizar(c.nombre_display).includes(txt) ||
-            normalizar(c.ciudad).includes(txt) ||
-            normalizar(c.provincia).includes(txt)
-          );
-
+        if (txt) {
+          const blob = [
+            c.nombre_display,
+            c.ciudad,
+            c.provincia,
+            c.tipo,
+            c.segmento
+          ].join(" ").toLowerCase();
+          ok = ok && blob.includes(txt);
+        }
         return ok;
       });
 
-      lista.sort((a,b) => b.num_obras - a.num_obras);
-      renderTabla(lista);
-      renderGrafico(lista);
+      lista.sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0));
+      renderTablaClientes(lista);
+      renderGraficoClientes(lista);
     }
 
-
-    /* ====================================================
-           TABLA CLIENTES
-    ==================================================== */
     function renderWeb(url) {
       if (!url) return "";
-      const href = url.startsWith("http") ? url : `https://${url}`;
+      const href = url.startsWith("http") ? url : "https://" + url;
       return `<a href="${href}" target="_blank">🔗</a>`;
     }
 
-    function renderTabla(lista) {
+    function renderTablaClientes(lista) {
       if (!lista.length) {
         clientesTableWrapper.innerHTML = "";
         clientesEmpty.style.display = "block";
@@ -386,143 +402,266 @@
       clientesEmpty.style.display = "none";
 
       let html = `
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Tipo</th>
-            <th>Segmento</th>
-            <th>Ciudad</th>
-            <th>Provincia</th>
-            <th>Teléfono</th>
-            <th>Web</th>
-            <th>Obras</th>
-          </tr>
-        </thead>
-        <tbody>
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="chkClientesAll" /></th>
+              <th>Cliente</th>
+              <th>Tipo</th>
+              <th>Segmento</th>
+              <th>Ciudad</th>
+              <th>Provincia</th>
+              <th>Teléfono</th>
+              <th>Web</th>
+              <th>Obras</th>
+            </tr>
+          </thead>
+          <tbody>
       `;
 
       lista.forEach(c => {
         html += `
-        <tr>
-          <td>${c.nombre_display}</td>
-          <td>${c.tipo || ""}</td>
-          <td>${c.segmento || ""}</td>
-          <td>${c.ciudad || ""}</td>
-          <td>${c.provincia || ""}</td>
-          <td>${c.telefono || ""}</td>
-          <td>${renderWeb(c.web)}</td>
-          <td>${c.num_obras}</td>
-        </tr>`;
+          <tr>
+            <td><input type="checkbox" class="chk-cliente-row" data-id="${c.id}" /></td>
+            <td>
+              <button class="link-button cliente-nombre-link" data-id="${c.id}">
+                ${c.nombre_display || ""}
+              </button>
+            </td>
+            <td>${c.tipo || ""}</td>
+            <td>${c.segmento || ""}</td>
+            <td>${c.ciudad || ""}</td>
+            <td>${c.provincia || ""}</td>
+            <td>${c.telefono || ""}</td>
+            <td>${renderWeb(c.web)}</td>
+            <td>${c.num_obras || 0}</td>
+          </tr>
+        `;
       });
 
-      html += "</tbody></table>";
+      html += `</tbody></table>`;
       clientesTableWrapper.innerHTML = html;
+
+      // Eventos tabla
+      const chkAll = document.getElementById("chkClientesAll");
+      if (chkAll) {
+        chkAll.addEventListener("change", () => {
+          document.querySelectorAll(".chk-cliente-row").forEach(ch => {
+            ch.checked = chkAll.checked;
+          });
+        });
+      }
+
+      document.querySelectorAll(".cliente-nombre-link").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          abrirDialogEdicionCliente(id);
+        });
+      });
     }
 
-
-    /* ====================================================
-           GRAFICO CLIENTES
-    ==================================================== */
-    function renderGrafico(lista) {
+    function renderGraficoClientes(lista) {
       if (!lista.length) {
-        graficoClientes.innerHTML = "<small>Sin datos</small>";
+        graficoClientes.innerHTML = "<div style='font-size:11px;color:#9CA3AF;'>Sin datos.</div>";
         return;
       }
 
       const top = lista.slice(0, 8);
-      const max = Math.max(...top.map(c => c.num_obras));
+      const max = Math.max(...top.map(c => c.num_obras || 0)) || 1;
 
-      graficoClientes.innerHTML = top.map(c => {
-        const pct = (c.num_obras / max) * 100;
-        return `
+      let html = "<div style='display:flex;flex-direction:column;gap:6px;'>";
+      top.forEach(c => {
+        const pct = ((c.num_obras || 0) / max) * 100;
+        html += `
           <div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;">
-              <span>${c.nombre_display}</span>
-              <span>${c.num_obras}</span>
+            <div style="display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:2px;">
+              <span style="max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                ${c.nombre_display || ""}
+              </span>
+              <span style="color:#4B5563;">${c.num_obras || 0} obras</span>
             </div>
-            <div style="background:#E5E7EB;width:100%;height:8px;border-radius:999px;overflow:hidden;">
-              <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#4F46E5,#22C55E);"></div>
+            <div style="width:100%;background:#E5E7EB;border-radius:999px;overflow:hidden;height:8px;">
+              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#4F46E5,#22C55E);"></div>
             </div>
           </div>
         `;
-      }).join("");
+      });
+      html += "</div>";
+      graficoClientes.innerHTML = html;
     }
 
+    // OBRAS VINCULADAS EN MODAL
+    function renderObrasCliente(nombreCliente) {
+      const cont = document.getElementById("clienteObrasLista");
+      if (!cont) return;
 
-    /* ====================================================
-           NUEVO CLIENTE (DIALOG)
-    ==================================================== */
-    const clienteDialog = document.getElementById("clienteDialog");
-    document.getElementById("btnNuevoCliente").onclick = () => clienteDialog.showModal();
+      const target = normalizar(nombreCliente);
+      const lista = [];
 
-    clienteForm.onsubmit = async (e) => {
+      proyectos.forEach(p => {
+        const roles = [];
+        if (normalizar(p.cliente_principal) === target) roles.push("Cliente principal");
+        if (normalizar(p.promotora) === target) roles.push("Promotora");
+        if (normalizar(p.constructora) === target) roles.push("Constructora");
+        if (normalizar(p.arquitectura) === target) roles.push("Arquitectura");
+        if (normalizar(p.ingenieria) === target) roles.push("Ingeniería");
+
+        if (roles.length) {
+          lista.push({
+            nombre: p.nombre_obra || p.nombre || "(Proyecto sin nombre)",
+            roles
+          });
+        }
+      });
+
+      if (!lista.length) {
+        cont.innerHTML = "<span style='color:#9CA3AF;'>Sin obras vinculadas todavía.</span>";
+        return;
+      }
+
+      cont.innerHTML = lista
+        .map(
+          item =>
+            `<div style="margin-bottom:4px;">
+              <div style="font-weight:500;">${item.nombre}</div>
+              <div style="font-size:10px;color:#6B7280;">${item.roles.join(", ")}</div>
+            </div>`
+        )
+        .join("");
+    }
+
+    // NUEVO / EDITAR CLIENTE
+    btnNuevoCliente.addEventListener("click", () => {
+      clienteEditandoId = null;
+      clienteForm.reset();
+      document.getElementById("clienteObrasLista").innerHTML =
+        "<span style='color:#9CA3AF;'>Sin obras vinculadas todavía.</span>";
+      clienteDialog.showModal();
+    });
+
+    function abrirDialogEdicionCliente(id) {
+      const c = clientes.find(cl => cl.id === id);
+      if (!c) return;
+
+      clienteEditandoId = id;
+
+      document.getElementById("cliNombre").value = c.nombre || c.nombre_cliente || "";
+      document.getElementById("cliTipo").value = c.tipo || "Promotora";
+      document.getElementById("cliSegmento").value = c.segmento || "Residencial";
+      document.getElementById("cliCiudad").value = c.ciudad || "";
+      document.getElementById("cliProvincia").value = c.provincia || "";
+      document.getElementById("cliTelefono").value = c.telefono || "";
+      document.getElementById("cliWeb").value = c.web || "";
+
+      renderObrasCliente(c.nombre || c.nombre_cliente || "");
+      clienteDialog.showModal();
+    }
+
+    clienteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const payload = {
-        nombre: cliNombre.value.trim(),
-        tipo: cliTipo.value,
-        segmento: cliSegmento.value,
-        ciudad: cliCiudad.value.trim(),
-        provincia: cliProvincia.value.trim(),
-        telefono: cliTelefono.value.trim(),
-        web: cliWeb.value.trim(),
-        fuente: "manual"
+        nombre: document.getElementById("cliNombre").value.trim(),
+        tipo: document.getElementById("cliTipo").value,
+        segmento: document.getElementById("cliSegmento").value,
+        ciudad: document.getElementById("cliCiudad").value.trim(),
+        provincia: document.getElementById("cliProvincia").value.trim(),
+        telefono: document.getElementById("cliTelefono").value.trim(),
+        web: document.getElementById("cliWeb").value.trim(),
       };
 
-      await addDoc(collection(db, "clientes"), payload);
+      if (clienteEditandoId) {
+        await updateDoc(doc(db, "clientes", clienteEditandoId), payload);
+        const idx = clientes.findIndex(c => c.id === clienteEditandoId);
+        if (idx !== -1) {
+          clientes[idx] = { ...clientes[idx], ...payload };
+        }
+      } else {
+        const ref = await addDoc(collection(db, "clientes"), { ...payload, fuente: "manual" });
+        clientes.push({ id: ref.id, ...payload, fuente: "manual" });
+      }
+
+      recalcularVinculaciones();
+      inicializarFiltroZonasClientes();
+      aplicarFiltrosClientes();
+
       clienteDialog.close();
-      cargarClientesYProyectos();
-    };
+    });
 
+    // ELIMINAR SELECCIONADOS
+    btnEliminarClientes.addEventListener("click", async () => {
+      const marcados = Array.from(document.querySelectorAll(".chk-cliente-row:checked"));
+      if (!marcados.length) {
+        alert("Selecciona al menos un cliente.");
+        return;
+      }
+      if (!confirm(`Vas a eliminar ${marcados.length} clientes. ¿Seguro?`)) return;
 
-    /* ====================================================
-           SCOUTING: GENERADOR DE PROMPT
-    ==================================================== */
+      const ids = marcados.map(ch => ch.dataset.id);
+      for (const id of ids) {
+        await deleteDoc(doc(db, "clientes", id));
+      }
+      clientes = clientes.filter(c => !ids.includes(c.id));
+      recalcularVinculaciones();
+      inicializarFiltroZonasClientes();
+      aplicarFiltrosClientes();
+    });
+
+    // SCOUTING: PROMPT
     const cliZonas = document.getElementById("cliZonas");
     const cliTicket = document.getElementById("cliTicket");
     const cliNotas = document.getElementById("cliNotas");
     const promptClientes = document.getElementById("promptClientes");
-
     const chkCliTipo = document.querySelectorAll(".chk-cli-tipo");
     const chkCliSeg = document.querySelectorAll(".chk-cli-seg");
+    const btnCopiarPromptClientes = document.getElementById("btnCopiarPromptClientes");
 
-    function getChecked(nl) {
-      return [...nl].filter(x => x.checked).map(x => x.value);
+    function getCheckedValues(nodeList) {
+      return Array.from(nodeList).filter(el => el.checked).map(el => el.value);
     }
 
     function generarPromptClientes() {
       const zonas = cliZonas.value.trim();
-      const tipos = getChecked(chkCliTipo);
-      const segs = getChecked(chkCliSeg);
+      const tipos = getCheckedValues(chkCliTipo);
+      const segmentos = getCheckedValues(chkCliSeg);
       const ticket = cliTicket.value.trim();
       const notas = cliNotas.value.trim();
 
-      const p = [];
+      const partes = [];
 
-      p.push("Actúa como un analista sénior para identificar CLIENTES CLAVE para soluciones 2N.");
-      p.push("Usa modo INVESTIGACIÓN PROFUNDA y busca en webs, notas de prensa, LinkedIn, bases profesionales, etc.");
+      partes.push(
+        "Actúa como un analista sénior de mercado inmobiliario y de inversión, " +
+        "especializado en identificar CLIENTES CLAVE para soluciones de control de accesos y videoportero IP de 2N."
+      );
+      partes.push(
+        "Trabaja en MODO INVESTIGACIÓN PROFUNDA: webs corporativas, notas de prensa, registros, LinkedIn, portales de obras, etc."
+      );
 
-      if (zonas)
-        p.push(`Zonas objetivo: ${zonas}`);
+      if (zonas) partes.push(`Zonas objetivo: ${zonas}.`);
+      if (tipos.length) partes.push(`Tipos de cliente prioritarios: ${tipos.join(", ")}.`);
+      if (segmentos.length) partes.push(`Segmentos de actividad prioritarios: ${segmentos.join(", ")}.`);
+      if (ticket) partes.push(`Perfil de proyectos / ticket típico: ${ticket}.`);
+      if (notas) partes.push(`Notas adicionales a tener en cuenta: ${notas}.`);
 
-      if (tipos.length)
-        p.push(`Tipos de cliente: ${tipos.join(", ")}`);
+      partes.push(
+        "Para cada empresa, evalúa el ENCAJE POTENCIAL con 2N (nº y tipo de proyectos, complejidad de accesos, integración, etc.) " +
+        "y clasifica encaje_2n_cliente en ALTO, MEDIO o BAJO con motivo_encaje_2n."
+      );
 
-      if (segs.length)
-        p.push(`Segmentos: ${segs.join(", ")}`);
+      partes.push(
+        "SALIDA DE DATOS: genera un Excel (.xlsx) llamado 'clientes_2n.xlsx' con hoja 'Clientes' " +
+        "o, si no es posible, un CSV. Usa EXACTAMENTE estas columnas en este orden:"
+      );
+      partes.push(
+        "nombre_cliente, tipo_cliente, segmento_principal, telefono, email, persona_contacto, cargo_contacto, " +
+        "telefono_contacto, email_contacto, web, direccion, ciudad, provincia, pais, linkedin_empresa, linkedin_contacto, " +
+        "proyectos_relevantes_resumen, volumen_estimado_proyectos, encaje_2n_cliente, motivo_encaje_2n, fuente_principal"
+      );
+      partes.push(
+        "Si devuelves CSV, usa ';' como separador y NO añadas texto fuera del bloque CSV."
+      );
 
-      if (ticket)
-        p.push(`Perfil de ticket/proyectos típico del cliente: ${ticket}`);
-
-      if (notas)
-        p.push(`Notas adicionales: ${notas}`);
-
-      p.push("Genera EXCEL 'clientes_2n.xlsx' o CSV si no es posible.");
-      p.push("Columnas EXACTAS:");
-      p.push("nombre_cliente, tipo_cliente, segmento_principal, telefono, email, persona_contacto, cargo_contacto, telefono_contacto, email_contacto, web, direccion, ciudad, provincia, pais, linkedin_empresa, linkedin_contacto, proyectos_relevantes_resumen, volumen_estimado_proyectos, encaje_2n_cliente, motivo_encaje_2n, fuente_principal");
-
-      promptClientes.value = p.join("\n\n");
+      promptClientes.value = partes.join("\n\n");
     }
 
     generarPromptClientes();
@@ -530,84 +669,192 @@
     [cliZonas, cliTicket, cliNotas].forEach(el =>
       el.addEventListener("input", generarPromptClientes)
     );
-
     [...chkCliTipo, ...chkCliSeg].forEach(ch =>
       ch.addEventListener("change", generarPromptClientes)
     );
 
-    document.getElementById("btnCopiarPromptClientes").onclick = async () => {
-      await navigator.clipboard.writeText(promptClientes.value);
-      alert("Prompt copiado");
-    };
+    btnOpenScoutingClientes.addEventListener("click", () => {
+      scoutingDialog.showModal();
+    });
 
+    btnCopiarPromptClientes.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(promptClientes.value || "");
+      btnCopiarPromptClientes.textContent = "Copiado ✔";
+      setTimeout(() => (btnCopiarPromptClientes.textContent = "Copiar prompt"), 1200);
+    });
 
-    /* ====================================================
-           IMPORTAR CLIENTES (CSV / XLSX)
-    ==================================================== */
+    // IMPORTAR CLIENTES (CSV / XLSX) CON DETECCIÓN DE DUPLICADOS
     const inputImportClientes = document.getElementById("inputImportClientes");
     const btnImportarClientes = document.getElementById("btnImportarClientes");
 
     btnImportarClientes.addEventListener("click", () => inputImportClientes.click());
+
+    function buildClienteKey(obj) {
+      const nombre = normalizar(obj.nombre_cliente || obj.nombre || "");
+      const web = normalizar(obj.web || "");
+      return `${nombre}|${web}`;
+    }
+
+    function buildClientesKeySet() {
+      const set = new Set();
+      clientes.forEach(c => set.add(buildClienteKey(c)));
+      return set;
+    }
 
     inputImportClientes.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       const ext = file.name.split(".").pop().toLowerCase();
+      if (ext !== "csv" && ext !== "xlsx") {
+        alert("Formato no válido. Usa CSV o XLSX.");
+        return;
+      }
 
-      if (ext === "csv") await importarCSVClientes(file);
-      else if (ext === "xlsx") await importarXLSXClientes(file);
-      else return alert("Formato no válido. Usa CSV o XLSX.");
+      const existingKeys = buildClientesKeySet();
+      let added = 0;
+      let skipped = 0;
 
-      await cargarClientesYProyectos();
-      alert("Clientes importados correctamente.");
+      if (ext === "csv") {
+        const { a, s } = await importarCSVClientes(file, existingKeys);
+        added += a; skipped += s;
+      } else {
+        const { a, s } = await importarXLSXClientes(file, existingKeys);
+        added += a; skipped += s;
+      }
+
+      recalcularVinculaciones();
+      inicializarFiltroZonasClientes();
+      aplicarFiltrosClientes();
+
+      alert(`Importación completada.\nAñadidos: ${added}\nDuplicados ignorados: ${skipped}`);
+      inputImportClientes.value = "";
     });
 
-
-    async function importarCSVClientes(file) {
+    async function importarCSVClientes(file, existingKeys) {
       const text = await file.text();
       const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+      if (!lines.length) return { a: 0, s: 0 };
 
       const headers = lines[0].split(";");
+      let added = 0, skipped = 0;
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(";");
-        const doc = {};
+        const docRaw = {};
+        headers.forEach((h, idx) => {
+          docRaw[h] = values[idx] || "";
+        });
 
-        headers.forEach((h, idx) => doc[h] = values[idx] || "");
-        doc["fuente"] = "scouting_csv";
+        const key = buildClienteKey(docRaw);
+        if (existingKeys.has(key)) {
+          skipped++;
+          continue;
+        }
 
-        await addDoc(collection(db, "clientes"), doc);
+        const payload = {
+          nombre: docRaw.nombre_cliente || docRaw.nombre || "",
+          tipo: docRaw.tipo_cliente || "",
+          segmento: docRaw.segmento_principal || "",
+          telefono: docRaw.telefono || "",
+          email: docRaw.email || "",
+          persona_contacto: docRaw.persona_contacto || "",
+          cargo_contacto: docRaw.cargo_contacto || "",
+          telefono_contacto: docRaw.telefono_contacto || "",
+          email_contacto: docRaw.email_contacto || "",
+          web: docRaw.web || "",
+          direccion: docRaw.direccion || "",
+          ciudad: docRaw.ciudad || "",
+          provincia: docRaw.provincia || "",
+          pais: docRaw.pais || "",
+          linkedin_empresa: docRaw.linkedin_empresa || "",
+          linkedin_contacto: docRaw.linkedin_contacto || "",
+          proyectos_relevantes_resumen: docRaw.proyectos_relevantes_resumen || "",
+          volumen_estimado_proyectos: docRaw.volumen_estimado_proyectos || "",
+          encaje_2n_cliente: docRaw.encaje_2n_cliente || "",
+          motivo_encaje_2n: docRaw.motivo_encaje_2n || "",
+          fuente: docRaw.fuente_principal || "scouting_csv"
+        };
+
+        const ref = await addDoc(collection(db, "clientes"), payload);
+        clientes.push({ id: ref.id, ...payload });
+
+        existingKeys.add(key);
+        added++;
       }
+
+      return { a: added, s: skipped };
     }
 
-    async function importarXLSXClientes(file) {
+    async function importarXLSXClientes(file, existingKeys) {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheet = workbook.Sheets["Clientes"] || workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
+      let added = 0, skipped = 0;
+
       for (const row of json) {
-        const doc = { ...row, fuente: "scouting_excel" };
-        await addDoc(collection(db, "clientes"), doc);
+        const key = buildClienteKey(row);
+        if (existingKeys.has(key)) {
+          skipped++;
+          continue;
+        }
+
+        const payload = {
+          nombre: row.nombre_cliente || row.nombre || "",
+          tipo: row.tipo_cliente || "",
+          segmento: row.segmento_principal || "",
+          telefono: row.telefono || "",
+          email: row.email || "",
+          persona_contacto: row.persona_contacto || "",
+          cargo_contacto: row.cargo_contacto || "",
+          telefono_contacto: row.telefono_contacto || "",
+          email_contacto: row.email_contacto || "",
+          web: row.web || "",
+          direccion: row.direccion || "",
+          ciudad: row.ciudad || "",
+          provincia: row.provincia || "",
+          pais: row.pais || "",
+          linkedin_empresa: row.linkedin_empresa || "",
+          linkedin_contacto: row.linkedin_contacto || "",
+          proyectos_relevantes_resumen: row.proyectos_relevantes_resumen || "",
+          volumen_estimado_proyectos: row.volumen_estimado_proyectos || "",
+          encaje_2n_cliente: row.encaje_2n_cliente || "",
+          motivo_encaje_2n: row.motivo_encaje_2n || "",
+          fuente: row.fuente_principal || "scouting_excel"
+        };
+
+        const ref = await addDoc(collection(db, "clientes"), payload);
+        clientes.push({ id: ref.id, ...payload });
+
+        existingKeys.add(key);
+        added++;
       }
+
+      return { a: added, s: skipped };
     }
 
+    // EVENTOS FILTROS
+    fZonaCliente.addEventListener("change", aplicarFiltrosClientes);
+    fTipoCliente.addEventListener("change", aplicarFiltrosClientes);
+    fSegmentoCliente.addEventListener("change", aplicarFiltrosClientes);
+    fTextoCliente.addEventListener("input", aplicarFiltrosClientes);
 
-    /* ====================================================
-           EVENTOS FILTRO
-    ==================================================== */
-    fZonaCliente.onchange = aplicarFiltrosClientes;
-    fTipoCliente.onchange = aplicarFiltrosClientes;
-    fSegmentoCliente.onchange = aplicarFiltrosClientes;
-    fTextoCliente.oninput = aplicarFiltrosClientes;
+    // Scouting dialog
+    btnOpenScoutingClientes.addEventListener("click", () => {
+      scoutingDialog.showModal();
+    });
 
+    // Copiar prompt
+    document.getElementById("btnCopiarPromptClientes").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(promptClientes.value || "");
+      document.getElementById("btnCopiarPromptClientes").textContent = "Copiado ✔";
+      setTimeout(() => (document.getElementById("btnCopiarPromptClientes").textContent = "Copiar prompt"), 1200);
+    });
 
-    /* ====================================================
-           ARRANQUE
-    ==================================================== */
+    // ARRANQUE
     cargarClientesYProyectos();
-
   </script>
 </body>
 </html>
