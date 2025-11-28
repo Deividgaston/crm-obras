@@ -1,147 +1,247 @@
+<!--
+CRM 2N – Modo Desarrollador Eficiente
+Estilo Salesforce Moderno + Apple Clean UI
+Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas duplicadas)
+-->
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DGO Insight · Panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM 2N – Dashboard</title>
 
-  <!-- Estilos globales -->
-  <link rel="stylesheet" href="style.css" />
+    <!-- Si ya tienes un styles.css, mantenlo -->
+    <link rel="stylesheet" href="styles.css">
 
-  <!-- Firebase central -->
-  <script src="firebase.js"></script>
+    <style>
+        /* ===== LAYOUT GENERAL CRM – ESTILO SALESFORCE ===== */
+        body {
+            margin: 0;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background: #F5F7FA;
+            color: #1A1A1A;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: #111827;
+            color: #E5E7EB;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar-logo {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-sub {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 12px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.6;
+            margin: 12px 0 4px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-decoration: none;
+            color: #E5E7EB;
+            opacity: 0.9;
+            cursor: pointer;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background: #1F2937;
+        }
+
+        .nav-item.active {
+            background: #4C6EF5;
+            color: #FFFFFF;
+        }
+
+        .nav-item.disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: 64px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        .topbar-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .topbar-right {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        }
+
+        .card-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+
+        .card-value {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .card-sub {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 6px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+
+        .section-sub {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            background: #4C6EF5;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background: #3B5BDB;
+        }
+    </style>
 </head>
-
 <body>
+<div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-logo">CRM 2N</div>
+            <div class="sidebar-sub">Prescripción · Proyectos</div>
+        </div>
 
-  <!-- HEADER ESTILO SALESFORCE -->
-  <header class="crm-header">
-    <div class="crm-logo">DGO Insight · CRM Obras</div>
+        <div>
+            <div class="nav-section-title">Principal</div>
+            <a href="index.html" class="nav-item active">📊 Dashboard</a>
+        </div>
 
-    <nav class="crm-nav">
-      <button onclick="window.location='index.html'">Panel</button>
-      <button onclick="window.location='proyectos.html'">Proyectos</button>
-    </nav>
-  </header>
+        <div>
+            <div class="nav-section-title">Operativa</div>
+            <a href="proyectos.html" class="nav-item">📁 Proyectos</a>
+            <a class="nav-item disabled">👥 Clientes (próx.)</a>
+        </div>
+    </aside>
 
-  <!-- CONTENIDO -->
-  <main id="app">
-    <h1 class="crm-page-title">Panel</h1>
-    <p class="crm-page-subtitle">
-      Resumen de tareas y seguimientos activos de tus proyectos.
-    </p>
+    <!-- ZONA PRINCIPAL -->
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-title">Dashboard general</div>
+            <div class="topbar-right">
+                CRM 2N · Estilo Salesforce · Firebase optimizado
+            </div>
+        </header>
 
-    <!-- Loader -->
-    <div id="panel-loading" style="display:none; margin-bottom:8px;">
-      Cargando datos...
+        <main class="content">
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-title">Proyectos</div>
+                    <div class="card-value">–</div>
+                    <div class="card-sub">Conteo se puede conectar más adelante a Firebase.</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Pipeline</div>
+                    <div class="card-value">–</div>
+                    <div class="card-sub">Resumen por estados (Pipeline, Prescripción, Ganado…).</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Zonas clave</div>
+                    <div class="card-value">Madrid / Málaga</div>
+                    <div class="card-sub">Enfocado a residencial y BTR/BTS.</div>
+                </div>
+            </div>
+
+            <div class="section-title">Siguiente paso</div>
+            <div class="section-sub">
+                Empieza a trabajar con tus proyectos en la vista dedicada.
+            </div>
+            <button class="btn-primary" onclick="irAProyectos()">
+                Ir a Proyectos →
+            </button>
+        </main>
     </div>
+</div>
 
-    <!-- TARJETAS RESUMEN -->
-    <section class="crm-row" style="margin-bottom:12px;">
-      <div class="crm-col-3">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Total acciones</div>
-          </div>
-          <div style="font-size:22px;font-weight:700;" id="stat-total">0</div>
-        </div>
-      </div>
-
-      <div class="crm-col-3">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Retrasadas</div>
-          </div>
-          <div style="font-size:22px;font-weight:700;color:#c23934;" id="stat-retrasadas">0</div>
-        </div>
-      </div>
-
-      <div class="crm-col-3">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Hoy</div>
-          </div>
-          <div style="font-size:22px;font-weight:700;color:#0e9f6e;" id="stat-hoy">0</div>
-        </div>
-      </div>
-
-      <div class="crm-col-3">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Próx. 7 días</div>
-          </div>
-          <div style="font-size:22px;font-weight:700;color:#0176d3;" id="stat-prox7">0</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- LISTAS -->
-    <section class="crm-row" style="margin-bottom:16px;">
-      <div class="crm-col-4">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Retrasadas</div>
-          </div>
-          <div id="list-retrasadas"></div>
-        </div>
-      </div>
-
-      <div class="crm-col-4">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Hoy</div>
-          </div>
-          <div id="list-hoy"></div>
-        </div>
-      </div>
-
-      <div class="crm-col-4">
-        <div class="crm-card">
-          <div class="crm-card-header">
-            <div class="crm-card-title">Próx. 7 días</div>
-          </div>
-          <div id="list-prox7"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- TABLA PRINCIPAL -->
-    <section class="crm-card">
-      <div class="crm-card-header">
-        <div class="crm-card-title">Listado de acciones por proyecto</div>
-        <button id="btn-panel-refresh" class="crm-btn">🔄 Refrescar</button>
-      </div>
-
-      <div class="crm-table-wrapper">
-        <table class="crm-table">
-          <thead>
-            <tr>
-              <th>Proyecto</th>
-              <th>Ciudad</th>
-              <th>Provincia</th>
-              <th>Fase</th>
-              <th>Fecha tarea</th>
-              <th>Comentario tarea</th>
-              <th>Fecha seguimiento</th>
-              <th>Comentario seguimiento</th>
-            </tr>
-          </thead>
-          <tbody id="panel-table-body">
-            <!-- Rellenado dinamicamente -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <!-- TOAST -->
-  <div id="toast"
-       style="position:fixed;right:16px;bottom:16px;padding:8px 10px;border-radius:6px;
-              font-size:13px;background:#c23934;color:#fff;opacity:0;transition:opacity .3s;z-index:200;">
-  </div>
-
-  <!-- Lógica del Panel -->
-  <script src="app.js"></script>
-
+<script>
+    function irAProyectos() {
+        window.location.href = "proyectos.html";
+    }
+</script>
 </body>
 </html>
