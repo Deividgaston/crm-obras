@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css" />
     <!-- Gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plugin para mostrar porcentajes dentro del gráfico -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
 <body>
@@ -74,11 +76,8 @@
             <!-- Obras potenciales 2N -->
             <div class="panel">
                 <div class="panel-title">Obras potenciales 2N (ALTO / MEDIO / BAJO)</div>
-                <div style="width:100%;max-width:360px;margin:0 auto 4px auto;">
+                <div style="width:100%;max-width:360px;margin:4px auto 4px auto;">
                     <canvas id="chartEncaje2N"></canvas>
-                </div>
-                <div id="resumenEncaje2N" style="font-size:11px;color:#6B7280;text-align:center;margin-top:4px;">
-                    <!-- aquí se pinta el resumen porcentual -->
                 </div>
             </div>
         </div>
@@ -96,7 +95,6 @@
 
         const seguimientosList = document.getElementById("seguimientosList");
         const tareasList = document.getElementById("tareasList");
-        const resumenEncaje2N = document.getElementById("resumenEncaje2N");
 
         let encajeChart = null;
 
@@ -159,8 +157,9 @@
                     `).join("")
                     : "<div class='empty-state'>No hay tareas pendientes.</div>";
 
-                // ===== Gráfico Encaje 2N con porcentajes =====
-                const totalEncaje = counts.ALTO + counts.MEDIO + counts.BAJO + counts.SIN || 1;
+                // ===== Gráfico Encaje 2N con porcentajes dentro =====
+                const totalEncaje =
+                    counts.ALTO + counts.MEDIO + counts.BAJO + counts.SIN || 1;
 
                 const valores = [
                     counts.ALTO,
@@ -171,19 +170,13 @@
 
                 const etiquetasBase = ["ALTO", "MEDIO", "BAJO", "Sin dato"];
 
-                const etiquetasConPct = etiquetasBase.map((label, idx) => {
-                    const value = valores[idx];
-                    const pct = Math.round(value * 100 / totalEncaje);
-                    return `${label} (${pct}%)`;
-                });
-
                 const ctx = document.getElementById("chartEncaje2N");
                 if (ctx) {
                     if (encajeChart) encajeChart.destroy();
                     encajeChart = new Chart(ctx, {
                         type: "doughnut",
                         data: {
-                            labels: etiquetasConPct,
+                            labels: etiquetasBase,
                             datasets: [{
                                 data: valores,
                                 backgroundColor: [
@@ -204,32 +197,39 @@
                                 tooltip: {
                                     callbacks: {
                                         label(ctx) {
-                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1;
+                                            const data = ctx.dataset.data;
+                                            const total = data.reduce((a, b) => a + b, 0) || 1;
                                             const value = ctx.parsed;
                                             const pct = Math.round(value * 100 / total);
                                             const label = etiquetasBase[ctx.dataIndex];
                                             return `${label}: ${value} (${pct}%)`;
                                         }
                                     }
+                                },
+                                datalabels: {
+                                    color: "#111827",
+                                    font: {
+                                        weight: "600",
+                                        size: 11
+                                    },
+                                    formatter(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data;
+                                        const total = data.reduce((a, b) => a + b, 0) || 1;
+                                        if (!value || total === 0) return "";
+                                        const pct = Math.round(value * 100 / total);
+                                        if (pct === 0) return "";
+                                        return pct + "%";
+                                    }
                                 }
                             }
-                        }
+                        },
+                        plugins: [ChartDataLabels]
                     });
                 }
-
-                // Resumen porcentual bajo el gráfico (sin lista de proyectos)
-                const pct = v => Math.round((v * 100) / totalEncaje);
-                resumenEncaje2N.innerHTML = `
-                    ALTO: <b>${counts.ALTO}</b> (${pct(counts.ALTO)}%) ·
-                    MEDIO: <b>${counts.MEDIO}</b> (${pct(counts.MEDIO)}%) ·
-                    BAJO: <b>${counts.BAJO}</b> (${pct(counts.BAJO)}%) ·
-                    Sin dato: <b>${counts.SIN}</b> (${pct(counts.SIN)}%)
-                `;
 
             } catch (err) {
                 seguimientosList.innerHTML = "Error cargando Firestore";
                 tareasList.innerHTML = "Error cargando Firestore";
-                resumenEncaje2N.innerHTML = "Error cargando Firestore";
                 console.error(err);
             }
         }
