@@ -32,12 +32,13 @@
         Scouting de oportunidades
       </div>
       <div style="font-size:18px;font-weight:600;margin-top:2px;margin-bottom:4px;color:#111827;">
-        Generador de prompt para buscar obras en Internet
+        Generador de prompt para buscar obras en Internet (orientado a 2N)
       </div>
       <p style="font-size:13px;color:#4B5563;margin:0;">
         Rellena los campos y el CRM te generará un prompt listo para copiar y pegar en ChatGPT / Gemini.
-        Ese prompt buscará proyectos de obra nueva y devolverá una tabla que luego podrás importar
-        en el apartado <b>Proyectos</b>.
+        El modelo hará una <b>investigación profunda</b> en Internet y devolverá una tabla de proyectos
+        con <b>prioridad de encaje para soluciones 2N</b> (videoportero IP y control de accesos),
+        que luego podrás importar en el apartado <b>Proyectos</b>.
       </p>
     </div>
 
@@ -66,14 +67,15 @@
           </div>
         </div>
 
-        <!-- Segmento -->
+        <!-- Segmento orientado a tipología 2N -->
         <div class="form-group">
-          <label for="segmento">Segmento</label>
+          <label for="segmento">Segmento principal (tipología objetivo)</label>
           <select id="segmento">
             <option value="">Cualquiera</option>
-            <option value="lujo">Lujo / high-end</option>
-            <option value="premium">Premium</option>
-            <option value="core">Core / residencial estándar</option>
+            <option value="residencia">Residencia / residencial multifamiliar</option>
+            <option value="villas">Villas</option>
+            <option value="lujo">Residenciales de lujo / high-end</option>
+            <option value="oficinas">Oficinas / edificios corporativos</option>
           </select>
         </div>
 
@@ -82,7 +84,7 @@
           <label for="ticketMin">Ticket mínimo por proyecto (estimado)</label>
           <input id="ticketMin" type="number" min="0" step="50000" placeholder="Ej: 3000000" />
           <div style="font-size:11px;color:#6B7280;margin-top:2px;">
-            Importe en euros (€). Se pedirá que muestres proyectos con inversión/obra igual o superior.
+            Importe en euros (€). Pide que se muestren proyectos con inversión/obra igual o superior.
           </div>
         </div>
 
@@ -125,7 +127,7 @@
         <div class="form-group" style="grid-column:1/-1;">
           <label for="notasExtra">Notas adicionales (palabras clave, cadenas, operadores, etc.)</label>
           <textarea id="notasExtra" rows="3"
-            placeholder="Ej: solo build-to-rent, foco en vistas al mar, proyectos emblemáticos, etc."></textarea>
+            placeholder="Ej: solo build-to-rent de lujo, foco en vistas al mar, proyectos con garaje y zonas comunes potentes, etc."></textarea>
         </div>
       </div>
 
@@ -140,11 +142,11 @@
     <div class="card" style="margin-top:16px;">
       <div class="card-title">Prompt generado</div>
       <p style="font-size:12px;color:#6B7280;margin-top:0;">
-        Copia y pega este prompt en ChatGPT / Gemini. El modelo hará una búsqueda intensa en Internet
-        y devolverá una tabla de proyectos que luego podrás importar en <b>Proyectos</b>.
+        Copia y pega este prompt en ChatGPT / Gemini. El modelo hará <b>búsqueda en modo investigación profunda</b>,
+        y te devolverá una tabla de proyectos con <b>prioridad de encaje para soluciones 2N</b>.
       </p>
 
-      <textarea id="promptGenerado" rows="12"
+      <textarea id="promptGenerado" rows="14"
         style="width:100%;border-radius:8px;border:1px solid #D1D5DB;padding:8px 10px;font-size:12px;"></textarea>
 
       <div style="margin-top:8px;display:flex;justify-content:flex-end;">
@@ -186,47 +188,59 @@
 
       let partes = [];
 
+      // Rol y contexto 2N + investigación profunda
       partes.push(
-        "Actúa como un analista sénior de mercado inmobiliario especializado en obra nueva en España."
+        "Actúa como un analista sénior de mercado inmobiliario y consultor de tecnología de acceso y videoportero IP, especializado en soluciones de 2N (videoportero IP, control de accesos, integración con domótica/PMS, zonas comunes, parkings, etc.)."
+      );
+      partes.push(
+        "Quiero que trabajes en MODO INVESTIGACIÓN PROFUNDA: realiza una búsqueda exhaustiva y actualizada en Internet (notas de prensa, webs de promotoras, constructoras, arquitecturas, fondos, portales inmobiliarios profesionales, informes de mercado y noticias especializadas)."
       );
 
       // Zonas
       if (zonas) {
         partes.push(
-          `Quiero que identifiques proyectos de obra nueva en las siguientes zonas: ${zonas}.`
+          `Identifica proyectos de obra nueva en las siguientes zonas de España: ${zonas}.`
         );
       } else {
         partes.push(
-          "Quiero que identifiques proyectos de obra nueva en las principales zonas urbanas y de costa de España."
+          "Identifica proyectos de obra nueva relevantes en España, priorizando capitales de provincia y zonas de costa con alta inversión."
         );
       }
 
-      // Tipos
+      // Tipo de activo
       if (tipos.length) {
         partes.push(
           `El foco debe estar en activos de tipo: ${tipos.join(", ")}.`
         );
+      } else {
+        partes.push(
+          "Puedes considerar residenciales BTR/BTS, coliving, hoteles, oficinas y proyectos mixtos siempre que tengan escala suficiente."
+        );
       }
 
-      // Segmento
-      if (segmento === "lujo") {
+      // Segmento orientado a tipología 2N
+      if (segmento === "residencia") {
         partes.push(
-          "Prioriza proyectos de segmento lujo / high-end, con posicionamiento diferencial."
+          "Prioriza edificios residenciales multifamiliares y complejos residenciales donde tenga sentido instalar videoportero IP en accesos principales, portales, garajes y zonas comunes."
         );
-      } else if (segmento === "premium") {
+      } else if (segmento === "villas") {
         partes.push(
-          "Prioriza proyectos de segmento premium, de buena calidad y enfoque aspiracional."
+          "Prioriza villas y conjuntos de villas de alto valor, donde el control de accesos, la imagen de entrada y la experiencia premium sean clave."
         );
-      } else if (segmento === "core") {
+      } else if (segmento === "lujo") {
         partes.push(
-          "Puedes incluir proyectos de segmento core / residencial estándar siempre que tengan cierto volumen."
+          "Prioriza residenciales de lujo / high-end, con fuerte énfasis en diseño, entrada icónica, servicios de concierge y zonas comunes potentes."
+        );
+      } else if (segmento === "oficinas") {
+        partes.push(
+          "Prioriza edificios de oficinas y corporativos donde haya múltiples accesos, control de visitantes, ascensores controlados y zonas de coworking."
         );
       }
 
       // Ticket mínimo
       if (ticketMin) {
         partes.push(
-          `Filtra proyectos con un ticket estimado de obra o inversión igual o superior a ${ticketMin} € (si no hay dato exacto, utiliza una estimación razonable).`
+          `Filtra proyectos con un ticket estimado de obra o inversión igual o superior a ${ticketMin} € (si no hay dato exacto, utiliza una estimación razonable basada en superficie, nº de unidades y rango de precios de la zona).`
         );
       }
 
@@ -237,39 +251,50 @@
         );
       } else {
         partes.push(
-          "Se pueden incluir proyectos en fase de suelo, proyecto/licencia y en construcción."
+          "Se pueden incluir proyectos desde la fase de suelo/proyecto hasta obra en construcción o próxima entrega, siempre que aún haya margen de diseño técnico (accesos, portales, zonas comunes)."
         );
       }
 
       // Players
       if (players.length) {
         partes.push(
-          `Me interesa conocer los principales players implicados: ${players.join(", ")}.`
+          `Me interesa conocer los principales players implicados, especialmente: ${players.join(", ")}.`
         );
       } else {
         partes.push(
-          "Incluye siempre que sea posible los datos de promotora, constructora, estudio de arquitectura, ingeniería y, si aplica, fondo o family office."
+          "Incluye siempre que sea posible los datos de promotora, constructora, estudio de arquitectura, ingeniería y, si aplica, fondo, socimi o family office involucrado."
         );
       }
 
       // Horizonte
       if (horizonte === "corto") {
         partes.push(
-          "Prioriza proyectos con entrega o desarrollo previsto en el corto plazo (0–2 años)."
+          "Prioriza proyectos con entrega o desarrollo previsto en el corto plazo (0–2 años), donde aún sea viable proponer soluciones de videoportero IP y control de accesos antes de la fase final de instalaciones."
         );
       } else if (horizonte === "medio") {
         partes.push(
-          "Prioriza proyectos con entrega o desarrollo previsto en el medio plazo (2–5 años)."
+          "Prioriza proyectos con entrega o desarrollo previsto en el medio plazo (2–5 años), donde haya tiempo para trabajar especificaciones técnicas y prescripción de soluciones 2N."
         );
       } else if (horizonte === "largo") {
         partes.push(
-          "Puedes incluir también proyectos a más largo plazo (+5 años) si son relevantes."
+          "Puedes incluir también proyectos a más largo plazo (+5 años) si son emblemáticos o de gran volumen, marcándolos igualmente en la tabla."
         );
       }
 
       if (notas) {
-        partes.push(`Ten en cuenta además lo siguiente: ${notas}`);
+        partes.push(`Ten en cuenta además lo siguiente a la hora de buscar: ${notas}`);
       }
+
+      // Encaje 2N
+      partes.push(
+        "Muy importante: para cada proyecto, evalúa específicamente el potencial de encaje de soluciones de videoportero IP y control de accesos de 2N (por ejemplo: número de accesos peatonales y de vehículos, portales de vivienda, presencia de garajes, trasteros, gimnasios, piscinas, zonas comunes, accesos a oficinas, etc.)."
+      );
+      partes.push(
+        "Utiliza esta evaluación para asignar a cada proyecto una prioridad de encaje 2N (ALTO, MEDIO o BAJO) en función del número de accesos, la complejidad del edificio, el segmento y el presupuesto."
+      );
+      partes.push(
+        "Ordena la tabla poniendo primero los proyectos con encaje 2N ALTO, después MEDIO y por último BAJO."
+      );
 
       // Formato de salida
       partes.push(
@@ -278,9 +303,9 @@
       partes.push(
         "- Ciudad / Zona\n" +
         "- Nombre del proyecto o promoción\n" +
-        "- Tipo de activo (BTR, BTS, hotel, coliving, oficinas, etc.)\n" +
+        "- Tipo de activo (BTR, BTS, hotel, coliving, oficinas, mixto, etc.)\n" +
+        "- Segmento / posicionamiento (lujo, premium, core, villas, etc.)\n" +
         "- Nº aproximado de unidades / habitaciones\n" +
-        "- Segmento (lujo, premium, core, etc.)\n" +
         "- Estado / fase (suelo, licencia, construcción, llave en mano, etc.)\n" +
         "- Promotora / Propiedad\n" +
         "- Estudio de arquitectura\n" +
@@ -288,11 +313,13 @@
         "- Constructora\n" +
         "- Ticket estimado de obra o inversión (€)\n" +
         "- Año/fecha estimada de entrega\n" +
-        "- Enlace a la fuente principal (web de la promotora, nota de prensa, portal inmobiliario, etc.)"
+        "- Encaje soluciones 2N (ALTO / MEDIO / BAJO)\n" +
+        "- Motivo del encaje 2N (ej: nº accesos, uso intensivo de zonas comunes, hotel con muchas habitaciones, oficinas multi-tenant, villas de lujo, etc.)\n" +
+        "- Enlace a la fuente principal (web de la promotora, nota de prensa, portal inmobiliario profesional, etc.)"
       );
 
       partes.push(
-        "Si no encuentras alguno de los datos para un proyecto, deja la celda en blanco pero mantén la fila igualmente."
+        "Si no encuentras alguno de los datos para un proyecto, deja la celda en blanco pero mantén la fila igualmente. Prioriza siempre la calidad y relevancia de los proyectos frente a la cantidad."
       );
 
       promptGenerado.value = partes.join("\n\n");
