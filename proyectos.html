@@ -9,183 +9,399 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM – Proyectos</title>
+    <title>CRM 2N – Proyectos</title>
 
-    <!-- Estilos globales -->
     <link rel="stylesheet" href="styles.css">
 
     <style>
-        /* ===== ESTILO SALESFORCE MODERNO – PROYECTOS ===== */
-
+        /* ===== LAYOUT GENERAL (MISMO QUE INDEX) ===== */
         body {
-            font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
             background: #F5F7FA;
             color: #1A1A1A;
         }
 
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: #111827;
+            color: #E5E7EB;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar-logo {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-sub {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 12px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.6;
+            margin: 12px 0 4px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-decoration: none;
+            color: #E5E7EB;
+            opacity: 0.9;
+            cursor: pointer;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background: #1F2937;
+        }
+
+        .nav-item.active {
+            background: #4C6EF5;
+            color: #FFFFFF;
+        }
+
+        .nav-item.disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
         .topbar {
-            height: 60px;
+            height: 64px;
             background: white;
             display: flex;
             align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            font-weight: 600;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        .topbar-title {
             font-size: 18px;
+            font-weight: 600;
+        }
+
+        .topbar-right {
+            font-size: 13px;
+            opacity: 0.7;
         }
 
         .content {
-            padding: 25px;
+            padding: 24px;
         }
 
-        .section-title {
-            font-size: 22px;
+        /* ===== ZONA DE FILTROS Y LISTA ===== */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid #D1D5DB;
+            font-size: 13px;
+            min-width: 220px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #4C6EF5;
+        }
+
+        .select-input {
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid #D1D5DB;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .btn-primary {
+            background: #4C6EF5;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 999px;
+            padding: 9px 14px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background: #3B5BDB;
+        }
+
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
         }
 
         .project-card {
             background: white;
             border-radius: 14px;
-            padding: 20px;
-            margin-bottom: 15px;
+            padding: 16px 18px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             cursor: pointer;
+            transition: 0.15s;
         }
 
         .project-card:hover {
-            transform: scale(1.01);
+            transform: translateY(-1px);
         }
 
-        .project-header {
+        .project-main {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .project-name {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
+        }
+
+        .project-meta {
+            font-size: 13px;
+            opacity: 0.8;
         }
 
         .badge {
             padding: 4px 10px;
-            border-radius: 8px;
-            font-size: 12px;
+            border-radius: 999px;
+            font-size: 11px;
             font-weight: 600;
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: inline-block;
         }
 
-        .badge.pipeline {
-            background: #4C6EF5;
+        .badge.pipeline { background: #4C6EF5; }
+        .badge.prescripcion { background: #FD7E14; }
+        .badge.ganado { background: #2F9E44; }
+        .badge.perdido { background: #E03131; }
+
+        .project-right {
+            text-align: right;
+            font-size: 13px;
         }
 
-        .badge.ganado {
-            background: #2F9E44;
+        .project-importe {
+            font-weight: 600;
         }
 
-        .badge.perdido {
-            background: #E03131;
-        }
-
-        .badge.prescripcion {
-            background: #FD7E14;
-        }
-
-        .project-info {
+        .empty-state {
+            margin-top: 30px;
             font-size: 14px;
-        }
-
-        .btn-add {
-            background: #4C6EF5;
-            color: white;
-            padding: 12px 18px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            margin-bottom: 20px;
-            transition: 0.2s;
-        }
-
-        .btn-add:hover {
-            background: #3B5BDB;
+            opacity: 0.7;
         }
     </style>
 </head>
-
 <body>
+<div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-logo">CRM 2N</div>
+            <div class="sidebar-sub">Prescripción · Proyectos</div>
+        </div>
 
-    <div class="topbar">
-        CRM 2N – Proyectos
+        <div>
+            <div class="nav-section-title">Principal</div>
+            <a href="index.html" class="nav-item">📊 Dashboard</a>
+        </div>
+
+        <div>
+            <div class="nav-section-title">Operativa</div>
+            <a href="proyectos.html" class="nav-item active">📁 Proyectos</a>
+            <a class="nav-item disabled">👥 Clientes (próx.)</a>
+        </div>
+    </aside>
+
+    <!-- ZONA PRINCIPAL -->
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-title">Proyectos</div>
+            <div class="topbar-right">
+                Búsqueda, filtros y pipeline · Firebase lectura única
+            </div>
+        </header>
+
+        <main class="content">
+            <div class="toolbar">
+                <input
+                    id="searchInput"
+                    class="search-input"
+                    type="text"
+                    placeholder="Buscar por nombre, cliente, ciudad..."
+                />
+
+                <select id="estadoFilter" class="select-input">
+                    <option value="todos">Todos los estados</option>
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Prescripción">Prescripción</option>
+                    <option value="Ganado">Ganado</option>
+                    <option value="Perdido">Perdido</option>
+                </select>
+
+                <button class="btn-primary" onclick="nuevoProyecto()">
+                    + Nuevo proyecto
+                </button>
+            </div>
+
+            <div id="projectList" class="project-list"></div>
+            <div id="emptyState" class="empty-state" style="display:none;">
+                No hay proyectos con estos filtros.
+            </div>
+        </main>
     </div>
+</div>
 
-    <div class="content">
+<script type="module">
+    import { db } from "./firebaseConfig.js";
+    import {
+        collection,
+        getDocs
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        <button class="btn-add" onclick="nuevoProyecto()">
-            + Nuevo Proyecto
-        </button>
+    const projectListEl = document.getElementById("projectList");
+    const emptyStateEl = document.getElementById("emptyState");
+    const searchInput = document.getElementById("searchInput");
+    const estadoFilter = document.getElementById("estadoFilter");
 
-        <div class="section-title">Todos los proyectos</div>
+    let proyectos = [];      // cache local
+    let proyectosFiltrados = [];
 
-        <div id="listaProyectos"></div>
+    // ===== CARGA ÚNICA DESDE FIREBASE (OPTIMIZADO) =====
+    async function cargarProyectos() {
+        const ref = collection(db, "proyectos");
+        const snap = await getDocs(ref);
 
-    </div>
-
-    <script type="module">
-        import { db } from "./firebaseConfig.js";
-        import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const lista = document.getElementById("listaProyectos");
-
-        // ==== Cargar proyectos (mínima lectura Firebase) ====
-        async function cargarProyectos() {
-            const ref = collection(db, "proyectos");
-            const snap = await getDocs(ref);
-
-            lista.innerHTML = "";
-
-            snap.forEach(doc => {
-                const p = doc.data();
-
-                const estadoClass =
-                    p.estado === "Pipeline" ? "pipeline" :
-                    p.estado === "Ganado" ? "ganado" :
-                    p.estado === "Perdido" ? "perdido" :
-                    "prescripcion";
-
-                const card = `
-                    <div class="project-card" onclick="verProyecto('${doc.id}')">
-                        <div class="project-header">
-                            <div class="project-name">${p.nombre || "Sin nombre"}</div>
-                            <div class="badge ${estadoClass}">${p.estado}</div>
-                        </div>
-
-                        <div class="project-info">
-                            <b>Cliente:</b> ${p.cliente || "-"}<br>
-                            <b>Ciudad:</b> ${p.ciudad || "-"}<br>
-                            <b>Fecha:</b> ${p.fecha || "-"}
-                        </div>
-                    </div>
-                `;
-
-                lista.innerHTML += card;
+        proyectos = [];
+        snap.forEach(doc => {
+            proyectos.push({
+                id: doc.id,
+                ...doc.data()
             });
+        });
+
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const texto = (searchInput.value || "").toLowerCase();
+        const estado = estadoFilter.value;
+
+        proyectosFiltrados = proyectos.filter(p => {
+            const matchTexto =
+                !texto ||
+                (p.nombre && p.nombre.toLowerCase().includes(texto)) ||
+                (p.cliente && p.cliente.toLowerCase().includes(texto)) ||
+                (p.ciudad && p.ciudad.toLowerCase().includes(texto));
+
+            const matchEstado =
+                estado === "todos" ||
+                (p.estado && p.estado === estado);
+
+            return matchTexto && matchEstado;
+        });
+
+        pintarLista();
+    }
+
+    function pintarLista() {
+        projectListEl.innerHTML = "";
+
+        if (!proyectosFiltrados.length) {
+            emptyStateEl.style.display = "block";
+            return;
+        } else {
+            emptyStateEl.style.display = "none";
         }
 
-        cargarProyectos();
+        proyectosFiltrados.forEach(p => {
+            const estado = p.estado || "Pipeline";
+            const estadoClass =
+                estado === "Pipeline" ? "pipeline" :
+                estado === "Prescripción" ? "prescripcion" :
+                estado === "Ganado" ? "ganado" :
+                estado === "Perdido" ? "perdido" :
+                "pipeline";
 
-        // ==== Acciones ====
-        window.verProyecto = (id) => {
-            window.location.href = `proyecto_detalle.html?id=${id}`;
-        }
+            const importe = p.importe ? `${p.importe.toLocaleString("es-ES")} €` : "–";
 
-        window.nuevoProyecto = () => {
-            window.location.href = "proyecto_nuevo.html";
-        }
-    </script>
+            const card = document.createElement("div");
+            card.className = "project-card";
+            card.onclick = () => verProyecto(p.id);
 
+            card.innerHTML = `
+                <div class="project-main">
+                    <div class="project-name">${p.nombre || "Sin nombre"}</div>
+                    <div class="project-meta">
+                        <b>Cliente:</b> ${p.cliente || "-"} ·
+                        <b>Ciudad:</b> ${p.ciudad || "-"} ·
+                        <b>Fecha:</b> ${p.fecha || "-"}
+                    </div>
+                </div>
+                <div class="project-right">
+                    <div class="badge ${estadoClass}">${estado}</div>
+                    <div class="project-importe">${importe}</div>
+                    <div>${p.tipo || ""}</div>
+                </div>
+            `;
+
+            projectListEl.appendChild(card);
+        });
+    }
+
+    // ===== ACCIONES =====
+    window.nuevoProyecto = function() {
+        // Cuando tengamos la pantalla, enlazamos
+        window.location.href = "proyecto_nuevo.html";
+    };
+
+    window.verProyecto = function(id) {
+        window.location.href = `proyecto_detalle.html?id=${id}`;
+    };
+
+    // ===== LISTENERS =====
+    searchInput.addEventListener("input", aplicarFiltros);
+    estadoFilter.addEventListener("change", aplicarFiltros);
+
+    // Carga inicial
+    cargarProyectos();
+</script>
 </body>
 </html>
