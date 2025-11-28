@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRM 2N – Tareas</title>
+  <title>Tareas · CRM 2N</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <!-- NAV SUPERIOR (igual que index, pero Tareas activo) -->
   <div class="topnav">
     <div class="logo">CRM 2N</div>
 
@@ -26,12 +25,9 @@
   </div>
 
   <main class="content">
-    <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Tareas y seguimientos</h2>
-    <div style="font-size:12px;color:#5A6872;margin-bottom:16px;">
-      Kanban para organizar seguimientos, tareas recurrentes y notas rápidas vinculadas a tus proyectos.
-    </div>
 
-    <!-- KPIs TAREAS -->
+    <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Tareas y seguimientos</h2>
+
     <div class="kpi-row" style="margin-bottom:14px;">
       <div class="kpi-card">
         <div class="kpi-label">Tareas totales</div>
@@ -47,30 +43,29 @@
       </div>
     </div>
 
-    <!-- LAYOUT PRINCIPAL: KANBAN + NOTAS RÁPIDAS -->
     <div class="columns" style="align-items:flex-start;">
-      <!-- KANBAN TAREAS -->
+
       <section class="panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div>
             <div class="panel-title">Kanban tareas</div>
-            <div class="panel-subtitle">
-              Arrastra las tarjetas entre columnas. Las tareas recurrentes se reprograman solas al marcarlas como hechas.
-            </div>
+            <div class="panel-subtitle">Arrastra entre columnas.</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+
+          <div style="display:flex;gap:8px;">
             <select id="filtroTipo" class="select-input" style="max-width:140px;">
               <option value="">Tipo: todos</option>
               <option value="seguimiento">Seguimiento</option>
               <option value="recurrente">Recurrente</option>
               <option value="nota">Nota rápida</option>
             </select>
+
             <button class="btn-primary" id="btnNuevaTarea">+ Nueva tarea</button>
           </div>
         </div>
 
         <div class="pipeline-board" id="kanbanBoard">
-          <!-- Pendiente -->
+
           <div class="pipeline-column" data-estado="pendiente">
             <div class="pipeline-column-header">
               <span class="pipeline-column-title">Pendiente</span>
@@ -79,7 +74,6 @@
             <div class="kanban-column-body" data-estado="pendiente"></div>
           </div>
 
-          <!-- En proceso -->
           <div class="pipeline-column" data-estado="proceso">
             <div class="pipeline-column-header">
               <span class="pipeline-column-title">En proceso</span>
@@ -88,7 +82,6 @@
             <div class="kanban-column-body" data-estado="proceso"></div>
           </div>
 
-          <!-- Hecho -->
           <div class="pipeline-column" data-estado="hecho">
             <div class="pipeline-column-header">
               <span class="pipeline-column-title">Hecho</span>
@@ -96,88 +89,90 @@
             </div>
             <div class="kanban-column-body" data-estado="hecho"></div>
           </div>
+
         </div>
       </section>
 
-      <!-- NOTAS RÁPIDAS (TAREAS tipo 'nota') -->
       <aside class="panel">
         <div class="panel-title">Notas rápidas</div>
-        <div class="panel-subtitle">
-          Ideal para ideas, recordatorios rápidos y cosas que no quieres perder pero no son una tarea formal.
-        </div>
+        <div class="panel-subtitle">Ideas, things-to-do rápidas.</div>
 
         <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <input
-            id="notaRapidaTexto"
-            type="text"
-            class="search-input"
-            placeholder="Escribe una nota rápida..."
-          />
+          <input id="notaRapidaTexto" type="text" class="search-input" placeholder="Escribe una nota..." />
           <button class="btn-primary" id="btnCrearNotaRapida">+</button>
         </div>
 
         <div id="listaNotasRapidas" class="activity-list"></div>
       </aside>
+
     </div>
   </main>
 
-  <!-- MODAL CREAR / EDITAR TAREA -->
   <dialog id="tareaDialog">
     <div class="modal-header">Tarea</div>
+
     <form id="tareaForm" method="dialog">
       <input type="hidden" id="tareaId" />
 
       <div class="form-grid">
         <div class="form-group">
-          <label for="tareaTitulo">Título</label>
+          <label>Título</label>
           <input id="tareaTitulo" type="text" required />
         </div>
+
         <div class="form-group">
-          <label for="tareaProyecto">Proyecto (nombre visible)</label>
-          <input id="tareaProyecto" type="text" />
+          <label>Proyecto</label>
+          <input id="tareaProyecto" type="text" list="listaProyectos" placeholder="Escribe o selecciona..." />
+          <datalist id="listaProyectos"></datalist>
         </div>
+
         <div class="form-group">
-          <label for="tareaFechaUnica">Fecha</label>
+          <label>Fecha</label>
           <input id="tareaFechaUnica" type="date" />
         </div>
+
         <div class="form-group">
-          <label for="tareaEstado">Estado</label>
+          <label>Estado</label>
           <select id="tareaEstado">
             <option value="pendiente">Pendiente</option>
             <option value="proceso">En proceso</option>
             <option value="hecho">Hecho</option>
           </select>
         </div>
+
         <div class="form-group">
-          <label for="tareaPrioridad">Prioridad</label>
+          <label>Prioridad</label>
           <select id="tareaPrioridad">
             <option value="media">Media</option>
             <option value="alta">Alta</option>
             <option value="baja">Baja</option>
           </select>
         </div>
+
         <div class="form-group">
-          <label for="tareaTipo">Tipo</label>
+          <label>Tipo</label>
           <select id="tareaTipo">
             <option value="seguimiento">Seguimiento</option>
             <option value="recurrente">Recurrente</option>
             <option value="nota">Nota rápida</option>
           </select>
         </div>
+
         <div class="form-group">
           <label>
             <input id="tareaRecurrenteChk" type="checkbox" />
-            &nbsp;Es recurrente
+            Es recurrente
           </label>
         </div>
+
         <div class="form-group">
-          <label for="tareaRecurrenteDias">Repetir cada (días)</label>
+          <label>Repetir cada (días)</label>
           <input id="tareaRecurrenteDias" type="number" min="1" value="7" />
         </div>
       </div>
 
       <div class="form-group">
-        <label for="tareaDescripcion">Descripción / notas</label>
+        <label>Descripción</label>
         <textarea id="tareaDescripcion" rows="3"></textarea>
       </div>
 
@@ -185,7 +180,8 @@
         <button type="button" class="btn-secondary" id="btnBorrarTarea" style="margin-right:auto;">
           Borrar
         </button>
-        <button type="button" class="btn-secondary" onclick="window.closeTareaDialog()">Cancelar</button>
+
+        <button type="button" class="btn-secondary" onclick="tareaDialog.close()">Cancelar</button>
         <button type="submit" class="btn-primary">Guardar</button>
       </div>
     </form>
@@ -202,30 +198,26 @@
       doc
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Estado en memoria (1 sola lectura)
     let tareas = [];
+    let proyectos = [];
 
-    // DOM refs
+    const collTareas = collection(db, "tareas");
+    const collProyectos = collection(db, "proyectos");
+
     const kpiTareasTotal = document.getElementById("kpiTareasTotal");
     const kpiTareasHoy = document.getElementById("kpiTareasHoy");
     const kpiTareasUrgentes = document.getElementById("kpiTareasUrgentes");
 
-    const countPendiente = document.getElementById("countPendiente");
-    const countProceso = document.getElementById("countProceso");
-    const countHecho = document.getElementById("countHecho");
-
-    const kanbanBoard = document.getElementById("kanbanBoard");
     const filtroTipo = document.getElementById("filtroTipo");
     const buscadorTareas = document.getElementById("buscadorTareas");
-
-    const listaNotasRapidas = document.getElementById("listaNotasRapidas");
-    const notaRapidaTexto = document.getElementById("notaRapidaTexto");
 
     const btnNuevaTarea = document.getElementById("btnNuevaTarea");
     const btnCrearNotaRapida = document.getElementById("btnCrearNotaRapida");
 
     const tareaDialog = document.getElementById("tareaDialog");
     const tareaForm = document.getElementById("tareaForm");
+
+    const listaProyectosHTML = document.getElementById("listaProyectos");
 
     const tareaId = document.getElementById("tareaId");
     const tareaTitulo = document.getElementById("tareaTitulo");
@@ -239,195 +231,152 @@
     const tareaDescripcion = document.getElementById("tareaDescripcion");
     const btnBorrarTarea = document.getElementById("btnBorrarTarea");
 
-    const collTareas = collection(db, "tareas");
+    async function cargarProyectos() {
+      const snap = await getDocs(collProyectos);
+      proyectos = [];
+      listaProyectosHTML.innerHTML = "";
+
+      snap.forEach(d => {
+        const data = d.data();
+        const nombre = data.nombre_display || data.nombre || "";
+        if (nombre) {
+          proyectos.push(nombre);
+          const op = document.createElement("option");
+          op.value = nombre;
+          listaProyectosHTML.appendChild(op);
+        }
+      });
+    }
 
     async function cargarTareas() {
       const snap = await getDocs(collTareas);
       tareas = [];
-      snap.forEach(d => {
-        tareas.push({ id: d.id, ...d.data() });
-      });
+      snap.forEach(d => tareas.push({ id: d.id, ...d.data() }));
       renderTodo();
     }
 
     function renderTodo() {
       renderKpis();
       renderKanban();
-      renderNotasRapidas();
+      renderNotas();
     }
 
     function renderKpis() {
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      const hoyStr = hoy.toISOString().slice(0, 10);
-
-      const total = tareas.length;
-      const paraHoy = tareas.filter(t => t.fecha === hoyStr).length;
-      const urgentes = tareas.filter(t => t.prioridad === "alta").length;
-
-      kpiTareasTotal.textContent = total;
-      kpiTareasHoy.textContent = paraHoy;
-      kpiTareasUrgentes.textContent = urgentes;
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      kpiTareasTotal.textContent = tareas.length;
+      kpiTareasHoy.textContent = tareas.filter(t => t.fecha === hoyStr).length;
+      kpiTareasUrgentes.textContent = tareas.filter(t => t.prioridad === "alta").length;
     }
 
-    function filtrarTareasBase() {
-      const tipo = filtroTipo.value;
-      const texto = (buscadorTareas.value || "").toLowerCase();
+    function filtrar() {
+      const f = filtroTipo.value;
+      const q = buscadorTareas.value.toLowerCase();
 
       return tareas.filter(t => {
-        if (tipo && t.tipo !== tipo) return false;
-
-        if (texto) {
-          const blob =
-            (t.titulo || "") +
-            " " +
-            (t.proyecto || "") +
-            " " +
-            (t.descripcion || "");
-          if (!blob.toLowerCase().includes(texto)) return false;
-        }
-        return true;
+        if (f && t.tipo !== f) return false;
+        const blob = (t.titulo || "") + " " + (t.proyecto || "") + " " + (t.descripcion || "");
+        return blob.toLowerCase().includes(q);
       });
     }
 
     function renderKanban() {
-      // Limpiar columnas
-      kanbanBoard.querySelectorAll(".kanban-column-body").forEach(col => {
-        col.innerHTML = "";
-      });
-
-      const base = filtrarTareasBase();
-
-      const porEstado = {
+      const est = {
         pendiente: [],
         proceso: [],
         hecho: []
       };
 
-      base.forEach(t => {
-        const est = t.estado || "pendiente";
-        if (porEstado[est]) porEstado[est].push(t);
+      filtrar().forEach(t => est[t.estado || "pendiente"].push(t));
+
+      document.getElementById("countPendiente").textContent = est.pendiente.length;
+      document.getElementById("countProceso").textContent = est.proceso.length;
+      document.getElementById("countHecho").textContent = est.hecho.length;
+
+      ["pendiente", "proceso", "hecho"].forEach(e => {
+        const cont = document.querySelector(`.kanban-column-body[data-estado="${e}"]`);
+        cont.innerHTML = "";
+        est[e].forEach(t => cont.appendChild(card(t)));
       });
 
-      countPendiente.textContent = porEstado.pendiente.length;
-      countProceso.textContent = porEstado.proceso.length;
-      countHecho.textContent = porEstado.hecho.length;
-
-      ["pendiente", "proceso", "hecho"].forEach(estado => {
-        const colBody = kanbanBoard.querySelector(
-          `.kanban-column-body[data-estado="${estado}"]`
-        );
-        porEstado[estado]
-          .sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""))
-          .forEach(t => {
-            const card = crearTarjetaTarea(t);
-            colBody.appendChild(card);
-          });
-      });
-
-      prepararDragAndDrop();
+      activarDrag();
     }
 
-    function crearTarjetaTarea(t) {
-      const div = document.createElement("div");
-      div.className = "pipeline-card";
-      div.draggable = true;
-      div.dataset.id = t.id;
+    function card(t) {
+      const d = document.createElement("div");
+      d.className = "pipeline-card";
+      d.draggable = true;
+      d.dataset.id = t.id;
 
-      const fechaStr = t.fecha || "";
-      const prioridad = t.prioridad || "media";
-      const tipo = t.tipo || "seguimiento";
-
-      const badgeColor =
-        prioridad === "alta"
+      const badge =
+        t.prioridad === "alta"
           ? "background:#FEE2E2;color:#B91C1C;"
-          : prioridad === "baja"
+          : t.prioridad === "baja"
           ? "background:#E0F2FE;color:#0369A1;"
           : "background:#E5E7EB;color:#374151;";
 
-      const tipoLabel =
-        tipo === "recurrente"
-          ? "Recurrente"
-          : tipo === "nota"
-          ? "Nota rápida"
-          : "Seguimiento";
-
-      div.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <button class="link-button" style="font-size:13px;font-weight:600;" data-id="${t.id}">
-            ${t.titulo || "(Sin título)"}
+      d.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <button class="link-button" data-id="${t.id}" style="font-weight:600;">
+            ${t.titulo}
           </button>
-          <span style="font-size:10px;padding:2px 6px;border-radius:999px;${badgeColor}">
-            ${prioridad.toUpperCase()}
+          <span style="font-size:10px;padding:2px 6px;border-radius:999px;${badge}">
+            ${t.prioridad.toUpperCase()}
           </span>
         </div>
-        <div style="font-size:11px;color:#6B7280;margin-top:2px;">
-          ${t.proyecto || ""}
-        </div>
+
+        <div style="font-size:11px;color:#6B7280;margin-top:3px;">${t.proyecto || ""}</div>
+
         <div style="font-size:11px;color:#4B5563;margin-top:4px;">
-          ${(t.descripcion || "").slice(0, 120)}
+          ${(t.descripcion || "").slice(0,120)}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:10.5px;color:#6B7280;">
-          <span>${fechaStr || ""}</span>
-          <span>${tipoLabel}</span>
+
+        <div style="font-size:10px;color:#6B7280;margin-top:6px;display:flex;justify-content:space-between;">
+          <span>${t.fecha || ""}</span>
+          <span>${t.tipo || ""}</span>
         </div>
       `;
 
-      div.querySelector(".link-button").addEventListener("click", () =>
-        abrirDialogoEdicion(t.id)
-      );
+      d.querySelector("button").onclick = () => abrir(t.id);
 
-      return div;
+      return d;
     }
 
-    function prepararDragAndDrop() {
-      const cards = kanbanBoard.querySelectorAll(".pipeline-card");
-      const columns = kanbanBoard.querySelectorAll(".kanban-column-body");
+    function activarDrag() {
+      const cards = document.querySelectorAll(".pipeline-card");
+      const cols = document.querySelectorAll(".kanban-column-body");
 
-      cards.forEach(card => {
-        card.addEventListener("dragstart", ev => {
-          ev.dataTransfer.setData("text/plain", card.dataset.id);
-          card.style.opacity = "0.5";
+      cards.forEach(c => {
+        c.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("id", c.dataset.id);
+          c.style.opacity = "0.5";
         });
-        card.addEventListener("dragend", ev => {
-          card.style.opacity = "1";
-        });
+        c.addEventListener("dragend", () => (c.style.opacity = "1"));
       });
 
-      columns.forEach(col => {
-        col.addEventListener("dragover", ev => {
-          ev.preventDefault();
-          col.style.background = "#E5E7EB";
-        });
-        col.addEventListener("dragleave", () => {
-          col.style.background = "";
-        });
-        col.addEventListener("drop", async ev => {
-          ev.preventDefault();
-          col.style.background = "";
-          const id = ev.dataTransfer.getData("text/plain");
-          const nuevoEstado = col.dataset.estado;
-          await actualizarEstadoTareaArrastre(id, nuevoEstado);
+      cols.forEach(col => {
+        col.addEventListener("dragover", e => e.preventDefault());
+        col.addEventListener("drop", e => {
+          const id = e.dataTransfer.getData("id");
+          mover(id, col.dataset.estado);
         });
       });
     }
 
-    async function actualizarEstadoTareaArrastre(id, nuevoEstado) {
+    async function mover(id, nuevoEstado) {
       const t = tareas.find(x => x.id === id);
       if (!t) return;
 
-      // Lógica de recurrente: si la paso a HECHO y es recurrente, reprogramar
       if (nuevoEstado === "hecho" && t.es_recurrente && t.recurrente_dias) {
-        const dias = Number(t.recurrente_dias) || 7;
-        const baseFecha = t.fecha ? new Date(t.fecha) : new Date();
-        baseFecha.setDate(baseFecha.getDate() + dias);
-        const nuevaFechaStr = baseFecha.toISOString().slice(0, 10);
+        const d = new Date(t.fecha || new Date());
+        d.setDate(d.getDate() + Number(t.recurrente_dias));
+        const nueva = d.toISOString().slice(0, 10);
 
-        t.fecha = nuevaFechaStr;
-        t.estado = "pendiente"; // vuelve a pendiente (siguiente ciclo)
+        t.estado = "pendiente";
+        t.fecha = nueva;
+
         await updateDoc(doc(db, "tareas", id), {
-          fecha: nuevaFechaStr,
-          estado: "pendiente"
+          estado: "pendiente",
+          fecha: nueva
         });
       } else {
         t.estado = nuevoEstado;
@@ -437,9 +386,8 @@
       renderTodo();
     }
 
-    function abrirDialogoEdicion(id = null) {
+    function abrir(id) {
       if (!id) {
-        // Nueva
         tareaId.value = "";
         tareaTitulo.value = "";
         tareaProyecto.value = "";
@@ -456,29 +404,26 @@
         if (!t) return;
 
         tareaId.value = t.id;
-        tareaTitulo.value = t.titulo || "";
+        tareaTitulo.value = t.titulo;
         tareaProyecto.value = t.proyecto || "";
         tareaFechaUnica.value = t.fecha || "";
-        tareaEstado.value = t.estado || "pendiente";
-        tareaPrioridad.value = t.prioridad || "media";
-        tareaTipo.value = t.tipo || "seguimiento";
+        tareaEstado.value = t.estado;
+        tareaPrioridad.value = t.prioridad;
+        tareaTipo.value = t.tipo;
         tareaRecurrenteChk.checked = !!t.es_recurrente;
         tareaRecurrenteDias.value = t.recurrente_dias || 7;
         tareaDescripcion.value = t.descripcion || "";
         btnBorrarTarea.style.display = "inline-block";
       }
-
       tareaDialog.showModal();
     }
 
-    window.closeTareaDialog = function () {
-      tareaDialog.close();
-    };
+    btnNuevaTarea.onclick = () => abrir(null);
 
-    tareaForm.addEventListener("submit", async ev => {
-      ev.preventDefault();
+    tareaForm.onsubmit = async e => {
+      e.preventDefault();
 
-      const payload = {
+      const data = {
         titulo: tareaTitulo.value.trim(),
         proyecto: tareaProyecto.value.trim(),
         fecha: tareaFechaUnica.value || null,
@@ -487,111 +432,88 @@
         tipo: tareaTipo.value,
         es_recurrente: tareaRecurrenteChk.checked,
         recurrente_dias: tareaRecurrenteChk.checked
-          ? Number(tareaRecurrenteDias.value || "7")
+          ? Number(tareaRecurrenteDias.value)
           : null,
         descripcion: tareaDescripcion.value.trim()
       };
 
       const id = tareaId.value;
-      try {
-        if (id) {
-          await updateDoc(doc(db, "tareas", id), payload);
-        } else {
-          const ref = await addDoc(collTareas, payload);
-          payload.id = ref.id;
-          tareas.push(payload);
-        }
-        await cargarTareas();
-        tareaDialog.close();
-      } catch (err) {
-        console.error("❌ Error guardando tarea:", err);
-        alert("Error guardando la tarea.");
-      }
-    });
 
-    btnBorrarTarea.addEventListener("click", async () => {
+      if (id) {
+        await updateDoc(doc(db, "tareas", id), data);
+      } else {
+        await addDoc(collTareas, data);
+      }
+
+      tareaDialog.close();
+      cargarTareas();
+    };
+
+    btnBorrarTarea.onclick = async () => {
       const id = tareaId.value;
-      if (!id) {
-        tareaDialog.close();
-        return;
-      }
-      if (!confirm("¿Eliminar esta tarea?")) return;
-      try {
-        await deleteDoc(doc(db, "tareas", id));
-        tareas = tareas.filter(t => t.id !== id);
-        renderTodo();
-        tareaDialog.close();
-      } catch (err) {
-        console.error("❌ Error borrando tarea:", err);
-        alert("Error borrando la tarea.");
-      }
-    });
+      if (!id) return;
+      await deleteDoc(doc(db, "tareas", id));
+      tareaDialog.close();
+      cargarTareas();
+    };
 
-    // Crear nueva tarea
-    btnNuevaTarea.addEventListener("click", () => abrirDialogoEdicion(null));
-
-    // Crear nota rápida -> tipo 'nota' en la colección tareas
-    btnCrearNotaRapida.addEventListener("click", async () => {
-      const texto = notaRapidaTexto.value.trim();
+    btnCrearNotaRapida.onclick = async () => {
+      const texto = document.getElementById("notaRapidaTexto").value.trim();
       if (!texto) return;
-      const hoy = new Date();
-      const payload = {
+
+      const hoy = new Date().toISOString().slice(0, 10);
+
+      await addDoc(collTareas, {
         titulo: texto.slice(0, 60),
         proyecto: "",
-        fecha: hoy.toISOString().slice(0, 10),
+        fecha: hoy,
         estado: "pendiente",
         prioridad: "baja",
         tipo: "nota",
         es_recurrente: false,
         recurrente_dias: null,
         descripcion: texto
-      };
-      try {
-        await addDoc(collTareas, payload);
-        notaRapidaTexto.value = "";
-        await cargarTareas();
-      } catch (err) {
-        console.error("❌ Error creando nota rápida:", err);
-      }
-    });
+      });
 
-    function renderNotasRapidas() {
-      listaNotasRapidas.innerHTML = "";
+      document.getElementById("notaRapidaTexto").value = "";
+      cargarTareas();
+    };
+
+    function renderNotas() {
+      const lista = document.getElementById("listaNotasRapidas");
+      lista.innerHTML = "";
+
       const notas = tareas
         .filter(t => t.tipo === "nota")
         .sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
 
       if (!notas.length) {
-        const empty = document.createElement("div");
-        empty.className = "empty-state";
-        empty.textContent = "Sin notas rápidas.";
-        listaNotasRapidas.appendChild(empty);
+        const e = document.createElement("div");
+        e.className = "empty-state";
+        e.textContent = "Sin notas rápidas.";
+        lista.appendChild(e);
         return;
       }
 
       notas.forEach(n => {
-        const item = document.createElement("div");
-        item.className = "activity-item";
-        item.innerHTML = `
-          <div class="activity-title">${n.titulo || ""}</div>
-          <div class="activity-sub">${(n.descripcion || "").slice(
-            0,
-            140
-          )}</div>
-          <div class="activity-meta">${n.fecha || ""}</div>
+        const li = document.createElement("div");
+        li.className = "activity-item";
+
+        li.innerHTML = `
+          <div class="activity-title">${n.titulo}</div>
+          <div class="activity-sub">${(n.descripcion || "").slice(0,130)}</div>
+          <div class="activity-meta">${n.fecha}</div>
         `;
-        item.addEventListener("click", () => abrirDialogoEdicion(n.id));
-        listaNotasRapidas.appendChild(item);
+
+        li.onclick = () => abrir(n.id);
+        lista.appendChild(li);
       });
     }
 
-    filtroTipo.addEventListener("change", renderTodo);
-    buscadorTareas.addEventListener("input", () => {
-      renderKanban();
-      renderNotasRapidas();
-    });
+    filtroTipo.onchange = renderTodo;
+    buscadorTareas.oninput = renderTodo;
 
-    // Carga inicial
+    cargarProyectos();
     cargarTareas();
   </script>
 </body>
