@@ -1,19 +1,10 @@
-<!--
-CRM 2N – Modo Desarrollador Eficiente
-Estilo Salesforce Moderno + Apple Clean UI
-Firebase optimizado (mínimas lecturas, funciones reutilizables)
--->
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CRM 2N – Dashboard</title>
-
     <link rel="stylesheet" href="style.css" />
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -25,6 +16,7 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables)
         <div class="nav-tabs">
             <div class="nav-item active" onclick="location.href='index.html'">Dashboard</div>
             <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+            <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
             <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
             <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
             <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
@@ -35,130 +27,108 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables)
     </div>
 
     <main class="content">
+        <h2 style="margin:0;color:#16325C;">Dashboard</h2>
+        <div style="font-size:12px;color:#5A6872;margin-bottom:14px;">
+            Resumen general de pipeline, tareas y actividad reciente
+        </div>
 
-        <!-- TOP CARDS -->
+        <!-- CARDS RESUMEN -->
         <div class="cards-grid">
             <div class="card">
                 <div class="card-title">Proyectos totales</div>
-                <div id="cardProyectos" class="card-value">–</div>
-                <a class="card-link" onclick="location.href='proyectos.html'">Ver proyectos →</a>
+                <div id="kpiProyectos" class="card-value">–</div>
             </div>
 
             <div class="card">
-                <div class="card-title">Obras Potenciales</div>
-                <div id="cardPotenciales" class="card-value">–</div>
-                <a class="card-link" onclick="location.href='pipeline.html'">Ver pipeline →</a>
+                <div class="card-title">En seguimiento</div>
+                <div id="kpiSeguimiento" class="card-value">–</div>
             </div>
 
             <div class="card">
-                <div class="card-title">Tareas pendientes</div>
-                <div id="cardTareas" class="card-value">–</div>
-                <a class="card-link" onclick="location.href='tareas.html'">Ver tareas →</a>
+                <div class="card-title">Ganados</div>
+                <div id="kpiGanados" class="card-value">–</div>
             </div>
         </div>
 
-        <!-- TAREAS / SEGUIMIENTOS -->
+        <!-- COLUMNAS -->
         <div class="columns">
+            <!-- Seguimientos -->
+            <div class="panel">
+                <div class="panel-title">Seguimientos pendientes</div>
+                <div id="seguimientosList">Cargando...</div>
+            </div>
+
+            <!-- Tareas -->
             <div class="panel">
                 <div class="panel-title">Tareas pendientes</div>
-                <div id="listaTareas"></div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Acciones de seguimiento</div>
-                <div id="listaSeguimientos"></div>
-            </div>
-        </div>
-
-        <!-- GRÁFICOS -->
-        <div class="columns" style="margin-top: 30px;">
-            <div class="panel">
-                <div class="panel-title">Tipos de Obra</div>
-                <canvas id="graficoTipos"></canvas>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Obras Potenciales</div>
-                <canvas id="graficoPotenciales"></canvas>
+                <div id="tareasList">Cargando...</div>
             </div>
         </div>
     </main>
 
     <script type="module">
-        import { db } from "./firebase.js";
-        import {
-            collection,
-            getDocs
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const cardProyectos = document.getElementById("cardProyectos");
-        const cardPotenciales = document.getElementById("cardPotenciales");
-        const cardTareas = document.getElementById("cardTareas");
-        const listaTareas = document.getElementById("listaTareas");
-        const listaSeguimientos = document.getElementById("listaSeguimientos");
+        import { db } from "./firebase.js";
+        import { collection, getDocs } 
+        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const kpiProyectos = document.getElementById("kpiProyectos");
+        const kpiSeguimiento = document.getElementById("kpiSeguimiento");
+        const kpiGanados = document.getElementById("kpiGanados");
+
+        const seguimientosList = document.getElementById("seguimientosList");
+        const tareasList = document.getElementById("tareasList");
 
         async function cargarDashboard() {
-            const ref = collection(db, "proyectos");
-            const snap = await getDocs(ref);
+            try {
+                const ref = collection(db, "proyectos");
+                const snap = await getDocs(ref);
 
-            let proyectos = [];
-            let tareas = [];
-            let seguimientos = [];
-            let tiposObra = {};
-            let obrasPotenciales = 0;
+                const proyectos = [];
+                snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
 
-            snap.forEach(doc => {
-                const p = doc.data();
-                proyectos.push(p);
+                // KPI
+                kpiProyectos.textContent = proyectos.length;
+                kpiSeguimiento.textContent = proyectos.filter(p => p.estado !== "Detectado").length;
+                kpiGanados.textContent = proyectos.filter(p => p.estado === "Ganado").length;
 
-                if (p.tareas) tareas.push(...p.tareas);
-                if (p.seguimientos) seguimientos.push(...p.seguimientos);
+                // Seguimientos (solo con fecha de seguimiento)
+                const seg = proyectos
+                    .filter(p => p.seguimiento_fecha)
+                    .sort((a,b) => (a.seguimiento_fecha || "").localeCompare(b.seguimiento_fecha));
 
-                if (p.tipoObra) {
-                    tiposObra[p.tipoObra] = (tiposObra[p.tipoObra] || 0) + 1;
-                }
+                seguimientosList.innerHTML = seg.length
+                    ? seg.map(p => `
+                        <div class="follow-item">
+                            <b>${p.nombre_obra}</b><br>
+                            ${p.seguimiento_fecha} – ${p.seguimiento_comentario || ""}
+                        </div>
+                      `).join("")
+                    : "<div class='empty-state'>No hay seguimientos pendientes.</div>";
 
-                if (p.potencial === true) {
-                    obrasPotenciales++;
-                }
-            });
+                // Tareas
+                const t = proyectos
+                    .filter(p => p.tarea_fecha)
+                    .sort((a,b)=> (a.tarea_fecha || "").localeCompare(b.tarea_fecha));
 
-            cardProyectos.textContent = proyectos.length;
-            cardPotenciales.textContent = obrasPotenciales;
-            cardTareas.textContent = tareas.length;
+                tareasList.innerHTML = t.length
+                    ? t.map(p => `
+                        <div class="task-item">
+                            <b>${p.nombre_obra}</b><br>
+                            ${p.tarea_fecha} – ${p.tarea_comentario || ""}
+                        </div>
+                      `).join("")
+                    : "<div class='empty-state'>No hay tareas pendientes.</div>";
 
-            listaTareas.innerHTML = tareas.length
-                ? tareas.map(t => `<div class="task-item">${t}</div>`).join("")
-                : `<div style="opacity:0.6;">No hay tareas pendientes</div>`;
-
-            listaSeguimientos.innerHTML = seguimientos.length
-                ? seguimientos.map(s => `<div class="follow-item">${s}</div>`).join("")
-                : `<div style="opacity:0.6;">Sin seguimientos pendientes</div>`;
-
-            new Chart(document.getElementById("graficoTipos"), {
-                type: "doughnut",
-                data: {
-                    labels: Object.keys(tiposObra),
-                    datasets: [{
-                        data: Object.values(tiposObra)
-                    }]
-                }
-            });
-
-            new Chart(document.getElementById("graficoPotenciales"), {
-                type: "bar",
-                data: {
-                    labels: ["Obras Potenciales"],
-                    datasets: [{
-                        label: "Total",
-                        data: [obrasPotenciales]
-                    }]
-                }
-            });
+            } catch (err) {
+                seguimientosList.innerHTML = "Error cargando Firestore";
+                tareasList.innerHTML = "Error cargando Firestore";
+                console.error(err);
+            }
         }
 
         cargarDashboard();
-    </script>
 
+    </script>
 </body>
 </html>
