@@ -1,8 +1,3 @@
-<!--
-CRM 2N – Modo Desarrollador Eficiente
-Página de Proyectos · Lista + filtros + alta/edición/importación
--->
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -24,6 +19,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
         <div class="nav-tabs">
             <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
             <div class="nav-item active" onclick="location.href='proyectos.html'">Proyectos</div>
+            <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
             <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
             <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
             <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
@@ -193,10 +189,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
         </div>
     </dialog>
 
-    <!-- ========================== -->
-    <!--         SCRIPT JS          -->
-    <!-- ========================== -->
-
     <script type="module">
         import { db } from "./firebase.js";
         import {
@@ -207,11 +199,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             deleteDoc,
             doc
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const ESTADOS_PIPELINE = [
-            "Detectado","En Prescripción","Oferta Enviada",
-            "Negociación","Ganado","Perdido","Paralizado"
-        ];
 
         const fCiudad = document.getElementById("fCiudad");
         const fEstado = document.getElementById("fEstado");
@@ -258,21 +245,22 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
 
         function inicializarFiltros() {
             const ciudades = [...new Set(proyectos.map(p => p.ciudad).filter(Boolean))].sort();
+            const estados = [...new Set(proyectos.map(p => p.estado).filter(Boolean))];
+            const tipos = [...new Set(proyectos.map(p => p.tipo).filter(Boolean))];
+            const prioridades = [...new Set(proyectos.map(p => p.prioridad).filter(Boolean))];
+
             fCiudad.innerHTML =
                 '<option value="Todas">Ciudad: todas</option>' +
                 ciudades.map(c => `<option value="${c}">${c}</option>`).join("");
 
-            const estados = [...new Set(proyectos.map(p => p.estado).filter(Boolean))];
             fEstado.innerHTML =
                 '<option value="Todos">Estado: todos</option>' +
                 estados.map(e => `<option value="${e}">${e}</option>`).join("");
 
-            const tipos = [...new Set(proyectos.map(p => p.tipo).filter(Boolean))];
             fTipo.innerHTML =
                 '<option value="Todos">Tipo: todos</option>' +
                 tipos.map(t => `<option value="${t}">${t}</option>`).join("");
 
-            const prioridades = [...new Set(proyectos.map(p => p.prioridad).filter(Boolean))];
             fPrioridad.innerHTML =
                 '<option value="Todas">Prioridad: todas</option>' +
                 prioridades.map(pr => `<option value="${pr}">${pr}</option>`).join("");
@@ -351,6 +339,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                             <th>Prioridad</th>
                             <th>Tipo</th>
                             <th>Potencial (€)</th>
+                            <th>Encaje 2N</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -360,6 +349,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                 const pot = p.potencial_eur
                     ? Number(p.potencial_eur).toLocaleString("es-ES")
                     : "–";
+                const encaje = (p.encaje_2n || "").toString().toUpperCase();
 
                 html += `
                     <tr data-id="${p.id}">
@@ -372,6 +362,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                         <td>${p.prioridad || ""}</td>
                         <td>${p.tipo || ""}</td>
                         <td>${pot}</td>
+                        <td>${encaje || ""}</td>
                     </tr>
                 `;
             });
@@ -415,7 +406,6 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             document.getElementById("prioridad").value = p?.prioridad || "Media";
             document.getElementById("tipo").value = p?.tipo || "Residencial";
             document.getElementById("potencial_eur").value = p?.potencial_eur || "";
-
             document.getElementById("seguimiento_fecha").value = p?.seguimiento_fecha || "";
             document.getElementById("seguimiento_comentario").value = p?.seguimiento_comentario || "";
             document.getElementById("tarea_fecha").value = p?.tarea_fecha || "";
@@ -573,7 +563,7 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             });
         }
 
-        // Mapeo nombres de columna Excel -> campos del proyecto
+        // Mapeo nombres de columna Excel -> campos del proyecto (incluye encaje 2N)
         const HEADER_MAP = {
             // Campos básicos
             nombre_obra: ["nombre_obra","Nombre_obra","Nombre de la obra","Proyecto"],
@@ -622,7 +612,21 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
             ],
 
             // Notas
-            notas: ["notas","Notas","Observaciones","Comentarios"]
+            notas: ["notas","Notas","Observaciones","Comentarios"],
+
+            // 🔴 Encaje soluciones 2N desde la tabla generada por el prompt
+            encaje_2n: [
+                "encaje_2n",
+                "Encaje soluciones 2N",
+                "Encaje 2N",
+                "Encaje soluciones 2n"
+            ],
+            motivo_encaje_2n: [
+                "motivo_encaje_2n",
+                "Motivo del encaje 2N",
+                "Motivo encaje 2N",
+                "Motivo 2N"
+            ]
         };
 
         function getCell(row, keys) {
@@ -695,7 +699,11 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
                 email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura).toString().trim(),
 
                 // Notas
-                notas: getCell(row, HEADER_MAP.notas).toString().trim()
+                notas: getCell(row, HEADER_MAP.notas).toString().trim(),
+
+                // Encaje 2N
+                encaje_2n: getCell(row, HEADER_MAP.encaje_2n).toString().trim(),
+                motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n).toString().trim()
             };
         }
 
@@ -708,6 +716,5 @@ Página de Proyectos · Lista + filtros + alta/edición/importación
 
         cargarProyectos();
     </script>
-
 </body>
 </html>
