@@ -11,11 +11,12 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM 2N – Dashboard</title>
 
-    <!-- Si ya tienes un styles.css, mantenlo -->
     <link rel="stylesheet" href="styles.css">
 
+    <!-- Chart.js para los gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        /* ===== LAYOUT GENERAL CRM – ESTILO SALESFORCE ===== */
         body {
             margin: 0;
             font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -23,11 +24,9 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             color: #1A1A1A;
         }
 
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
+        .layout { display: flex; min-height: 100vh; }
 
+        /* Sidebar igual que proyectos.html */
         .sidebar {
             width: 230px;
             background: #111827;
@@ -37,52 +36,21 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             flex-direction: column;
             gap: 16px;
         }
-
-        .sidebar-logo {
-            font-weight: 700;
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-
-        .sidebar-sub {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 12px;
-        }
-
+        .sidebar-logo { font-weight: 700; font-size: 18px; }
+        .sidebar-sub { font-size: 12px; opacity: 0.8; }
         .nav-section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            opacity: 0.6;
+            font-size: 11px; text-transform: uppercase;
+            letter-spacing: 0.08em; opacity: 0.6;
             margin: 12px 0 4px;
         }
-
         .nav-item {
+            padding: 8px 10px; border-radius: 10px;
+            text-decoration: none; color: #E5E7EB;
+            opacity: 0.9; cursor: pointer; margin-bottom: 4px;
             display: block;
-            padding: 8px 10px;
-            border-radius: 10px;
-            font-size: 14px;
-            text-decoration: none;
-            color: #E5E7EB;
-            opacity: 0.9;
-            cursor: pointer;
-            margin-bottom: 4px;
         }
-
-        .nav-item:hover {
-            background: #1F2937;
-        }
-
-        .nav-item.active {
-            background: #4C6EF5;
-            color: #FFFFFF;
-        }
-
-        .nav-item.disabled {
-            opacity: 0.4;
-            cursor: default;
-        }
+        .nav-item:hover { background: #1F2937; }
+        .nav-item.active { background: #4C6EF5; color: #FFF; }
 
         .main {
             flex: 1;
@@ -91,8 +59,8 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         }
 
         .topbar {
-            height: 64px;
             background: white;
+            height: 64px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -100,25 +68,14 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         }
 
-        .topbar-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
+        .topbar-title { font-size: 18px; font-weight: 600; }
+        .content { padding: 24px; }
 
-        .topbar-right {
-            font-size: 13px;
-            opacity: 0.7;
-        }
-
-        .content {
-            padding: 24px;
-        }
-
+        /* Tarjetas resumen */
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
-            margin-top: 8px;
         }
 
         .card {
@@ -130,52 +87,43 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
 
         .card-title {
             font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
             opacity: 0.6;
+            text-transform: uppercase;
             margin-bottom: 4px;
         }
+        .card-value { font-size: 22px; font-weight: 600; }
 
-        .card-value {
-            font-size: 22px;
-            font-weight: 600;
+        /* Columnas inferiores */
+        .columns {
+            margin-top: 32px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
         }
 
-        .card-sub {
-            font-size: 12px;
-            opacity: 0.7;
-            margin-top: 6px;
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
         }
 
-        .section-title {
-            font-size: 18px;
+        .panel-title {
+            font-size: 16px;
             font-weight: 600;
-            margin-top: 24px;
+            margin-bottom: 14px;
+        }
+
+        .task-item, .follow-item {
+            background: #F1F3F5;
+            padding: 10px 12px;
+            border-radius: 10px;
             margin-bottom: 8px;
-        }
-
-        .section-sub {
-            font-size: 13px;
-            opacity: 0.7;
-            margin-bottom: 12px;
-        }
-
-        .btn-primary {
-            background: #4C6EF5;
-            color: #FFFFFF;
-            border: none;
-            border-radius: 999px;
-            padding: 10px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-primary:hover {
-            background: #3B5BDB;
+            font-size: 14px;
         }
     </style>
 </head>
+
 <body>
 <div class="layout">
     <!-- SIDEBAR -->
@@ -197,51 +145,155 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         </div>
     </aside>
 
-    <!-- ZONA PRINCIPAL -->
+    <!-- MAIN -->
     <div class="main">
         <header class="topbar">
             <div class="topbar-title">Dashboard general</div>
-            <div class="topbar-right">
-                CRM 2N · Estilo Salesforce · Firebase optimizado
-            </div>
+            <div>CRM 2N · Seguimientos · Gráficos</div>
         </header>
 
         <main class="content">
+            <!-- TOP CARDS -->
             <div class="cards-grid">
                 <div class="card">
-                    <div class="card-title">Proyectos</div>
-                    <div class="card-value">–</div>
-                    <div class="card-sub">Conteo se puede conectar más adelante a Firebase.</div>
+                    <div class="card-title">Proyectos totales</div>
+                    <div id="cardProyectos" class="card-value">–</div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Pipeline</div>
-                    <div class="card-value">–</div>
-                    <div class="card-sub">Resumen por estados (Pipeline, Prescripción, Ganado…).</div>
+                    <div class="card-title">Obras Potenciales</div>
+                    <div id="cardPotenciales" class="card-value">–</div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Zonas clave</div>
-                    <div class="card-value">Madrid / Málaga</div>
-                    <div class="card-sub">Enfocado a residencial y BTR/BTS.</div>
+                    <div class="card-title">Tareas pendientes</div>
+                    <div id="cardTareas" class="card-value">–</div>
                 </div>
             </div>
 
-            <div class="section-title">Siguiente paso</div>
-            <div class="section-sub">
-                Empieza a trabajar con tus proyectos en la vista dedicada.
+            <!-- PANELS -->
+            <div class="columns">
+
+                <!-- Panel de Tareas -->
+                <div class="panel">
+                    <div class="panel-title">Tareas pendientes</div>
+                    <div id="listaTareas"></div>
+                </div>
+
+                <!-- Panel de Seguimientos -->
+                <div class="panel">
+                    <div class="panel-title">Acciones de seguimiento</div>
+                    <div id="listaSeguimientos"></div>
+                </div>
             </div>
-            <button class="btn-primary" onclick="irAProyectos()">
-                Ir a Proyectos →
-            </button>
+
+            <!-- GRÁFICOS -->
+            <div class="columns" style="margin-top: 30px;">
+                <div class="panel">
+                    <div class="panel-title">Tipos de Obra</div>
+                    <canvas id="graficoTipos"></canvas>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Obras Potenciales</div>
+                    <canvas id="graficoPotenciales"></canvas>
+                </div>
+            </div>
+
         </main>
     </div>
 </div>
 
-<script>
-    function irAProyectos() {
-        window.location.href = "proyectos.html";
+<script type="module">
+    import { db } from "./firebaseConfig.js";
+    import {
+        collection,
+        getDocs
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Containers
+    const cardProyectos = document.getElementById("cardProyectos");
+    const cardPotenciales = document.getElementById("cardPotenciales");
+    const cardTareas = document.getElementById("cardTareas");
+
+    const listaTareas = document.getElementById("listaTareas");
+    const listaSeguimientos = document.getElementById("listaSeguimientos");
+
+    // ======== LECTURA ÚNICA ========
+    async function cargarDashboard() {
+        const ref = collection(db, "proyectos");
+        const snap = await getDocs(ref);
+
+        let proyectos = [];
+        let tareas = [];
+        let seguimientos = [];
+        let tiposObra = {};
+        let obrasPotenciales = 0;
+
+        snap.forEach(doc => {
+            const p = doc.data();
+            proyectos.push(p);
+
+            // Tareas (del proyecto)
+            if (p.tareas) tareas.push(...p.tareas);
+
+            // Acciones de seguimiento
+            if (p.seguimientos) seguimientos.push(...p.seguimientos);
+
+            // Gráfico Tipos de Obra
+            if (p.tipoObra) {
+                tiposObra[p.tipoObra] = (tiposObra[p.tipoObra] || 0) + 1;
+            }
+
+            // Obras Potenciales (condición original que usabas)
+            if (p.potencial === true) {
+                obrasPotenciales++;
+            }
+        });
+
+        // Totales
+        cardProyectos.textContent = proyectos.length;
+        cardPotenciales.textContent = obrasPotenciales;
+        cardTareas.textContent = tareas.length;
+
+        // Pintar tareas
+        listaTareas.innerHTML = tareas.length
+            ? tareas.map(t => `<div class="task-item">${t}</div>`).join("")
+            : `<div style="opacity:0.6;">No hay tareas pendientes</div>`;
+
+        // Pintar seguimientos
+        listaSeguimientos.innerHTML = seguimientos.length
+            ? seguimientos.map(s => `<div class="follow-item">${s}</div>`).join("")
+            : `<div style="opacity:0.6;">Sin seguimientos pendientes</div>`;
+
+        // GRÁFICO TIPOS DE OBRA
+        new Chart(document.getElementById("graficoTipos"), {
+            type: "doughnut",
+            data: {
+                labels: Object.keys(tiposObra),
+                datasets: [{
+                    data: Object.values(tiposObra),
+                    backgroundColor: ["#4C6EF5","#2F9E44","#E03131","#FD7E14","#15AABF","#845EF7"]
+                }]
+            }
+        });
+
+        // GRÁFICO OBRAS POTENCIALES
+        new Chart(document.getElementById("graficoPotenciales"), {
+            type: "bar",
+            data: {
+                labels: ["Obras Potenciales"],
+                datasets: [{
+                    label: "Total",
+                    data: [obrasPotenciales],
+                    backgroundColor: "#4C6EF5"
+                }]
+            }
+        });
     }
+
+    cargarDashboard();
 </script>
+
 </body>
 </html>
