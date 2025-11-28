@@ -89,11 +89,25 @@
     let proyectosFiltrados = [];
     let dragId = null;
 
+    function estadoNormalizado(p) {
+      const raw = (p.estado || "").toString().trim();
+      if (!raw) return "Detectado";
+      if (ESTADOS.includes(raw)) return raw;
+      // Cualquier estado raro → a "Detectado" para que se vea en la primera columna
+      return "Detectado";
+    }
+
     async function cargarProyectos() {
-      const snap = await getDocs(collection(db, "proyectos"));
-      proyectos = [];
-      snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
-      aplicarFiltros();
+      try {
+        const snap = await getDocs(collection(db, "proyectos"));
+        proyectos = [];
+        snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+        aplicarFiltros();
+      } catch (err) {
+        console.error("❌ Error obteniendo proyectos:", err);
+        kanbanBoard.innerHTML =
+          "<div style='font-size:13px;color:#B91C1C;'>Error cargando proyectos. Revisa la consola.</div>";
+      }
     }
 
     function aplicarFiltros() {
@@ -174,12 +188,12 @@
     function pintarKanban() {
       kanbanBoard.innerHTML = "";
 
-      ESTADOS.forEach(estado => {
-        const colProyectos = proyectosFiltrados.filter(p => (p.estado || "Detectado") === estado);
+      ESTADOS.forEach(estadoCol => {
+        const colProyectos = proyectosFiltrados.filter(p => estadoNormalizado(p) === estadoCol);
 
         const col = document.createElement("div");
         col.className = "kanban-column";
-        col.dataset.estado = estado;
+        col.dataset.estado = estadoCol;
         col.style.background = "#F9FAFB";
         col.style.border = "1px solid #E5E7EB";
         col.style.borderRadius = "10px";
@@ -192,13 +206,13 @@
         col.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <div style="font-size:11px;font-weight:600;color:#111827;">
-              ${estado}
+              ${estadoCol}
             </div>
             <div style="font-size:10px;color:#6B7280;">
               ${colProyectos.length}
             </div>
           </div>
-        `;
+        """
 
         const dropZone = document.createElement("div");
         dropZone.className = "kanban-dropzone";
@@ -223,7 +237,13 @@
 
           const newEstado = col.dataset.estado;
           const proyecto = proyectos.find(p => p.id === dragId);
-          if (!proyecto || (proyecto.estado || "Detectado") === newEstado) return;
+          if (!proyecto) return;
+
+          const estadoActualNormalizado = estadoNormalizado(proyecto);
+          if (estadoActualNormalizado === newEstado) {
+            dragId = null;
+            return;
+          }
 
           try {
             await updateDoc(doc(db, "proyectos", dragId), { estado: newEstado });
@@ -251,6 +271,7 @@
           card.style.boxShadow = "0 1px 1px rgba(15,23,42,0.04)";
 
           const loc = [p.ciudad, p.provincia].filter(Boolean).join(" · ");
+          const estNorm = estadoNormalizado(p);
 
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
@@ -274,7 +295,7 @@
               ${p.cliente_principal || ""}${loc ? " · " + loc : ""}
             </div>
             <div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
-              <span class="${badgeEstado(p.estado)}" style="font-size:9.5px;">${p.estado || "Detectado"}</span>
+              <span class="${badgeEstado(estNorm)}" style="font-size:9.5px;">${estNorm}</span>
               ${badgeEncaje(p.encaje_2n)}
             </div>
           `;
@@ -294,11 +315,11 @@
         kanbanBoard.appendChild(col);
       });
 
-      // Click para abrir edición rápida (usará el mismo diálogo que index si lo quieres más adelante)
+      // De momento, al pinchar en el título te llevo a proyectos.html (detalle)
       kanbanBoard.querySelectorAll(".kanban-title").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-id");
-          // De momento solo navego a proyectos.html; si quieres, siguiente fase = modal aquí también
+          // Futura fase: abrir modal rápido. Por ahora, simplemente a la lista.
           window.location.href = "proyectos.html";
         });
       });
