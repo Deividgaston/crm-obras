@@ -30,7 +30,7 @@
     <main class="content">
         <h2 style="margin-top:0; margin-bottom:4px; color:#16325C;">Proyectos</h2>
         <div style="font-size:12px;color:#5A6872;margin-bottom:14px;">
-            Vista general en tabla · Filtra, selecciona, edita, borra o importa proyectos desde Excel (Prompt / Construdata)
+            Vista general · Edita, borra o importa proyectos desde Excel (Prompt / Construdata)
         </div>
 
         <!-- FILTROS -->
@@ -54,29 +54,38 @@
                 <option value="BAJO">Encaje 2N: BAJO</option>
                 <option value="SIN">Encaje 2N: sin dato</option>
             </select>
-            <input id="fTexto" class="search-input" placeholder="Buscar texto libre..." />
+            <input id="fTexto" class="search-input" placeholder="Buscar texto..." />
         </div>
 
         <!-- KPIs -->
         <div class="kpi-row">
-            <div class="kpi-card"><div class="kpi-label">Total</div><div id="kpiTotal" class="kpi-value">–</div></div>
-            <div class="kpi-card"><div class="kpi-label">Seguimiento</div><div id="kpiSeguimiento" class="kpi-value">–</div></div>
-            <div class="kpi-card"><div class="kpi-label">Ganados</div><div id="kpiGanados" class="kpi-value">–</div></div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total</div>
+                <div id="kpiTotal" class="kpi-value">–</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Seguimiento</div>
+                <div id="kpiSeguimiento" class="kpi-value">–</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Ganados</div>
+                <div id="kpiGanados" class="kpi-value">–</div>
+            </div>
         </div>
 
         <!-- TOOLBAR -->
         <div class="toolbar-table">
             <button class="btn-primary" onclick="openNewProject()">+ Nuevo proyecto</button>
-            <button class="btn-icon" onclick="onEditSelected()" title="Editar proyecto seleccionado">✏️</button>
-            <button class="btn-icon" onclick="onDeleteSelected()" title="Borrar proyectos seleccionados">🗑️</button>
-            <button class="btn-icon" onclick="openImport()" title="Importar proyectos desde Excel">⬆️</button>
+            <button class="btn-icon" onclick="onEditSelected()" title="Editar proyecto">✏️</button>
+            <button class="btn-icon" onclick="onDeleteSelected()" title="Borrar proyectos">🗑️</button>
+            <button class="btn-icon" onclick="openImport()" title="Importar Excel">⬆️</button>
             <input type="file" id="fileImport" accept=".xlsx,.xls,.csv" style="display:none" />
         </div>
 
         <!-- TABLA -->
         <div id="tablaWrapper"></div>
         <div id="emptyState" class="empty-state" style="display:none;">
-            No hay proyectos que coincidan con los filtros seleccionados.
+            No hay proyectos con los filtros seleccionados.
         </div>
     </main>
 
@@ -84,26 +93,32 @@
     <dialog id="projectDialog">
         <div class="modal-header" id="dialogTitle">Proyecto</div>
         <form id="projectForm" method="dialog">
+
             <input type="hidden" id="projId" />
             <input type="hidden" id="fuente" />
 
             <div class="form-grid">
+
                 <div class="form-group">
                     <label for="nombre_obra">Nombre de la obra</label>
                     <input id="nombre_obra" required />
                 </div>
+
                 <div class="form-group">
                     <label for="cliente_principal">Cliente principal</label>
                     <input id="cliente_principal" />
                 </div>
+
                 <div class="form-group">
                     <label for="ciudad">Ciudad</label>
                     <input id="ciudad" />
                 </div>
+
                 <div class="form-group">
                     <label for="provincia">Provincia</label>
                     <input id="provincia" />
                 </div>
+
                 <div class="form-group">
                     <label for="estado">Estado</label>
                     <select id="estado">
@@ -116,6 +131,7 @@
                         <option>Paralizado</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label for="prioridad">Prioridad</label>
                     <select id="prioridad">
@@ -124,21 +140,23 @@
                         <option>Baja</option>
                     </select>
                 </div>
+
                 <div class="form-group">
-                    <label for="tipo">Tipo de proyecto</label>
+                    <label for="tipo">Tipo</label>
                     <select id="tipo">
                         <option>Residencial</option>
                         <option>Terciario</option>
                         <option>Mixto</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label for="potencial_eur">Potencial (€)</label>
-                    <input id="potencial_eur" type="number" min="0" step="10000" />
+                    <input id="potencial_eur" type="number" min="0" />
                 </div>
 
                 <div class="form-group">
-                    <label for="url_obra">URL de la obra</label>
+                    <label for="url_obra">URL obra</label>
                     <input id="url_obra" placeholder="https://..." />
                 </div>
 
@@ -146,24 +164,29 @@
                     <label for="seguimiento_fecha">Fecha seguimiento</label>
                     <input id="seguimiento_fecha" type="date" />
                 </div>
+
                 <div class="form-group">
                     <label for="seguimiento_comentario">Comentario seguimiento</label>
                     <textarea id="seguimiento_comentario"></textarea>
                 </div>
+
                 <div class="form-group">
                     <label for="tarea_fecha">Fecha tarea</label>
                     <input id="tarea_fecha" type="date" />
                 </div>
+
                 <div class="form-group">
-                    <label for="tarea_comentario">Descripción tarea</label>
+                    <label for="tarea_comentario">Comentario tarea</label>
                     <textarea id="tarea_comentario"></textarea>
                 </div>
+
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeDialog()">Cancelar</button>
                 <button type="submit" class="btn-primary">Guardar</button>
             </div>
+
         </form>
     </dialog>
 
@@ -178,6 +201,7 @@
     </dialog>
 
     <script type="module">
+
         import { db } from "./firebase.js";
         import {
             collection,
@@ -203,9 +227,11 @@
         const emptyState = document.getElementById("emptyState");
 
         const projectDialog = document.getElementById("projectDialog");
+        const projectForm = document.getElementById("projectForm");
+
         const deleteDialog = document.getElementById("deleteDialog");
         const deleteText = document.getElementById("deleteText");
-        const projectForm = document.getElementById("projectForm");
+
         const fileInput = document.getElementById("fileImport");
 
         let proyectos = [];
@@ -217,14 +243,16 @@
             try {
                 const ref = collection(db, "proyectos");
                 const snap = await getDocs(ref);
+
                 proyectos = [];
                 snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+
                 inicializarFiltros();
                 aplicarFiltros();
+
             } catch (err) {
                 console.error("❌ Error Firestore:", err);
-                tablaWrapper.innerHTML =
-                    "<div style='padding:12px;color:#c92a2a;font-size:14px;'>Error cargando Firestore. Mira consola.</div>";
+                tablaWrapper.innerHTML = "<div>Error cargando Firestore.</div>";
             }
         }
 
@@ -256,17 +284,18 @@
             const estado = fEstado.value;
             const tipo = fTipo.value;
             const prioridad = fPrioridad.value;
-            const encajeFiltro = fEncaje2N.value;
             const texto = (fTexto.value || "").toLowerCase();
+            const encajeFiltro = fEncaje2N.value;
 
             proyectosFiltrados = proyectos.filter(p => {
                 let ok = true;
+
                 if (ciudad !== "Todas") ok = ok && p.ciudad === ciudad;
                 if (estado !== "Todos") ok = ok && p.estado === estado;
                 if (tipo !== "Todos") ok = ok && p.tipo === tipo;
                 if (prioridad !== "Todas") ok = ok && p.prioridad === prioridad;
 
-                const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
+                const enc = (p.encaje_2n || "").toUpperCase().trim();
                 if (encajeFiltro !== "Todos") {
                     if (encajeFiltro === "SIN") ok = ok && !enc;
                     else ok = ok && enc === encajeFiltro;
@@ -281,6 +310,7 @@
                     ].join(" ").toLowerCase();
                     ok = ok && blob.includes(texto);
                 }
+
                 return ok;
             });
 
@@ -314,10 +344,9 @@
         }
 
         function renderUrl(url) {
-            const u = (url || "").toString().trim();
-            if (!u) return "";
-            const safe = u.startsWith("http") ? u : "https://" + u;
-            return `<a href="${safe}" target="_blank" rel="noopener noreferrer">🔗</a>`;
+            if (!url) return "";
+            const href = url.startsWith("http") ? url : "https://" + url;
+            return `<a href="${href}" target="_blank">🔗</a>`;
         }
 
         function pintarTabla() {
@@ -328,50 +357,60 @@
                 emptyState.style.display = "block";
                 return;
             }
+
             emptyState.style.display = "none";
 
             let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox" id="selectAll" /></th>
-                            <th>Proyecto</th>
-                            <th>Cliente</th>
-                            <th>Ciudad</th>
-                            <th>Provincia</th>
-                            <th>Estado</th>
-                            <th>Prioridad</th>
-                            <th>Tipo</th>
-                            <th>Potencial (€)</th>
-                            <th>Fuente</th>
-                            <th>Enlace</th>
-                            <th>Encaje 2N</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll" /></th>
+                        <th>Proyecto</th>
+                        <th>Cliente</th>
+                        <th>Ciudad</th>
+                        <th>Provincia</th>
+                        <th>Estado</th>
+                        <th>Prioridad</th>
+                        <th>Tipo</th>
+                        <th>Potencial (€)</th>
+                        <th>Fuente</th>
+                        <th>Enlace</th>
+                        <th>Encaje 2N</th>
+                    </tr>
+                </thead>
+                <tbody>
             `;
 
             proyectosFiltrados.forEach(p => {
                 const pot = p.potencial_eur
                     ? Number(p.potencial_eur).toLocaleString("es-ES")
                     : "–";
-                const encaje = (p.encaje_2n || "").toString().toUpperCase();
 
                 html += `
-                    <tr data-id="${p.id}">
-                        <td><input type="checkbox" class="rowCheck" /></td>
-                        <td>${p.nombre_obra || ""}</td>
-                        <td>${p.cliente_principal || ""}</td>
-                        <td>${p.ciudad || ""}</td>
-                        <td>${p.provincia || ""}</td>
-                        <td><span class="${badgeClass(p.estado)}">${p.estado || ""}</span></td>
-                        <td>${p.prioridad || ""}</td>
-                        <td>${p.tipo || ""}</td>
-                        <td>${pot}</td>
-                        <td>${fuenteBadge(p.fuente)}</td>
-                        <td>${renderUrl(p.url_obra)}</td>
-                        <td>${encaje || ""}</td>
-                    </tr>
+                <tr data-id="${p.id}">
+                    <td><input type="checkbox" class="rowCheck" /></td>
+
+                    <td>
+                        <button class="proj-title-btn" data-id="${p.id}" style="
+                            border:none;background:none;padding:0;margin:0;text-align:left;
+                            cursor:pointer;font-size:12px;font-weight:600;color:#111827;">
+                            ${p.nombre_obra}
+                        </button>
+                    </td>
+
+                    <td>${p.cliente_principal || ""}</td>
+                    <td>${p.ciudad || ""}</td>
+                    <td>${p.provincia || ""}</td>
+
+                    <td><span class="${badgeClass(p.estado)}">${p.estado}</span></td>
+
+                    <td>${p.prioridad || ""}</td>
+                    <td>${p.tipo || ""}</td>
+                    <td>${pot}</td>
+                    <td>${fuenteBadge(p.fuente)}</td>
+                    <td>${renderUrl(p.url_obra)}</td>
+                    <td>${(p.encaje_2n || "").toUpperCase()}</td>
+                </tr>
                 `;
             });
 
@@ -400,6 +439,18 @@
                     }
                 });
             });
+
+            // 👉 NUEVO: click en título abre modal de edición
+            document.querySelectorAll(".proj-title-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const id = btn.dataset.id;
+                    const p = proyectos.find(x => x.id === id);
+                    if (!p) return;
+                    document.getElementById("dialogTitle").textContent = "Edición de proyecto";
+                    fillForm(p);
+                    projectDialog.showModal();
+                });
+            });
         }
 
         function fillForm(p) {
@@ -421,36 +472,21 @@
         }
 
         window.openNewProject = function () {
-            document.getElementById("dialogTitle").textContent = "Alta de proyecto";
+            document.getElementById("dialogTitle").textContent = "Nuevo proyecto";
             fillForm(null);
             projectDialog.showModal();
         };
 
-        window.onEditSelected = function () {
-            if (selectedIds.length === 0) {
-                alert("Selecciona una única obra para editar.");
-                return;
-            }
-            if (selectedIds.length > 1) {
-                alert("Solo puedes editar una obra a la vez.");
-                return;
-            }
-            const id = selectedIds[0];
-            const p = proyectos.find(x => x.id === id);
-            if (!p) return;
-            document.getElementById("dialogTitle").textContent = "Edición de proyecto";
-            fillForm(p);
-            projectDialog.showModal();
-        };
-
-        window.closeDialog = function () {
+        function closeDialog() {
             projectDialog.close();
-        };
+        }
+        window.closeDialog = closeDialog;
 
         projectForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
             const id = document.getElementById("projId").value;
+
             const payload = {
                 nombre_obra: document.getElementById("nombre_obra").value.trim(),
                 cliente_principal: document.getElementById("cliente_principal").value.trim(),
@@ -465,35 +501,51 @@
                 seguimiento_comentario: document.getElementById("seguimiento_comentario").value.trim(),
                 tarea_fecha: document.getElementById("tarea_fecha").value || null,
                 tarea_comentario: document.getElementById("tarea_comentario").value.trim(),
-                fuente: document.getElementById("fuente").value || "manual"
+                fuente: document.getElementById("fuente").value
             };
 
             try {
-                if (id) await updateDoc(doc(db, "proyectos", id), payload);
-                else await addDoc(collection(db, "proyectos"), payload);
+                if (id) {
+                    await updateDoc(doc(db, "proyectos", id), payload);
+                } else {
+                    await addDoc(collection(db, "proyectos"), payload);
+                }
 
                 projectDialog.close();
                 cargarProyectos();
+
             } catch (err) {
                 console.error("❌ Error guardando:", err);
                 alert("Error guardando el proyecto.");
             }
         });
 
+        window.onEditSelected = function () {
+            if (selectedIds.length !== 1) {
+                alert("Selecciona un único proyecto para editar.");
+                return;
+            }
+            const id = selectedIds[0];
+            const p = proyectos.find(x => x.id === id);
+            document.getElementById("dialogTitle").textContent = "Editar proyecto";
+            fillForm(p);
+            projectDialog.showModal();
+        };
+
         window.onDeleteSelected = function () {
             if (!selectedIds.length) {
-                alert("Selecciona una obra para borrar.");
+                alert("Selecciona proyectos a borrar.");
                 return;
             }
             pendingDeleteIds = [...selectedIds];
-            deleteText.textContent =
-                `Se van a borrar ${pendingDeleteIds.length} proyecto(s).`;
+            deleteText.textContent = `Se van a borrar ${pendingDeleteIds.length} proyecto(s).`;
             deleteDialog.showModal();
         };
 
-        window.closeDeleteDialog = function () {
+        function closeDeleteDialog() {
             deleteDialog.close();
-        };
+        }
+        window.closeDeleteDialog = closeDeleteDialog;
 
         window.confirmDelete = async function () {
             try {
@@ -502,9 +554,10 @@
                 }
                 deleteDialog.close();
                 cargarProyectos();
+
             } catch (err) {
-                console.error(err);
-                alert("Error borrando");
+                console.error("❌ Error borrando:", err);
+                alert("Error borrando proyecto.");
             }
         };
 
@@ -513,39 +566,28 @@
             fileInput.click();
         };
 
-        fileInput.addEventListener("change", handleFileImport);
-
-        async function handleFileImport(e) {
+        fileInput.addEventListener("change", async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (!window.XLSX) {
-                alert("No se ha podido cargar la librería de Excel (XLSX).");
-                return;
-            }
 
             try {
                 const rows = await readExcelFile(file);
+
                 if (!rows.length) {
-                    alert("No se han encontrado filas en el Excel.");
+                    alert("El Excel está vacío.");
                     return;
                 }
 
                 const mapped = rows
                     .map(row => {
                         const p = mapRowToProyecto(row);
-                        if (!p.nombre_obra || !p.nombre_obra.trim()) return null;
+                        if (!p.nombre_obra) return null;
                         p.fuente = detectSource(row);
                         return p;
                     })
                     .filter(Boolean);
 
-                if (!mapped.length) {
-                    alert("No se ha podido mapear ningún proyecto (revisa los encabezados).");
-                    return;
-                }
-
                 const existingKeys = new Set(proyectos.map(p => makeKey(p)));
-
                 const batchKeys = new Set();
                 const toImport = [];
                 const duplicates = [];
@@ -560,282 +602,139 @@
                     toImport.push(p);
                 }
 
-                if (!toImport.length) {
-                    alert(
-                        `No se ha importado ningún proyecto nuevo.\n` +
-                        `Todas las filas detectadas estaban ya en el CRM o duplicadas en el propio fichero.`
-                    );
-                    return;
-                }
-
                 const ref = collection(db, "proyectos");
                 for (const p of toImport) {
                     await addDoc(ref, p);
                 }
 
-                const namesDup = duplicates.map(p => p.nombre_obra).filter(Boolean);
-                const summaryNames = namesDup.slice(0, 10).join(", ");
-                const extra = namesDup.length > 10
-                    ? `, y ${namesDup.length - 10} más...`
-                    : "";
-
-                alert(
-                    `Importación completada.\n\n` +
-                    `Filas leídas del fichero: ${rows.length}\n` +
-                    `Proyectos mapeados válidos (con nombre): ${mapped.length}\n` +
-                    `Proyectos NUEVOS creados: ${toImport.length}\n` +
-                    `Proyectos detectados como duplicados y omitidos: ${duplicates.length}` +
-                    (duplicates.length
-                        ? `\n\nDuplicados (ejemplos): ${summaryNames}${extra}`
-                        : "")
-                );
+                alert(`Importados ${toImport.length} proyectos.\nDuplicados ignorados: ${duplicates.length}`);
 
                 cargarProyectos();
+
             } catch (err) {
-                console.error("❌ Error importando Excel:", err);
-                alert("Error importando el fichero. Revisa la consola.");
+                console.error(err);
+                alert("Error importando Excel.");
             }
-        }
+        });
 
         function readExcelFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = (e) => {
                     try {
-                        const data = new Uint8Array(event.target.result);
+                        const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: "array" });
-                        const firstSheetName = workbook.SheetNames[0];
-                        const sheet = workbook.Sheets[firstSheetName];
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
                         resolve(json);
-                    } catch (e) {
-                        reject(e);
+                    } catch (err) {
+                        reject(err);
                     }
                 };
-                reader.onerror = (err) => reject(err);
+                reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
         }
 
         function makeKey(p) {
-            const nombre = (p.nombre_obra || "").toString().toLowerCase().trim();
-            const ciudad = (p.ciudad || "").toString().toLowerCase().trim();
-            const cliente = (p.cliente_principal || p.promotora || "").toString().toLowerCase().trim();
-            return [nombre, ciudad, cliente].join("|");
+            return [
+                (p.nombre_obra || "").toLowerCase().trim(),
+                (p.ciudad || "").toLowerCase().trim(),
+                (p.cliente_principal || "").toLowerCase().trim()
+            ].join("|");
         }
 
         function detectSource(row) {
-            const normKeys = Object.keys(row).map(k => normalizeHeaderKey(k));
-            const isConstrudata =
-                normKeys.includes(normalizeHeaderKey("Obra:Nombre")) ||
-                normKeys.includes(normalizeHeaderKey("Promotor1:Empresa")) ||
-                normKeys.includes(normalizeHeaderKey("Obra:Url (Enlace Obra)"));
-            return isConstrudata ? "construdata" : "prompt";
+            const keys = Object.keys(row).map(k => k.toLowerCase());
+            if (keys.some(k => k.includes("obra:url"))) return "construdata";
+            return "prompt";
+        }
+
+        function normalizeHeaderKey(key) {
+            return key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
         }
 
         const HEADER_MAP = {
-            nombre_obra: [
-                "nombre_obra", "Nombre_obra", "Nombre de la obra", "Nombre obra",
-                "Obra", "Proyecto", "Obra/Proyecto", "Titulo obra", "Título obra",
-                "Obra:Nombre"
-            ],
-            cliente_principal: [
-                "cliente_principal", "Cliente_principal", "Cliente principal",
-                "Cliente", "Cliente/Propiedad", "Propietario", "Propiedad",
-                "Promotor", "Promotor1:Empresa"
-            ],
-            ciudad: [
-                "ciudad", "Ciudad", "Localidad", "Población", "Poblacion", "Municipio",
-                "Obra:Localidad"
-            ],
-            provincia: [
-                "provincia", "Provincia"
-            ],
-            estado: [
-                "estado", "Estado", "Estado proyecto", "Situación", "Situacion", "Fase",
-                "Obra:Hito"
-            ],
-            prioridad: [
-                "prioridad", "Prioridad"
-            ],
-            tipo: [
-                "tipo", "Tipo", "Tipo de proyecto", "Tipo de obra", "Tipologia", "Tipología",
-                "Obra:Tipo de obra", "Obra (Extras):Tipo de trabajo"
-            ],
-            potencial_eur: [
-                "potencial_eur", "Potencial (€)", "Potencial", "Presupuesto",
-                "Presupuesto (EUR)", "Presupuesto (€)", "Importe obra", "Presupuesto obra",
-                "Obra:Presupuesto"
-            ],
-            url_obra: [
-                "url_obra", "Url obra", "URL obra", "Enlace obra",
-                "Obra:Url (Enlace Obra)", "Obra:Url", "Obra:URL"
-            ],
-            seguimiento_fecha: [
-                "seguimiento_fecha", "Seguimiento_fecha", "Fecha seguimiento",
-                "Próximo seguimiento", "Proximo seguimiento",
-                "Obra:Fecha hito actual"
-            ],
-            seguimiento_comentario: [
-                "seguimiento_comentario", "Comentario seguimiento",
-                "Notas seguimiento", "Notas seguimiento comercial",
-                "Obra:Descripcion Hito", "Obra:Descripción Hito", "Obra:Descripcion hito"
-            ],
-            tarea_fecha: [
-                "tarea_fecha", "Fecha tarea", "Fecha próxima tarea", "Fecha proxima tarea"
-            ],
-            tarea_comentario: [
-                "tarea_comentario", "Descripción tarea", "Descripcion tarea",
-                "Tarea", "Acción comercial", "Accion comercial",
-                "Gestiones:Eventos agendados"
-            ],
-            promotora: [
-                "promotora", "Promotora", "Promotor", "Promotora / Cliente", "Propiedad",
-                "Promotor1:Empresa"
-            ],
-            constructora: [
-                "constructora", "Constructora", "Constructor",
-                "Contratista1:Empresa"
-            ],
-            arquitectura: [
-                "arquitectura", "Arquitectura", "Arquitecto", "Estudio arquitectura",
-                "Estudio de arquitectura", "Arquitecto/Estudio",
-                "Arquitecto1:Empresa"
-            ],
-            ingenieria: [
-                "ingenieria", "Ingenieria", "Ingeniería", "Ingeniería/Instalaciones",
-                "Ingenieria/Instalaciones",
-                "Ingeniería 1:Empresa"
-            ],
-            contacto_cliente: [
-                "contacto_cliente", "Contacto cliente", "Responsable cliente",
-                "Persona contacto cliente"
-            ],
-            telefono_cliente: [
-                "telefono_cliente", "Teléfono cliente", "Telefono cliente",
-                "Tlf cliente", "Teléfono contacto", "Telefono contacto",
-                "Promotor1:Telefonos"
-            ],
-            email_cliente: [
-                "email_cliente", "Email cliente", "Correo cliente", "Mail cliente",
-                "Promotor1:Email"
-            ],
-            contacto_arquitectura: [
-                "contacto_arquitectura", "Contacto arquitecto", "Contacto arquitectura",
-                "Responsable arquitectura"
-            ],
-            telefono_arquitectura: [
-                "telefono_arquitectura", "Teléfono arquitecto", "Telefono arquitecto",
-                "Tlf arquitecto",
-                "Arquitecto1:Telefonos"
-            ],
-            email_arquitectura: [
-                "email_arquitectura", "Email arquitecto", "Correo arquitecto", "Mail arquitecto",
-                "Arquitecto1:Email"
-            ],
-            notas: [
-                "notas", "Notas", "Observaciones", "Comentarios",
-                "Gestiones:Comentarios"
-            ],
-            encaje_2n: [
-                "encaje_2n", "Encaje soluciones 2N", "Encaje 2N",
-                "Encaje soluciones 2n", "Encaje potencial 2N"
-            ],
-            motivo_encaje_2n: [
-                "motivo_encaje_2n", "Motivo del encaje 2N", "Motivo encaje 2N",
-                "Motivo 2N", "Notas encaje 2N"
-            ]
+            nombre_obra: ["nombre_obra","obra","obranombre","proyecto","obra:Nombre"],
+            cliente_principal: ["cliente_principal","cliente","promotor","promotor1:empresa"],
+            ciudad: ["ciudad","localidad","municipio","obra:localidad"],
+            provincia: ["provincia"],
+            prioridad: ["prioridad"],
+            tipo: ["tipo","tipologia"],
+            potencial_eur: ["potencial_eur","presupuesto","importe","obra:presupuesto"],
+            url_obra: ["url_obra","obra:url","enlace","obra:url (enlace obra)"],
+            seguimiento_fecha: ["seguimiento_fecha","fecha seguimiento","obra:fecha hito actual"],
+            seguimiento_comentario: ["seguimiento_comentario","comentario seguimiento"],
+            tarea_fecha: ["tarea_fecha","fecha tarea"],
+            tarea_comentario: ["tarea_comentario","comentario tarea"],
+            encaje_2n: ["encaje_2n","encaje 2n"],
+            motivo_encaje_2n: ["motivo_encaje_2n","motivo encaje 2n"]
         };
 
-        function normalizeHeaderKey(key) {
-            return key
-                .toString()
-                .toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]/g, "");
-        }
-
-        const HEADER_NORMALIZED = {};
-        for (const [field, variants] of Object.entries(HEADER_MAP)) {
-            HEADER_NORMALIZED[field] = variants.map(v => normalizeHeaderKey(v));
-        }
-
-        function getCell(row, variants, fieldName) {
+        function getCell(row, variants) {
             for (const v of variants) {
-                if (Object.prototype.hasOwnProperty.call(row, v) && row[v] !== "") return row[v];
+                if (row[v] !== undefined && row[v] !== "") return row[v];
             }
-            const targetNorms = HEADER_NORMALIZED[fieldName];
+            const normalized = variants.map(normalizeHeaderKey);
             for (const key of Object.keys(row)) {
                 const nk = normalizeHeaderKey(key);
-                if (targetNorms.includes(nk) && row[key] !== "") return row[key];
+                if (normalized.includes(nk)) return row[key];
             }
             return "";
         }
 
         function normalizeDate(value) {
             if (!value) return "";
-            if (typeof value === "string") {
-                if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
-                const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                if (m) {
-                    const d = m[1].padStart(2, "0");
-                    const mo = m[2].padStart(2, "0");
-                    return `${m[3]}-${mo}-${d}`;
-                }
-                return "";
+            if (typeof value === "string" && value.includes("-")) return value;
+            if (typeof value === "string" && value.includes("/")) {
+                const [d,m,y] = value.split("/");
+                return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
             }
-            if (typeof value === "number" && window.XLSX && XLSX.SSF) {
-                try {
-                    const date = XLSX.SSF.parse_date_code(value);
-                    if (date) {
-                        const y = date.y;
-                        const m = String(date.m).padStart(2, "0");
-                        const d = String(date.d).padStart(2, "0");
-                        return `${y}-${m}-${d}`;
-                    }
-                } catch {}
+            if (typeof value === "number") {
+                const date = XLSX.SSF.parse_date_code(value);
+                if (!date) return "";
+                return `${date.y}-${String(date.m).padStart(2,"0")}-${String(date.d).padStart(2,"0")}`;
             }
             return "";
         }
 
         function mapRowToProyecto(row) {
             return {
-                nombre_obra: getCell(row, HEADER_MAP.nombre_obra, "nombre_obra").toString().trim(),
-                cliente_principal: getCell(row, HEADER_MAP.cliente_principal, "cliente_principal").toString().trim(),
-                ciudad: getCell(row, HEADER_MAP.ciudad, "ciudad").toString().trim(),
-                provincia: getCell(row, HEADER_MAP.provincia, "provincia").toString().trim(),
-                // 🔴 SIEMPRE estado inicial detectado al importar
+                nombre_obra: getCell(row, HEADER_MAP.nombre_obra).toString().trim(),
+                cliente_principal: getCell(row, HEADER_MAP.cliente_principal).toString().trim(),
+                ciudad: getCell(row, HEADER_MAP.ciudad).toString().trim(),
+                provincia: getCell(row, HEADER_MAP.provincia).toString().trim(),
+
+                // 🔥 TODO IMPORTADO → SIEMPRE ESTADO DETECTADO
                 estado: "Detectado",
-                prioridad: (getCell(row, HEADER_MAP.prioridad, "prioridad") || "Media").toString().trim(),
-                tipo: (getCell(row, HEADER_MAP.tipo, "tipo") || "Residencial").toString().trim(),
-                potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur, "potencial_eur") || 0),
-                url_obra: getCell(row, HEADER_MAP.url_obra, "url_obra").toString().trim(),
-                seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha, "seguimiento_fecha")),
-                seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario, "seguimiento_comentario").toString().trim(),
-                tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha, "tarea_fecha")),
-                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario, "tarea_comentario").toString().trim(),
-                promotora: getCell(row, HEADER_MAP.promotora, "promotora").toString().trim(),
-                constructora: getCell(row, HEADER_MAP.constructora, "constructora").toString().trim(),
-                arquitectura: getCell(row, HEADER_MAP.arquitectura, "arquitectura").toString().trim(),
-                ingenieria: getCell(row, HEADER_MAP.ingenieria, "ingenieria").toString().trim(),
-                contacto_cliente: getCell(row, HEADER_MAP.contacto_cliente, "contacto_cliente").toString().trim(),
-                telefono_cliente: getCell(row, HEADER_MAP.telefono_cliente, "telefono_cliente").toString().trim(),
-                email_cliente: getCell(row, HEADER_MAP.email_cliente, "email_cliente").toString().trim(),
-                contacto_arquitectura: getCell(row, HEADER_MAP.contacto_arquitectura, "contacto_arquitectura").toString().trim(),
-                telefono_arquitectura: getCell(row, HEADER_MAP.telefono_arquitectura, "telefono_arquitectura").toString().trim(),
-                email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura, "email_arquitectura").toString().trim(),
-                notas: getCell(row, HEADER_MAP.notas, "notas").toString().trim(),
-                encaje_2n: getCell(row, HEADER_MAP.encaje_2n, "encaje_2n").toString().trim(),
-                motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n, "motivo_encaje_2n").toString().trim()
+
+                prioridad: getCell(row, HEADER_MAP.prioridad) || "Media",
+                tipo: getCell(row, HEADER_MAP.tipo) || "Residencial",
+                potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur) || 0),
+
+                url_obra: getCell(row, HEADER_MAP.url_obra).toString().trim(),
+
+                seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha)),
+                seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario).toString().trim(),
+
+                tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha)),
+                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario).toString().trim(),
+
+                encaje_2n: getCell(row, HEADER_MAP.encaje_2n).toString().trim(),
+                motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n).toString().trim()
             };
         }
 
-        [fCiudad, fEstado, fTipo, fPrioridad, fEncaje2N].forEach(el =>
-            el.addEventListener("change", aplicarFiltros)
-        );
+        fCiudad.addEventListener("change", aplicarFiltros);
+        fEstado.addEventListener("change", aplicarFiltros);
+        fTipo.addEventListener("change", aplicarFiltros);
+        fPrioridad.addEventListener("change", aplicarFiltros);
+        fEncaje2N.addEventListener("change", aplicarFiltros);
         fTexto.addEventListener("input", aplicarFiltros);
 
         cargarProyectos();
+
     </script>
+
 </body>
 </html>
