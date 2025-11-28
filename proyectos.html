@@ -53,6 +53,14 @@
                 <option value="Todas">Prioridad: todas</option>
             </select>
 
+            <select id="fEncaje2N" class="select-input">
+                <option value="Todos">Encaje 2N: todos</option>
+                <option value="ALTO">Encaje 2N: ALTO</option>
+                <option value="MEDIO">Encaje 2N: MEDIO</option>
+                <option value="BAJO">Encaje 2N: BAJO</option>
+                <option value="SIN">Encaje 2N: sin dato</option>
+            </select>
+
             <input id="fTexto" class="search-input" placeholder="Buscar texto libre..." />
         </div>
 
@@ -204,6 +212,7 @@
         const fEstado = document.getElementById("fEstado");
         const fTipo = document.getElementById("fTipo");
         const fPrioridad = document.getElementById("fPrioridad");
+        const fEncaje2N = document.getElementById("fEncaje2N");
         const fTexto = document.getElementById("fTexto");
 
         const kpiTotal = document.getElementById("kpiTotal");
@@ -224,8 +233,6 @@
         let selectedIds = [];
         let pendingDeleteIds = [];
 
-        /* --------- CARGA INICIAL --------- */
-
         async function cargarProyectos() {
             try {
                 const ref = collection(db, "proyectos");
@@ -240,8 +247,6 @@
                     "<div style='padding:12px;color:#c92a2a;font-size:14px;'>Error cargando Firestore. Mira consola.</div>";
             }
         }
-
-        /* --------- FILTROS / KPI --------- */
 
         function inicializarFiltros() {
             const ciudades = [...new Set(proyectos.map(p => p.ciudad).filter(Boolean))].sort();
@@ -264,6 +269,8 @@
             fPrioridad.innerHTML =
                 '<option value="Todas">Prioridad: todas</option>' +
                 prioridades.map(pr => `<option value="${pr}">${pr}</option>`).join("");
+
+            // fEncaje2N se queda con opciones fijas
         }
 
         function aplicarFiltros() {
@@ -271,6 +278,7 @@
             const estado = fEstado.value;
             const tipo = fTipo.value;
             const prioridad = fPrioridad.value;
+            const encajeFiltro = fEncaje2N.value;
             const texto = (fTexto.value || "").toLowerCase();
 
             proyectosFiltrados = proyectos.filter(p => {
@@ -279,6 +287,16 @@
                 if (estado !== "Todos") ok = ok && p.estado === estado;
                 if (tipo !== "Todos") ok = ok && p.tipo === tipo;
                 if (prioridad !== "Todas") ok = ok && p.prioridad === prioridad;
+
+                // filtro encaje 2N
+                const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
+                if (encajeFiltro !== "Todos") {
+                    if (encajeFiltro === "SIN") {
+                        ok = ok && !enc;
+                    } else {
+                        ok = ok && enc === encajeFiltro;
+                    }
+                }
 
                 if (texto) {
                     const blob = [
@@ -300,8 +318,6 @@
 
             pintarTabla();
         }
-
-        /* --------- TABLA --------- */
 
         function badgeClass(estado) {
             if (!estado) return "badge detectado";
@@ -394,8 +410,6 @@
             });
         }
 
-        /* --------- MODAL ALTA/EDICIÓN --------- */
-
         function fillForm(p) {
             document.getElementById("projId").value = p?.id || "";
             document.getElementById("nombre_obra").value = p?.nombre_obra || "";
@@ -472,8 +486,6 @@
             }
         });
 
-        /* --------- BORRADO --------- */
-
         window.onDeleteSelected = function () {
             if (!selectedIds.length) {
                 alert("Selecciona una obra para borrar.");
@@ -501,8 +513,6 @@
                 alert("Error borrando");
             }
         };
-
-        /* --------- IMPORTAR EXCEL --------- */
 
         window.openImport = function () {
             fileInput.value = "";
@@ -563,9 +573,7 @@
             });
         }
 
-        // Mapeo nombres de columna Excel -> campos del proyecto (incluye encaje 2N)
         const HEADER_MAP = {
-            // Campos básicos
             nombre_obra: ["nombre_obra","Nombre_obra","Nombre de la obra","Proyecto"],
             cliente_principal: ["cliente_principal","Cliente_principal","Cliente principal","Cliente"],
             ciudad: ["ciudad","Ciudad"],
@@ -575,13 +583,11 @@
             tipo: ["tipo","Tipo","Tipo de proyecto"],
             potencial_eur: ["potencial_eur","Potencial","Potencial (€)","Potencial eur"],
 
-            // Seguimiento / tareas
             seguimiento_fecha: ["seguimiento_fecha","Seguimiento_fecha","Fecha seguimiento"],
             seguimiento_comentario: ["seguimiento_comentario","Comentario seguimiento"],
             tarea_fecha: ["tarea_fecha","Fecha tarea"],
             tarea_comentario: ["tarea_comentario","Descripción tarea","Descripcion tarea"],
 
-            // Promotora / constructora / arquitectura / ingeniería
             promotora: ["promotora","Promotora","Promotor","Promotor/Propiedad"],
             constructora: ["constructora","Constructora","Constructor"],
             arquitectura: [
@@ -589,7 +595,6 @@
             ],
             ingenieria: ["ingenieria","Ingenieria","Ingeniería","Ingeniería/Instalaciones"],
 
-            // Contactos cliente
             contacto_cliente: [
                 "contacto_cliente","Contacto cliente","Responsable cliente","Persona contacto cliente"
             ],
@@ -600,7 +605,6 @@
                 "email_cliente","Email cliente","Correo cliente","Mail cliente"
             ],
 
-            // Contactos arquitectura
             contacto_arquitectura: [
                 "contacto_arquitectura","Contacto arquitecto","Contacto arquitectura","Responsable arquitectura"
             ],
@@ -611,10 +615,8 @@
                 "email_arquitectura","Email arquitecto","Correo arquitecto","Mail arquitecto"
             ],
 
-            // Notas
             notas: ["notas","Notas","Observaciones","Comentarios"],
 
-            // 🔴 Encaje soluciones 2N desde la tabla generada por el prompt
             encaje_2n: [
                 "encaje_2n",
                 "Encaje soluciones 2N",
@@ -666,7 +668,6 @@
 
         function mapRowToProyecto(row) {
             return {
-                // Básicos
                 nombre_obra: getCell(row, HEADER_MAP.nombre_obra).toString().trim(),
                 cliente_principal: getCell(row, HEADER_MAP.cliente_principal).toString().trim(),
                 ciudad: getCell(row, HEADER_MAP.ciudad).toString().trim(),
@@ -676,40 +677,32 @@
                 tipo: getCell(row, HEADER_MAP.tipo).toString().trim() || "Residencial",
                 potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur) || 0),
 
-                // Seguimiento / tareas
                 seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha)),
                 seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario).toString().trim(),
                 tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha)),
                 tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario).toString().trim(),
 
-                // Promotora / constructora / arquitectura / ingeniería
                 promotora: getCell(row, HEADER_MAP.promotora).toString().trim(),
                 constructora: getCell(row, HEADER_MAP.constructora).toString().trim(),
                 arquitectura: getCell(row, HEADER_MAP.arquitectura).toString().trim(),
                 ingenieria: getCell(row, HEADER_MAP.ingenieria).toString().trim(),
 
-                // Contactos cliente
                 contacto_cliente: getCell(row, HEADER_MAP.contacto_cliente).toString().trim(),
                 telefono_cliente: getCell(row, HEADER_MAP.telefono_cliente).toString().trim(),
                 email_cliente: getCell(row, HEADER_MAP.email_cliente).toString().trim(),
 
-                // Contactos arquitectura
                 contacto_arquitectura: getCell(row, HEADER_MAP.contacto_arquitectura).toString().trim(),
                 telefono_arquitectura: getCell(row, HEADER_MAP.telefono_arquitectura).toString().trim(),
                 email_arquitectura: getCell(row, HEADER_MAP.email_arquitectura).toString().trim(),
 
-                // Notas
                 notas: getCell(row, HEADER_MAP.notas).toString().trim(),
 
-                // Encaje 2N
                 encaje_2n: getCell(row, HEADER_MAP.encaje_2n).toString().trim(),
                 motivo_encaje_2n: getCell(row, HEADER_MAP.motivo_encaje_2n).toString().trim()
             };
         }
 
-        /* --------- LISTENERS & INIT --------- */
-
-        [fCiudad, fEstado, fTipo, fPrioridad].forEach(el =>
+        [fCiudad, fEstado, fTipo, fPrioridad, fEncaje2N].forEach(el =>
             el.addEventListener("change", aplicarFiltros)
         );
         fTexto.addEventListener("input", aplicarFiltros);
