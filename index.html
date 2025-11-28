@@ -104,6 +104,34 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
         }
         .card-value { font-size: 22px; font-weight: 600; }
 
+        .card-link {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #4C6EF5;
+            cursor: pointer;
+        }
+
+        /* Botones de acceso rápido */
+        .quick-row {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-quick {
+            background: #FFFFFF;
+            border-radius: 999px;
+            border: 1px solid #D1D5DB;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-quick:hover {
+            background: #F1F3F5;
+        }
+
         .columns {
             margin-top: 32px;
             display: grid;
@@ -164,17 +192,28 @@ Firebase optimizado (mínimas lecturas, funciones reutilizables, sin llamadas du
             <div class="card">
                 <div class="card-title">Proyectos totales</div>
                 <div id="cardProyectos" class="card-value">–</div>
+                <div class="card-link" onclick="go('proyectos.html')">Ver proyectos →</div>
             </div>
 
             <div class="card">
                 <div class="card-title">Obras Potenciales</div>
                 <div id="cardPotenciales" class="card-value">–</div>
+                <div class="card-link" onclick="go('pipeline.html')">Ver pipeline →</div>
             </div>
 
             <div class="card">
                 <div class="card-title">Tareas pendientes</div>
                 <div id="cardTareas" class="card-value">–</div>
+                <div class="card-link" onclick="go('tareas.html')">Ver tareas →</div>
             </div>
+        </div>
+
+        <!-- ACCESOS RÁPIDOS -->
+        <div class="quick-row">
+            <button class="btn-quick" onclick="go('proyectos.html')">📁 Ir a Proyectos</button>
+            <button class="btn-quick" onclick="go('pipeline.html')">📊 Ver Pipeline</button>
+            <button class="btn-quick" onclick="go('clientes.html')">👥 Ver Clientes</button>
+            <button class="btn-quick" onclick="go('tareas.html')">✅ Ver Tareas</button>
         </div>
 
         <!-- TAREAS / SEGUIMIENTOS -->
