@@ -535,17 +535,71 @@
                     alert("No se han encontrado filas en el Excel.");
                     return;
                 }
-                const toImport = rows.map(mapRowToProyecto).filter(p => p.nombre_obra);
-                if (!toImport.length) {
+
+                // 1) Mapear todas las filas a proyectos (solo las que tienen nombre_obra)
+                const mapped = rows
+                    .map(mapRowToProyecto)
+                    .filter(p => p.nombre_obra && p.nombre_obra.trim() !== "");
+
+                if (!mapped.length) {
                     alert("No se ha podido mapear ningún proyecto (revisa los encabezados).");
                     return;
                 }
 
+                // 2) Claves existentes en Firestore (para detectar duplicados previos)
+                const existingKeys = new Set(
+                    proyectos.map(p => makeKey(p))
+                );
+
+                // 3) Detección de duplicados dentro del propio Excel + contra Firestore
+                const batchKeys = new Set();
+                const toImport = [];
+                const duplicates = [];
+
+                for (const p of mapped) {
+                    const key = makeKey(p);
+                    if (existingKeys.has(key) || batchKeys.has(key)) {
+                        duplicates.push(p);
+                        continue;
+                    }
+                    batchKeys.add(key);
+                    toImport.push(p);
+                }
+
+                if (!toImport.length) {
+                    alert(
+                        `No se ha importado ningún proyecto nuevo.\n` +
+                        `Todas las filas detectadas estaban ya en el CRM o duplicadas en el propio fichero.`
+                    );
+                    return;
+                }
+
+                // 4) Alta en Firestore
                 const ref = collection(db, "proyectos");
                 for (const p of toImport) {
                     await addDoc(ref, p);
                 }
-                alert(`Importación completada. Proyectos creados: ${toImport.length}`);
+
+                const namesDup = duplicates
+                    .map(p => p.nombre_obra)
+                    .filter(Boolean);
+
+                const summaryNames = namesDup.slice(0, 10).join(", ");
+                const extra = namesDup.length > 10
+                    ? `, y ${namesDup.length - 10} más...`
+                    : "";
+
+                alert(
+                    `Importación completada.\n\n` +
+                    `Filas leídas del fichero: ${rows.length}\n` +
+                    `Proyectos mapeados válidos (con nombre): ${mapped.length}\n` +
+                    `Proyectos NUEVOS creados: ${toImport.length}\n` +
+                    `Proyectos detectados como duplicados y omitidos: ${duplicates.length}` +
+                    (duplicates.length
+                        ? `\n\nDuplicados (ejemplos): ${summaryNames}${extra}`
+                        : "")
+                );
+
                 cargarProyectos();
             } catch (err) {
                 console.error("❌ Error importando Excel:", err);
@@ -571,6 +625,18 @@
                 reader.onerror = (err) => reject(err);
                 reader.readAsArrayBuffer(file);
             });
+        }
+
+        // ==== CLAVE DE DUPLICADO: nombre_obra + ciudad + (cliente_principal o promotora) ====
+        function makeKey(p) {
+            const nombre = (p.nombre_obra || "").toString().toLowerCase().trim();
+            const ciudad = (p.ciudad || "").toString().toLowerCase().trim();
+            const cliente = (
+                p.cliente_principal ||
+                p.promotora ||
+                ""
+            ).toString().toLowerCase().trim();
+            return [nombre, ciudad, cliente].join("|");
         }
 
         // ====== MAPEOS DE CABECERAS PARA DISTINTOS FORMATOS (PROMPT + CONSTRUDATA) ======
