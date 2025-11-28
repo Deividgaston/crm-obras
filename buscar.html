@@ -53,7 +53,8 @@
         </div>
         <p style="font-size:13px;color:#4B5563;margin:0 0 6px 0;">
           Configura los criterios y genera un <b>prompt avanzado</b> para que la IA haga una
-          <b>búsqueda intensa en Internet</b> y devuelva un <b>CSV listo para Excel</b> con proyectos
+          <b>búsqueda intensa en Internet</b> y te devuelva un <b>Excel descargable</b>
+          (o, si no puede, un <b>CSV listo para Excel</b>) con proyectos
           priorizados por <b>encaje 2N</b>.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
@@ -73,7 +74,7 @@
               font-size:11px;padding:3px 8px;border-radius:999px;
               background:#FFFBEB;color:#92400E;font-weight:500;
             ">
-            ⬇️ Salida en CSV para importar
+            ⬇️ Salida en Excel / CSV para importar
           </span>
         </div>
       </div>
@@ -277,8 +278,8 @@
             <span>🧠 Prompt generado para IA</span>
           </div>
           <div style="font-size:11px;color:#6B7280;margin-top:2px;">
-            Copia este prompt en ChatGPT / Gemini. La respuesta será un <b>CSV</b> listo para Excel,
-            que podrás importar en la pestaña <b>Proyectos</b>.
+            Copia este prompt en ChatGPT / Gemini. La respuesta será preferiblemente un <b>Excel .xlsx descargable</b>,
+            o, si no es posible, un <b>CSV</b> que podrás pegar en Excel e importar en <b>Proyectos</b>.
           </div>
         </div>
         <button id="btnCopiar" class="btn-secondary" type="button" style="font-size:12px;padding:6px 12px;">
@@ -287,7 +288,7 @@
       </div>
 
       <textarea id="promptGenerado" rows="18"
-        style="width:100%;border-radius:10px;border:1px solid #D1D5DB;padding:10px 12px;font-size:12px;font-family:Menlo,Consolas,monospace;"></textarea>
+        style="width:100%;border-radius:10px;border:1px solid:#D1D5DB;padding:10px 12px;font-size:12px;font-family:Menlo,Consolas,monospace;"></textarea>
 
       <div style="font-size:10.5px;color:#9CA3AF;margin-top:6px;">
         Tip: guarda este prompt en tus favoritos y solo ajusta zonas / ticket cuando hagas nuevos barridos.
@@ -436,12 +437,25 @@
         "Ordena los proyectos de forma que aparezcan primero los de encaje 2N ALTO, luego MEDIO y por último BAJO."
       );
 
-      // Formato de salida: CSV compatible Excel
+      // 🔴 SALIDA: primero intenta EXCEL, si no, CSV
       partes.push(
-        "Devuélveme el resultado EXCLUSIVAMENTE como un único bloque de datos en formato CSV (valores separados por punto y coma ';'), sin textos adicionales antes ni después del CSV."
+        "SALIDA DE DATOS (MUY IMPORTANTE):"
       );
       partes.push(
-        "La PRIMERA LÍNEA del CSV debe ser la cabecera con exactamente estos nombres de columna (en este orden):\n" +
+        "1) Si tu entorno te permite generar archivos, crea un archivo Excel (.xlsx) llamado 'scouting_2n.xlsx' con una única hoja llamada 'Proyectos', utilizando exactamente estas columnas en este orden como cabecera de la primera fila:"
+      );
+      partes.push(
+        "nombre_obra, cliente_principal, ciudad, provincia, tipo, segmento, num_unidades, estado, " +
+        "promotora, constructora, arquitectura, ingenieria, potencial_eur, ano_entrega, encaje_2n, motivo_encaje_2n, enlace_fuente"
+      );
+      partes.push(
+        "Rellena una fila por proyecto con esos datos y añade el archivo Excel como adjunto descargable en tu respuesta."
+      );
+      partes.push(
+        "2) SOLO si no puedes generar ni adjuntar un archivo Excel, devuélveme entonces el resultado EXCLUSIVAMENTE como un único bloque de datos en formato CSV (valores separados por punto y coma ';'), sin textos adicionales antes ni después del CSV."
+      );
+      partes.push(
+        "En ese caso, la PRIMERA LÍNEA del CSV debe ser la cabecera con exactamente estos nombres de columna (en este orden):\n" +
         "nombre_obra;cliente_principal;ciudad;provincia;tipo;segmento;num_unidades;estado;" +
         "promotora;constructora;arquitectura;ingenieria;potencial_eur;ano_entrega;" +
         "encaje_2n;motivo_encaje_2n;enlace_fuente"
@@ -450,7 +464,7 @@
         "Cada línea siguiente debe corresponder a un proyecto. No incluyas comas como separador; utiliza solo ';' como separador de columnas. Si algún dato no está disponible, deja la celda vacía pero mantén la estructura de columnas."
       );
       partes.push(
-        "Muy importante: NO añadas explicaciones en texto libre, ni resúmenes, ni comentarios fuera del CSV. Solo devuelve el bloque CSV, idealmente dentro de un bloque de código marcado como ```csv ... ``` para poder copiarlo fácilmente."
+        "Muy importante: en el modo CSV, NO añadas explicaciones en texto libre, ni resúmenes, ni comentarios fuera del CSV. Devuelve solo el bloque CSV, idealmente dentro de un bloque de código marcado como ```csv ... ``` para poder copiarlo fácilmente."
       );
 
       promptGenerado.value = partes.join("\n\n");
@@ -474,8 +488,8 @@
     btnCopiar.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(promptGenerado.value || "");
-          btnCopiar.textContent = "Copiado ✔";
-          setTimeout(() => (btnCopiar.textContent = "Copiar prompt"), 1200);
+        btnCopiar.textContent = "Copiado ✔";
+        setTimeout(() => (btnCopiar.textContent = "Copiar prompt"), 1200);
       } catch {
         alert("No se ha podido copiar al portapapeles.");
       }
