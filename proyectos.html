@@ -101,6 +101,7 @@
         <div class="modal-header" id="dialogTitle">Proyecto</div>
         <form id="projectForm" method="dialog">
             <input type="hidden" id="projId" />
+            <input type="hidden" id="fuente" />
 
             <div class="form-grid">
                 <div class="form-group">
@@ -157,6 +158,11 @@
                 <div class="form-group">
                     <label for="potencial_eur">Potencial (€)</label>
                     <input id="potencial_eur" type="number" min="0" step="10000" />
+                </div>
+
+                <div class="form-group">
+                    <label for="url_obra">URL de la obra</label>
+                    <input id="url_obra" placeholder="https://..." />
                 </div>
 
                 <div class="form-group">
@@ -269,8 +275,6 @@
             fPrioridad.innerHTML =
                 '<option value="Todas">Prioridad: todas</option>' +
                 prioridades.map(pr => `<option value="${pr}">${pr}</option>`).join("");
-
-            // fEncaje2N se queda con opciones fijas
         }
 
         function aplicarFiltros() {
@@ -288,7 +292,6 @@
                 if (tipo !== "Todos") ok = ok && p.tipo === tipo;
                 if (prioridad !== "Todas") ok = ok && p.prioridad === prioridad;
 
-                // filtro encaje 2N
                 const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
                 if (encajeFiltro !== "Todos") {
                     if (encajeFiltro === "SIN") {
@@ -332,6 +335,20 @@
             return "badge detectado";
         }
 
+        function fuenteBadge(fuente) {
+            const f = (fuente || "").toLowerCase();
+            if (f === "construdata") return '<span class="badge oferta">Construdata</span>';
+            if (f === "prompt") return '<span class="badge prescripcion">AI / Prompt</span>';
+            return '<span class="badge detectado">Manual</span>';
+        }
+
+        function renderUrl(url) {
+            const u = (url || "").toString().trim();
+            if (!u) return "";
+            const safe = u.startsWith("http") ? u : "https://" + u;
+            return `<a href="${safe}" target="_blank" rel="noopener noreferrer">🔗</a>`;
+        }
+
         function pintarTabla() {
             selectedIds = [];
 
@@ -355,6 +372,8 @@
                             <th>Prioridad</th>
                             <th>Tipo</th>
                             <th>Potencial (€)</th>
+                            <th>Fuente</th>
+                            <th>Enlace</th>
                             <th>Encaje 2N</th>
                         </tr>
                     </thead>
@@ -378,6 +397,8 @@
                         <td>${p.prioridad || ""}</td>
                         <td>${p.tipo || ""}</td>
                         <td>${pot}</td>
+                        <td>${fuenteBadge(p.fuente)}</td>
+                        <td>${renderUrl(p.url_obra)}</td>
                         <td>${encaje || ""}</td>
                     </tr>
                 `;
@@ -420,10 +441,12 @@
             document.getElementById("prioridad").value = p?.prioridad || "Media";
             document.getElementById("tipo").value = p?.tipo || "Residencial";
             document.getElementById("potencial_eur").value = p?.potencial_eur || "";
+            document.getElementById("url_obra").value = p?.url_obra || "";
             document.getElementById("seguimiento_fecha").value = p?.seguimiento_fecha || "";
             document.getElementById("seguimiento_comentario").value = p?.seguimiento_comentario || "";
             document.getElementById("tarea_fecha").value = p?.tarea_fecha || "";
             document.getElementById("tarea_comentario").value = p?.tarea_comentario || "";
+            document.getElementById("fuente").value = p?.fuente || "manual";
         }
 
         window.openNewProject = function () {
@@ -466,10 +489,12 @@
                 prioridad: document.getElementById("prioridad").value,
                 tipo: document.getElementById("tipo").value,
                 potencial_eur: Number(document.getElementById("potencial_eur").value || 0),
+                url_obra: document.getElementById("url_obra").value.trim(),
                 seguimiento_fecha: document.getElementById("seguimiento_fecha").value || null,
                 seguimiento_comentario: document.getElementById("seguimiento_comentario").value.trim(),
                 tarea_fecha: document.getElementById("tarea_fecha").value || null,
-                tarea_comentario: document.getElementById("tarea_comentario").value.trim()
+                tarea_comentario: document.getElementById("tarea_comentario").value.trim(),
+                fuente: document.getElementById("fuente").value || "manual"
             };
 
             try {
@@ -536,22 +561,27 @@
                     return;
                 }
 
-                // 1) Mapear todas las filas a proyectos (solo las que tienen nombre_obra)
+                // 1) Mapear filas a proyectos y detectar fuente (Prompt / Construdata)
                 const mapped = rows
-                    .map(mapRowToProyecto)
-                    .filter(p => p.nombre_obra && p.nombre_obra.trim() !== "");
+                    .map(row => {
+                        const p = mapRowToProyecto(row);
+                        if (!p.nombre_obra || !p.nombre_obra.trim()) return null;
+                        p.fuente = detectSource(row);
+                        return p;
+                    })
+                    .filter(Boolean);
 
                 if (!mapped.length) {
                     alert("No se ha podido mapear ningún proyecto (revisa los encabezados).");
                     return;
                 }
 
-                // 2) Claves existentes en Firestore (para detectar duplicados previos)
+                // 2) Claves existentes en Firestore
                 const existingKeys = new Set(
                     proyectos.map(p => makeKey(p))
                 );
 
-                // 3) Detección de duplicados dentro del propio Excel + contra Firestore
+                // 3) Detección de duplicados
                 const batchKeys = new Set();
                 const toImport = [];
                 const duplicates = [];
@@ -639,6 +669,16 @@
             return [nombre, ciudad, cliente].join("|");
         }
 
+        // Detecta si una fila viene de Construdata o del Prompt
+        function detectSource(row) {
+            const normKeys = Object.keys(row).map(k => normalizeHeaderKey(k));
+            const isConstrudata =
+                normKeys.includes(normalizeHeaderKey("Obra:Nombre")) ||
+                normKeys.includes(normalizeHeaderKey("Promotor1:Empresa")) ||
+                normKeys.includes(normalizeHeaderKey("Obra:Url (Enlace Obra)"));
+            return isConstrudata ? "construdata" : "prompt";
+        }
+
         // ====== MAPEOS DE CABECERAS PARA DISTINTOS FORMATOS (PROMPT + CONSTRUDATA) ======
         const HEADER_MAP = {
             nombre_obra: [
@@ -673,6 +713,10 @@
                 "potencial_eur", "Potencial (€)", "Potencial", "Presupuesto",
                 "Presupuesto (EUR)", "Presupuesto (€)", "Importe obra", "Presupuesto obra",
                 "Obra:Presupuesto"
+            ],
+            url_obra: [
+                "url_obra", "Url obra", "URL obra", "Enlace obra",
+                "Obra:Url (Enlace Obra)", "Obra:Url", "Obra:URL"
             ],
 
             seguimiento_fecha: [
@@ -756,31 +800,27 @@
             ]
         };
 
-        // Normaliza cabeceras para encontrar coincidencias aunque cambien acentos/espacios
+        // Normaliza cabeceras
         function normalizeHeaderKey(key) {
             return key
                 .toString()
                 .toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quita acentos
-                .replace(/[^a-z0-9]/g, ""); // quita espacios y signos
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]/g, "");
         }
 
-        // Pre-computamos las versiones normalizadas de todas las variantes
         const HEADER_NORMALIZED = {};
         for (const [field, variants] of Object.entries(HEADER_MAP)) {
             HEADER_NORMALIZED[field] = variants.map(v => normalizeHeaderKey(v));
         }
 
-        // row = objeto JSON de XLSX
         function getCell(row, variants, fieldName) {
-            // 1) Intento por nombre exacto
             for (const v of variants) {
                 if (Object.prototype.hasOwnProperty.call(row, v) && row[v] !== "") {
                     return row[v];
                 }
             }
 
-            // 2) Intento por nombre normalizado
             const targetNorms = HEADER_NORMALIZED[fieldName];
             for (const key of Object.keys(row)) {
                 const nk = normalizeHeaderKey(key);
@@ -828,6 +868,7 @@
                 prioridad: (getCell(row, HEADER_MAP.prioridad, "prioridad") || "Media").toString().trim(),
                 tipo: (getCell(row, HEADER_MAP.tipo, "tipo") || "Residencial").toString().trim(),
                 potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur, "potencial_eur") || 0),
+                url_obra: getCell(row, HEADER_MAP.url_obra, "url_obra").toString().trim(),
 
                 seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha, "seguimiento_fecha")),
                 seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario, "seguimiento_comentario").toString().trim(),
