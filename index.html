@@ -29,7 +29,7 @@
     <main class="content">
         <h2 style="margin:0;color:#16325C;">Dashboard</h2>
         <div style="font-size:12px;color:#5A6872;margin-bottom:14px;">
-            Resumen general de pipeline, tareas y actividad reciente
+            Resumen general de pipeline, tareas y obras con potencial 2N
         </div>
 
         <!-- CARDS RESUMEN -->
@@ -48,6 +48,11 @@
                 <div class="card-title">Ganados</div>
                 <div id="kpiGanados" class="card-value">–</div>
             </div>
+
+            <div class="card">
+                <div class="card-title">Obras potenciales 2N (ALTO/MEDIO)</div>
+                <div id="kpiPotenciales2N" class="card-value">–</div>
+            </div>
         </div>
 
         <!-- COLUMNAS -->
@@ -63,21 +68,28 @@
                 <div class="panel-title">Tareas pendientes</div>
                 <div id="tareasList">Cargando...</div>
             </div>
+
+            <!-- Obras potenciales 2N -->
+            <div class="panel">
+                <div class="panel-title">Obras potenciales 2N (ALTO/MEDIO)</div>
+                <div id="potenciales2NList">Cargando...</div>
+            </div>
         </div>
     </main>
 
     <script type="module">
-
         import { db } from "./firebase.js";
         import { collection, getDocs } 
-        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+            from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const kpiProyectos = document.getElementById("kpiProyectos");
         const kpiSeguimiento = document.getElementById("kpiSeguimiento");
         const kpiGanados = document.getElementById("kpiGanados");
+        const kpiPotenciales2N = document.getElementById("kpiPotenciales2N");
 
         const seguimientosList = document.getElementById("seguimientosList");
         const tareasList = document.getElementById("tareasList");
+        const potenciales2NList = document.getElementById("potenciales2NList");
 
         async function cargarDashboard() {
             try {
@@ -87,15 +99,23 @@
                 const proyectos = [];
                 snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
 
-                // KPI
+                // KPIs básicos
                 kpiProyectos.textContent = proyectos.length;
-                kpiSeguimiento.textContent = proyectos.filter(p => p.estado !== "Detectado").length;
+                kpiSeguimiento.textContent = proyectos.filter(p => p.estado && p.estado !== "Detectado").length;
                 kpiGanados.textContent = proyectos.filter(p => p.estado === "Ganado").length;
+
+                // 🔴 Obras potenciales 2N (encaje ALTO/MEDIO)
+                const potenciales2N = proyectos.filter(p => {
+                    const encaje = (p.encaje_2n || "").toString().toUpperCase();
+                    return encaje === "ALTO" || encaje === "MEDIO";
+                });
+
+                kpiPotenciales2N.textContent = potenciales2N.length;
 
                 // Seguimientos (solo con fecha de seguimiento)
                 const seg = proyectos
                     .filter(p => p.seguimiento_fecha)
-                    .sort((a,b) => (a.seguimiento_fecha || "").localeCompare(b.seguimiento_fecha));
+                    .sort((a, b) => (a.seguimiento_fecha || "").localeCompare(b.seguimiento_fecha));
 
                 seguimientosList.innerHTML = seg.length
                     ? seg.map(p => `
@@ -103,13 +123,13 @@
                             <b>${p.nombre_obra}</b><br>
                             ${p.seguimiento_fecha} – ${p.seguimiento_comentario || ""}
                         </div>
-                      `).join("")
+                    `).join("")
                     : "<div class='empty-state'>No hay seguimientos pendientes.</div>";
 
                 // Tareas
                 const t = proyectos
                     .filter(p => p.tarea_fecha)
-                    .sort((a,b)=> (a.tarea_fecha || "").localeCompare(b.tarea_fecha));
+                    .sort((a, b) => (a.tarea_fecha || "").localeCompare(b.tarea_fecha));
 
                 tareasList.innerHTML = t.length
                     ? t.map(p => `
@@ -117,18 +137,58 @@
                             <b>${p.nombre_obra}</b><br>
                             ${p.tarea_fecha} – ${p.tarea_comentario || ""}
                         </div>
-                      `).join("")
+                    `).join("")
                     : "<div class='empty-state'>No hay tareas pendientes.</div>";
+
+                // Lista de obras potenciales 2N
+                const ordenados2N = potenciales2N
+                    .sort((a, b) => {
+                        const rank = v => {
+                            const e = (v.encaje_2n || "").toString().toUpperCase();
+                            if (e === "ALTO") return 0;
+                            if (e === "MEDIO") return 1;
+                            if (e === "BAJO") return 2;
+                            return 3;
+                        };
+                        return rank(a) - rank(b);
+                    })
+                    .slice(0, 20); // top 20
+
+                potenciales2NList.innerHTML = ordenados2N.length
+                    ? ordenados2N.map(p => {
+                        const encaje = (p.encaje_2n || "").toString().toUpperCase();
+                        const motivo = p.motivo_encaje_2n || "";
+                        const ciudad = p.ciudad || "";
+                        const tipo = p.tipo || "";
+                        const pot = p.potencial_eur
+                            ? Number(p.potencial_eur).toLocaleString("es-ES")
+                            : "–";
+                        return `
+                            <div class="follow-item">
+                                <b>${p.nombre_obra || "(sin nombre)"}</b><br>
+                                <span style="font-size:11px;color:#6B7280;">
+                                    ${ciudad} · ${tipo} · Potencial: ${pot} €
+                                </span><br>
+                                <span style="font-size:11px;font-weight:600;">
+                                    Encaje 2N: ${encaje || "N/D"}
+                                </span><br>
+                                <span style="font-size:11px;color:#4B5563;">
+                                    ${motivo}
+                                </span>
+                            </div>
+                        `;
+                    }).join("")
+                    : "<div class='empty-state'>No hay obras marcadas como potencial 2N (ALTO/MEDIO).</div>";
 
             } catch (err) {
                 seguimientosList.innerHTML = "Error cargando Firestore";
                 tareasList.innerHTML = "Error cargando Firestore";
+                potenciales2NList.innerHTML = "Error cargando Firestore";
                 console.error(err);
             }
         }
 
         cargarDashboard();
-
     </script>
 </body>
 </html>
