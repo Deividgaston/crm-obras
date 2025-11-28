@@ -1,7 +1,6 @@
 <!--
 CRM 2N – Modo Desarrollador Eficiente
-Página de Proyectos · Lista + filtros + alta/edición
-Estilo Salesforce Moderno + Firebase optimizado
+Página de Proyectos · Lista + filtros + alta/edición/importación
 -->
 
 <!DOCTYPE html>
@@ -12,6 +11,9 @@ Estilo Salesforce Moderno + Firebase optimizado
     <title>CRM 2N – Proyectos</title>
 
     <link rel="stylesheet" href="style.css" />
+
+    <!-- Librería para leer Excel en el navegador -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -35,7 +37,7 @@ Estilo Salesforce Moderno + Firebase optimizado
     <main class="content">
         <h2 style="margin-top:0; margin-bottom:4px; color:#16325C;">Proyectos</h2>
         <div style="font-size:12px;color:#5A6872;margin-bottom:14px;">
-            Vista general en tabla · Filtra, selecciona, edita o borra
+            Vista general en tabla · Filtra, selecciona, edita, borra o importa proyectos desde Excel
         </div>
 
         <!-- FILTROS SUPERIORES -->
@@ -78,8 +80,10 @@ Estilo Salesforce Moderno + Firebase optimizado
         <!-- TOOLBAR TABLA -->
         <div class="toolbar-table">
             <button class="btn-primary" onclick="openNewProject()">+ Nuevo proyecto</button>
-            <button class="btn-icon" onclick="onEditSelected()">✏️</button>
-            <button class="btn-icon" onclick="onDeleteSelected()">🗑️</button>
+            <button class="btn-icon" onclick="onEditSelected()" title="Editar proyecto seleccionado">✏️</button>
+            <button class="btn-icon" onclick="onDeleteSelected()" title="Borrar proyectos seleccionados">🗑️</button>
+            <button class="btn-icon" onclick="openImport()" title="Importar proyectos desde Excel">⬆️</button>
+            <input type="file" id="fileImport" accept=".xlsx,.xls,.csv" style="display:none" />
         </div>
 
         <!-- TABLA -->
@@ -195,10 +199,6 @@ Estilo Salesforce Moderno + Firebase optimizado
     <!-- ========================== -->
 
     <script type="module">
-
-        /* ------------------------------
-           IMPORTS FIREBASE (correctos)
-           ------------------------------ */
         import { db } from "./firebase.js";
         import {
             collection,
@@ -210,10 +210,6 @@ Estilo Salesforce Moderno + Firebase optimizado
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         console.log("CRM 2N – Proyectos cargado");
-
-        /* ------------------------------
-           VARIABLES
-           ------------------------------ */
 
         const ESTADOS_PIPELINE = [
             "Detectado","En Prescripción","Oferta Enviada",
@@ -237,6 +233,7 @@ Estilo Salesforce Moderno + Firebase optimizado
         const deleteDialog = document.getElementById("deleteDialog");
         const deleteText = document.getElementById("deleteText");
         const projectForm = document.getElementById("projectForm");
+        const fileInput = document.getElementById("fileImport");
 
         let proyectos = [];
         let proyectosFiltrados = [];
@@ -248,24 +245,19 @@ Estilo Salesforce Moderno + Firebase optimizado
            ------------------------------ */
 
         async function cargarProyectos() {
-            console.log("Cargando documentos desde Firestore…");
-
             try {
-                const ref = collection(db, "proyectos");  // 👈 CAMBIA AQUÍ si tu colección tiene otro nombre
+                const ref = collection(db, "proyectos");
                 const snap = await getDocs(ref);
 
-                console.log("Docs encontrados:", snap.size);
-
                 proyectos = [];
-                snap.forEach(doc => {
-                    proyectos.push({ id: doc.id, ...doc.data() });
+                snap.forEach(d => {
+                    proyectos.push({ id: d.id, ...d.data() });
                 });
 
                 inicializarFiltros();
                 aplicarFiltros();
-
             } catch (err) {
-                console.error("❌ ERROR Firestore:", err);
+                console.error("❌ Error Firestore:", err);
                 tablaWrapper.innerHTML =
                     "<div style='padding:12px;color:#c92a2a;font-size:14px;'>Error cargando Firestore. Mira consola.</div>";
             }
@@ -311,23 +303,24 @@ Estilo Salesforce Moderno + Firebase optimizado
             const estado = fEstado.value;
             const tipo = fTipo.value;
             const prioridad = fPrioridad.value;
-            const texto = fTexto.value.toLowerCase();
+            const texto = (fTexto.value || "").toLowerCase();
 
             proyectosFiltrados = proyectos.filter(p => {
                 let ok = true;
 
-                if (ciudad !== "Todas") ok &= p.ciudad === ciudad;
-                if (estado !== "Todos") ok &= p.estado === estado;
-                if (tipo !== "Todos") ok &= p.tipo === tipo;
-                if (prioridad !== "Todas") ok &= p.prioridad === prioridad;
+                if (ciudad !== "Todas") ok = ok && p.ciudad === ciudad;
+                if (estado !== "Todos") ok = ok && p.estado === estado;
+                if (tipo !== "Todos") ok = ok && p.tipo === tipo;
+                if (prioridad !== "Todas") ok = ok && p.prioridad === prioridad;
 
                 if (texto) {
                     const blob = [
-                        p.nombre_obra, p.cliente_principal,
-                        p.ciudad, p.provincia
+                        p.nombre_obra,
+                        p.cliente_principal,
+                        p.ciudad,
+                        p.provincia
                     ].join(" ").toLowerCase();
-
-                    ok &= blob.includes(texto);
+                    ok = ok && blob.includes(texto);
                 }
 
                 return ok;
@@ -336,10 +329,6 @@ Estilo Salesforce Moderno + Firebase optimizado
             pintarKPIs();
             pintarTabla();
         }
-
-        /* ------------------------------
-           KPI
-           ------------------------------ */
 
         function pintarKPIs() {
             kpiTotal.textContent = proyectosFiltrados.length;
@@ -509,6 +498,11 @@ Estilo Salesforce Moderno + Firebase optimizado
                 tarea_comentario: document.getElementById("tarea_comentario").value.trim()
             };
 
+            if (!payload.nombre_obra) {
+                alert("El nombre de la obra es obligatorio.");
+                return;
+            }
+
             try {
                 if (id) {
                     await updateDoc(doc(db, "proyectos", id), payload);
@@ -556,7 +550,145 @@ Estilo Salesforce Moderno + Firebase optimizado
         };
 
         /* ------------------------------
-           LISTENERS FILTROS
+           IMPORTAR DESDE EXCEL
+           ------------------------------ */
+
+        window.openImport = function () {
+            fileInput.value = "";      // para poder importar dos veces seguidas
+            fileInput.click();
+        };
+
+        fileInput.addEventListener("change", handleFileImport);
+
+        async function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!window.XLSX) {
+                alert("No se ha podido cargar la librería de Excel (XLSX).");
+                return;
+            }
+
+            try {
+                const rows = await readExcelFile(file);
+                if (!rows.length) {
+                    alert("No se han encontrado filas en el Excel.");
+                    return;
+                }
+
+                const toImport = rows.map(mapRowToProyecto).filter(p => p.nombre_obra);
+                if (!toImport.length) {
+                    alert("No se ha podido mapear ningún proyecto (revisa los encabezados).");
+                    return;
+                }
+
+                const ref = collection(db, "proyectos");
+                for (const p of toImport) {
+                    await addDoc(ref, p);
+                }
+
+                alert(`Importación completada. Proyectos creados: ${toImport.length}`);
+                cargarProyectos();
+            } catch (err) {
+                console.error("❌ Error importando Excel:", err);
+                alert("Error importando el fichero. Revisa la consola.");
+            }
+        }
+
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: "array" });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                        resolve(json);
+                    } catch (e) {
+                        reject(e);
+                    }
+                };
+                reader.onerror = (err) => reject(err);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Mapeo de columnas Excel -> estructura Firestore
+        const HEADER_MAP = {
+            nombre_obra: ["nombre_obra", "Nombre_obra", "Nombre de la obra", "Proyecto"],
+            cliente_principal: ["cliente_principal", "Cliente_principal", "Cliente principal", "Cliente"],
+            ciudad: ["ciudad", "Ciudad"],
+            provincia: ["provincia", "Provincia"],
+            estado: ["estado", "Estado"],
+            prioridad: ["prioridad", "Prioridad"],
+            tipo: ["tipo", "Tipo", "Tipo de proyecto"],
+            potencial_eur: ["potencial_eur", "Potencial", "Potencial (€)", "Potencial eur"],
+            seguimiento_fecha: ["seguimiento_fecha", "Seguimiento_fecha", "Fecha seguimiento"],
+            seguimiento_comentario: ["seguimiento_comentario", "Comentario seguimiento"],
+            tarea_fecha: ["tarea_fecha", "Fecha tarea"],
+            tarea_comentario: ["tarea_comentario", "Descripción tarea", "Descripcion tarea"]
+        };
+
+        function getCell(row, keys) {
+            for (const k of keys) {
+                if (Object.prototype.hasOwnProperty.call(row, k) && row[k] !== "") {
+                    return row[k];
+                }
+            }
+            return "";
+        }
+
+        function normalizeDate(value) {
+            if (!value) return "";
+            if (typeof value === "string") {
+                // Si ya parece ISO (yyyy-mm-dd) lo dejamos
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
+                // Si es dd/mm/yyyy lo cambiamos
+                const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (m) {
+                    const d = m[1].padStart(2, "0");
+                    const mo = m[2].padStart(2, "0");
+                    return `${m[3]}-${mo}-${d}`;
+                }
+                return "";
+            }
+            // Fechas de Excel como número
+            if (typeof value === "number" && window.XLSX && XLSX.SSF) {
+                try {
+                    const date = XLSX.SSF.parse_date_code(value);
+                    if (date) {
+                        const y = date.y;
+                        const m = String(date.m).padStart(2, "0");
+                        const d = String(date.d).padStart(2, "0");
+                        return `${y}-${m}-${d}`;
+                    }
+                } catch {}
+            }
+            return "";
+        }
+
+        function mapRowToProyecto(row) {
+            const p = {
+                nombre_obra: getCell(row, HEADER_MAP.nombre_obra).toString().trim(),
+                cliente_principal: getCell(row, HEADER_MAP.cliente_principal).toString().trim(),
+                ciudad: getCell(row, HEADER_MAP.ciudad).toString().trim(),
+                provincia: getCell(row, HEADER_MAP.provincia).toString().trim(),
+                estado: getCell(row, HEADER_MAP.estado).toString().trim() || "Detectado",
+                prioridad: getCell(row, HEADER_MAP.prioridad).toString().trim() || "Media",
+                tipo: getCell(row, HEADER_MAP.tipo).toString().trim() || "Residencial",
+                potencial_eur: Number(getCell(row, HEADER_MAP.potencial_eur) || 0),
+                seguimiento_fecha: normalizeDate(getCell(row, HEADER_MAP.seguimiento_fecha)),
+                seguimiento_comentario: getCell(row, HEADER_MAP.seguimiento_comentario).toString().trim(),
+                tarea_fecha: normalizeDate(getCell(row, HEADER_MAP.tarea_fecha)),
+                tarea_comentario: getCell(row, HEADER_MAP.tarea_comentario).toString().trim()
+            };
+            return p;
+        }
+
+        /* ------------------------------
+           LISTENERS FILTROS & INIT
            ------------------------------ */
 
         [fCiudad, fEstado, fTipo, fPrioridad].forEach(el =>
@@ -564,11 +696,7 @@ Estilo Salesforce Moderno + Firebase optimizado
         );
         fTexto.addEventListener("input", aplicarFiltros);
 
-        /* ------------------------------
-           INIT
-           ------------------------------ */
         cargarProyectos();
-
     </script>
 
 </body>
