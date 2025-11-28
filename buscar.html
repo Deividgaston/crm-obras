@@ -1,454 +1,200 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRM 2N – Scouting / Buscar obras</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM 2N – Buscar proyectos</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <!-- NAV SUPERIOR -->
-  <div class="topnav">
-    <div class="logo">CRM 2N</div>
+    <!-- NAV SUPERIOR -->
+    <div class="topnav">
+        <div class="logo">CRM 2N</div>
 
-    <div class="nav-tabs">
-      <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
-      <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
-      <div class="nav-item active" onclick="location.href='buscar.html'">Buscar</div>
-      <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
-      <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
-      <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
-      <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
+        <div class="nav-tabs">
+            <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
+            <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+            <div class="nav-item active" onclick="location.href='buscar.html'">Buscar</div>
+            <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
+            <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+            <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+            <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
+        </div>
+
+        <input type="text" class="search-box" placeholder="Buscar..." />
     </div>
 
-    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
-  </div>
+    <main class="content">
+        <h2 style="margin:0;color:#16325C;">Scouting de obras</h2>
+        <div style="font-size:12px;color:#5A6872;margin-bottom:16px;">
+            Genera un prompt para el modelo de IA, obtén un CSV y descárgalo listo para importar en <b>Proyectos</b>.
+        </div>
 
-  <main class="content">
-    <!-- HERO / INTRO MÁS COMPACTO -->
-    <div class="card" style="
-        margin-bottom:14px;
-        padding:10px 14px;
-        background: radial-gradient(circle at 0 0, #EEF2FF 0, #E0ECFF 40%, #FFFFFF 100%);
-        border: 1px solid #E5E7EB;
-        display:flex;
-        gap:10px;
-        align-items:center;
-      ">
-      <div style="
-          width:32px;height:32px;border-radius:999px;
-          background:rgba(59,130,246,0.08);
-          display:flex;align-items:center;justify-content:center;
-          font-size:18px;
-        ">
-        🛰️
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:10px;text-transform:uppercase;color:#4F46E5;font-weight:600;letter-spacing:.08em;">
-          Scouting · Investigación profunda
-        </div>
-        <div style="font-size:15px;font-weight:650;margin-top:2px;margin-bottom:2px;color:#111827;">
-          Buscar obras potenciales para soluciones 2N
-        </div>
-        <p style="font-size:11.5px;color:#4B5563;margin:0;">
-          Configura los criterios y genera un <b>prompt</b> para que la IA haga una
-          <b>búsqueda intensa</b> y te devuelva un <b>Excel descargable</b> o un <b>CSV</b>
-          listo para importar al CRM.
-        </p>
-      </div>
-    </div>
+        <!-- CARD PRINCIPAL PROMPT -->
+        <div class="panel" style="max-width:960px;margin-bottom:16px;">
+            <div class="panel-title">1 · Define el scouting</div>
+            <div style="font-size:12px;color:#6B7280;margin-bottom:10px;">
+                Ajusta zonas, tipo de activo y criterios. Luego pulsa <b>Copiar prompt</b> y pégalo en tu modelo de IA.
+            </div>
 
-    <!-- BLOQUE CONFIGURACIÓN (igual que antes) -->
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="
-          padding:10px 14px;
-          border-bottom:1px solid #E5E7EB;
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-        ">
-        <div>
-          <div style="font-size:12px;font-weight:600;color:#111827;display:flex;align-items:center;gap:6px;">
-            <span>⚙️ Configurar búsqueda</span>
-          </div>
-          <div style="font-size:10.5px;color:#6B7280;margin-top:2px;">
-            Define zonas, tipología, ticket y horizonte para centrar el radar.
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button id="btnLimpiar" class="btn-secondary" type="button" style="font-size:11px;padding:4px 8px;">
-            Limpiar
-          </button>
-          <button id="btnGenerar" class="btn-primary" type="button" style="font-size:11px;padding:4px 10px;">
-            🚀 Generar prompt
-          </button>
-        </div>
-      </div>
-
-      <div style="padding:12px 14px;">
-        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;">
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div class="form-group">
-              <label for="zonas" style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-                📍 Zonas / provincias objetivo
-              </label>
-              <input id="zonas"
-                     placeholder="Ej: Madrid, Málaga, Valencia, Barcelona, Mallorca"
-                     style="width:100%;" />
-              <div style="font-size:10px;color:#6B7280;margin-top:2px;">
-                Puedes combinar provincias y áreas (Costa del Sol, Levante, etc.).
-              </div>
+            <div class="form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;">
+                <div class="form-group">
+                    <label for="zonas">Zonas objetivo</label>
+                    <input id="zonas" placeholder="Madrid, Málaga, Valencia..." value="Comunidad de Madrid, Provincia de Málaga, Valencia, Alicante, Barcelona, Mallorca" />
+                </div>
+                <div class="form-group">
+                    <label for="segmento">Segmento</label>
+                    <input id="segmento" placeholder="Residencial, villas, oficinas..." value="Residencial de obra nueva, villas, residenciales de lujo, edificios en altura, oficinas prime" />
+                </div>
+                <div class="form-group">
+                    <label for="horizonte">Horizonte temporal</label>
+                    <input id="horizonte" placeholder="En diseño, en construcción..." value="Proyectos en diseño, licitación o construcción en los próximos 3-5 años" />
+                </div>
             </div>
 
             <div class="form-group">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                <label style="font-size:11.5px;font-weight:600;color:#111827;">
-                  🏗️ Tipo de activo
-                </label>
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10.5px;">
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Residencial BTR" /> BTR
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Residencial BTS" /> BTS
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Coliving" /> Coliving
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Hoteles" /> Hoteles
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Oficinas" /> Oficinas
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Retail" /> Retail
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-tipo" value="Mixto" /> Mixto
-                </label>
-              </div>
+                <label for="criterios_extra">Criterios extra (opcional)</label>
+                <input id="criterios_extra" placeholder="BTR, >80 viviendas, operador institucional..." />
             </div>
 
-            <div class="form-group">
-              <label for="segmento" style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-                🧱 Segmento principal (tipología objetivo)
-              </label>
-              <select id="segmento" class="select-input" style="width:100%;font-size:11.5px;">
-                <option value="">Cualquiera</option>
-                <option value="residencia">Residencia / multifamiliar</option>
-                <option value="villas">Villas</option>
-                <option value="lujo">Residenciales de lujo / high-end</option>
-                <option value="oficinas">Oficinas / edificios corporativos</option>
-              </select>
-              <div style="font-size:10px;color:#6B7280;margin-top:2px;">
-                Empuja al modelo a pensar donde el acceso 2N tiene más impacto.
-              </div>
-            </div>
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div class="form-group">
-              <label for="ticketMin" style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-                💶 Ticket mínimo por proyecto (estimado)
-              </label>
-              <input id="ticketMin" type="number" min="0" step="50000"
-                     placeholder="Ej: 3000000" style="width:100%;" />
-              <div style="font-size:10px;color:#6B7280;margin-top:2px;">
-                Se filtrarán proyectos por inversión/obra ≥ este importe (estimado).
-              </div>
+            <div class="form-group" style="margin-top:12px;">
+                <label for="promptText">Prompt generado</label>
+                <textarea id="promptText" rows="10" class="textarea-input"></textarea>
             </div>
 
-            <div class="form-group">
-              <label style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-                📆 Estado / fase del proyecto
-              </label>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10.5px;">
-                <label class="chip">
-                  <input type="checkbox" class="chk-fase" value="suelo" /> Suelo
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-fase" value="licencia" /> Proyecto / licencia
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-fase" value="construccion" /> En construcción
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-fase" value="llave en mano" /> Llave en mano
-                </label>
-              </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <button class="btn-primary" onclick="generarPrompt()">Actualizar prompt</button>
+                <button class="btn-secondary" onclick="copiarPrompt()">Copiar prompt</button>
             </div>
-
-            <div class="form-group">
-              <label style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-                👥 Perfiles / players objetivo
-              </label>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10.5px;">
-                <label class="chip">
-                  <input type="checkbox" class="chk-player" value="promotoras" /> Promotoras
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-player" value="constructoras" /> Constructoras
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-player" value="estudios de arquitectura" /> Arquitecturas
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-player" value="ingenierías" /> Ingenierías
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-player" value="fondos" /> Fondos / socimis
-                </label>
-                <label class="chip">
-                  <input type="checkbox" class="chk-player" value="family offices" /> Family offices
-                </label>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="horizonte" style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-                ⏳ Horizonte temporal
-              </label>
-              <select id="horizonte" class="select-input" style="width:100%;font-size:11.5px;">
-                <option value="">Cualquiera</option>
-                <option value="corto">Corto plazo (0–2 años)</option>
-                <option value="medio">Medio plazo (2–5 años)</option>
-                <option value="largo">Largo plazo (+5 años)</option>
-              </select>
-            </div>
-          </div>
         </div>
 
-        <div class="form-group" style="margin-top:10px;">
-          <label for="notasExtra" style="display:block;font-size:11.5px;font-weight:600;color:#111827;margin-bottom:3px;">
-            🧩 Notas adicionales / palabras clave
-          </label>
-          <textarea id="notasExtra" rows="3"
-            placeholder="Ej: solo build-to-rent de lujo, foco en vistas al mar, proyectos con garaje y zonas comunes potentes, etc."
-            style="width:100%;resize:vertical;font-size:11.5px;"></textarea>
+        <!-- CARD RESULTADO CSV -->
+        <div class="panel" style="max-width:960px;">
+            <div class="panel-title">2 · Pega aquí el resultado en CSV y descárgalo</div>
+            <div style="font-size:12px;color:#6B7280;margin-bottom:8px;">
+                Pega la salida <b>CSV o tabla separada por punto y coma</b> que te devuelva la IA. Después usa
+                <b>Descargar CSV</b> y cárgalo en la página <b>Proyectos → Importar</b>.
+            </div>
+
+            <div class="form-group">
+                <label for="csvInput">Resultado IA (CSV)</label>
+                <textarea id="csvInput" rows="10" class="textarea-input" placeholder="nombre_obra;cliente_principal;ciudad;provincia;tipo;segmento;num_unidades;estado;promotora;constructora;arquitectura;ingenieria;potencial_eur;telefono_cliente;email_cliente;url_obra;encaje_2n;motivo_encaje_2n&#10;..."></textarea>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <button class="btn-primary" onclick="descargarCSV()">Descargar CSV</button>
+            </div>
         </div>
-      </div>
-    </div>
+    </main>
 
-    <!-- BLOQUE PROMPT -->
-    <div class="card" style="margin-top:14px;">
-      <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          margin-bottom:6px;
-        ">
-        <div>
-          <div style="font-size:12px;font-weight:600;color:#111827;display:flex;align-items:center;gap:6px;">
-            <span>🧠 Prompt generado para IA</span>
-          </div>
-          <div style="font-size:10.5px;color:#6B7280;margin-top:2px;">
-            Copia este prompt en ChatGPT / Gemini. La respuesta será preferiblemente un <b>Excel .xlsx</b> descargable,
-            o, si no es posible, un <b>CSV</b> para importar en <b>Proyectos</b>.
-          </div>
-        </div>
-        <button id="btnCopiar" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
-          Copiar prompt
-        </button>
-      </div>
+    <script>
+        const promptTextarea = document.getElementById("promptText");
+        const zonasInput = document.getElementById("zonas");
+        const segmentoInput = document.getElementById("segmento");
+        const horizonteInput = document.getElementById("horizonte");
+        const criteriosExtraInput = document.getElementById("criterios_extra");
 
-      <textarea id="promptGenerado" rows="16"
-        style="width:100%;border-radius:10px;border:1px solid:#D1D5DB;padding:8px 10px;font-size:11.5px;font-family:Menlo,Consolas,monospace;"></textarea>
+        function buildPrompt() {
+            const zonas = zonasInput.value || "Comunidad de Madrid, Provincia de Málaga, Valencia, Alicante, Barcelona, Mallorca";
+            const segmento = segmentoInput.value || "Residencial de obra nueva, villas, residenciales de lujo, edificios en altura, oficinas prime";
+            const horizonte = horizonteInput.value || "Proyectos en diseño, licitación o construcción en los próximos 3-5 años";
+            const extra = criteriosExtraInput.value || "";
 
-      <div style="font-size:10px;color:#9CA3AF;margin-top:4px;">
-        Tip: guarda este prompt y solo ajusta zonas / ticket cuando hagas nuevos barridos.
-      </div>
-    </div>
-  </main>
+            return `
+Actúa como un analista de mercado inmobiliario especializado en proyectos de nueva construcción y como un asistente de *scouting* para un fabricante de videoporteros y control de accesos IP llamado 2N.
 
-  <script>
-    const zonasInput = document.getElementById("zonas");
-    const chkTipo = document.querySelectorAll(".chk-tipo");
-    const segmentoSel = document.getElementById("segmento");
-    const ticketMinInput = document.getElementById("ticketMin");
-    const chkFase = document.querySelectorAll(".chk-fase");
-    const chkPlayer = document.querySelectorAll(".chk-player");
-    const horizonteSel = document.getElementById("horizonte");
-    const notasExtra = document.getElementById("notasExtra");
+Objetivo:
+- Detectar obras y proyectos relevantes para soluciones de videoportero y control de accesos IP de alta gama en España.
+- Priorizar proyectos donde tenga sentido instalar videoportero IP, control de accesos en portales, garajes, zonas comunes, oficinas o espacios terciarios.
 
-    const btnGenerar = document.getElementById("btnGenerar");
-    const btnLimpiar = document.getElementById("btnLimpiar");
-    const btnCopiar = document.getElementById("btnCopiar");
-    const promptGenerado = document.getElementById("promptGenerado");
+Alcance de búsqueda (investigación profunda):
+- Zonas objetivo: ${zonas}.
+- Segmento: ${segmento}.
+- Horizonte temporal: ${horizonte}.
+${extra ? "- Criterios adicionales: " + extra + "." : ""}
+- Busca información en portales inmobiliarios profesionales, notas de prensa, webs de promotoras y constructoras, revistas de arquitectura, licitaciones y fuentes similares.
 
-    function getCheckedValues(nodeList) {
-      return Array.from(nodeList)
-        .filter(el => el.checked)
-        .map(el => el.value);
-    }
+Para cada proyecto relevante, devuelve una tabla en formato CSV (separado por punto y coma) con las siguientes columnas EXACTAS:
 
-    function generarPrompt() {
-      const zonas = zonasInput.value.trim();
-      const tipos = getCheckedValues(chkTipo);
-      const segmento = segmentoSel.value;
-      const ticketMin = ticketMinInput.value.trim();
-      const fases = getCheckedValues(chkFase);
-      const players = getCheckedValues(chkPlayer);
-      const horizonte = horizonteSel.value;
-      const notas = notasExtra.value.trim();
+nombre_obra
+cliente_principal
+ciudad
+provincia
+tipo
+segmento
+num_unidades
+estado
+promotora
+constructora
+arquitectura
+ingenieria
+potencial_eur
+telefono_cliente
+email_cliente
+url_obra
+encaje_2n
+motivo_encaje_2n
 
-      let partes = [];
+Definición de campos:
+- nombre_obra: nombre comercial de la promoción o edificio.
+- cliente_principal: cliente clave para la decisión (fondo, SOCIMI, family office, etc. si aplica).
+- ciudad / provincia: localización principal del proyecto.
+- tipo: residencial, residencial de lujo, villas, oficinas, mixto, hotelero, coliving, etc.
+- segmento: breve descripción (por ejemplo, "BTR residencial", "Villas de lujo", "Oficinas prime", "Residencial en altura").
+- num_unidades: nº aproximado de viviendas, habitaciones o unidades relevantes.
+- estado: fase del proyecto (por ejemplo, "En diseño", "En construcción", "En comercialización").
+- promotora: empresa promotora o propietaria.
+- constructora: empresa constructora, si se conoce.
+- arquitectura: estudio de arquitectura principal.
+- ingenieria: ingeniería o consultora técnica, si aparece.
+- potencial_eur: estimación aproximada del presupuesto o volumen de inversión de la obra (en euros). Si no hay dato fiable, dejar en blanco o 0.
+- telefono_cliente / email_cliente: datos de contacto del promotor o responsable comercial si aparecen; si no, dejar vacío.
+- url_obra: URL visible de la promoción o proyecto. 
+  · Priorizar la web específica de la promoción o edificio. 
+  · Si no existe, usar la página del proyecto en la web de la promotora, la página de la constructora o la fuente principal donde se describe el proyecto.
+  · Debe ser una URL completa empezando por http o https.
+- encaje_2n: ALTO, MEDIO o BAJO en función del potencial para soluciones de videoportero y control de accesos 2N (portales, garajes, zonas comunes, oficinas, etc.).
+- motivo_encaje_2n: breve explicación del por qué del encaje (por ejemplo "Residencial de 150 viviendas con garaje y varias entradas peatonales, ideal para videoportero IP y control de accesos").
 
-      partes.push(
-        "Actúa como un analista sénior de mercado inmobiliario y consultor de tecnología de acceso y videoportero IP, especializado en soluciones de 2N (videoportero IP, control de accesos, integración con domótica/PMS, zonas comunes, parkings, etc.)."
-      );
-      partes.push(
-        "Quiero que trabajes en MODO INVESTIGACIÓN PROFUNDA: realiza una búsqueda exhaustiva y actualizada en Internet (notas de prensa, webs de promotoras, constructoras, arquitecturas, fondos, portales inmobiliarios profesionales, informes de mercado y noticias especializadas)."
-      );
+Instrucciones de formato:
+- Devuelve SOLO la tabla en CSV, sin texto adicional ni comentarios.
+- Usa el punto y coma (;) como separador.
+- Una fila por proyecto.
+- No incluyas comillas alrededor de los campos salvo que sea estrictamente necesario.
+            `.trim();
+        }
 
-      if (zonas) {
-        partes.push(
-          `Identifica proyectos de obra nueva en las siguientes zonas de España: ${zonas}.`
-        );
-      } else {
-        partes.push(
-          "Identifica proyectos de obra nueva relevantes en España, priorizando capitales de provincia y zonas de costa con alta inversión."
-        );
-      }
+        function generarPrompt() {
+            promptTextarea.value = buildPrompt();
+        }
 
-      if (tipos.length) {
-        partes.push(
-          `El foco debe estar en activos de tipo: ${tipos.join(", ")}.`
-        );
-      } else {
-        partes.push(
-          "Puedes considerar residenciales BTR/BTS, coliving, hoteles, oficinas y proyectos mixtos siempre que tengan escala suficiente."
-        );
-      }
+        function copiarPrompt() {
+            promptTextarea.select();
+            document.execCommand("copy");
+            alert("Prompt copiado al portapapeles.");
+        }
 
-      if (segmento === "residencia") {
-        partes.push(
-          "Prioriza edificios residenciales multifamiliares y complejos residenciales donde tenga sentido instalar videoportero IP en accesos principales, portales, garajes y zonas comunes."
-        );
-      } else if (segmento === "villas") {
-        partes.push(
-          "Prioriza villas y conjuntos de villas de alto valor, donde el control de accesos, la imagen de entrada y la experiencia premium sean clave."
-        );
-      } else if (segmento === "lujo") {
-        partes.push(
-          "Prioriza residenciales de lujo / high-end, con fuerte énfasis en diseño, entrada icónica, servicios de concierge y zonas comunes potentes."
-        );
-      } else if (segmento === "oficinas") {
-        partes.push(
-          "Prioriza edificios de oficinas y corporativos donde haya múltiples accesos, control de visitantes, ascensores controlados y zonas de coworking."
-        );
-      }
+        function descargarCSV() {
+            const contenido = document.getElementById("csvInput").value.trim();
+            if (!contenido) {
+                alert("Pega primero el CSV devuelto por la IA.");
+                return;
+            }
+            const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const fecha = new Date().toISOString().slice(0,10);
+            a.download = `scouting_obras_${fecha}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
-      if (ticketMin) {
-        partes.push(
-          `Filtra proyectos con un ticket estimado de obra o inversión igual o superior a ${ticketMin} € (si no hay dato exacto, utiliza una estimación razonable basada en superficie, nº de unidades y rango de precios de la zona).`
-        );
-      }
-
-      if (fases.length) {
-        partes.push(
-          `Interesan proyectos en las siguientes fases: ${fases.join(", ")}.`
-        );
-      } else {
-        partes.push(
-          "Se pueden incluir proyectos desde la fase de suelo/proyecto hasta obra en construcción o próxima entrega, siempre que aún haya margen de diseño técnico (accesos, portales, zonas comunes)."
-        );
-      }
-
-      if (players.length) {
-        partes.push(
-          `Me interesa conocer los principales players implicados, especialmente: ${players.join(", ")}.`
-        );
-      } else {
-        partes.push(
-          "Incluye siempre que sea posible los datos de promotora, constructora, estudio de arquitectura, ingeniería y, si aplica, fondo, socimi o family office involucrado."
-        );
-      }
-
-      if (horizonte === "corto") {
-        partes.push(
-          "Prioriza proyectos con entrega o desarrollo previsto en el corto plazo (0–2 años), donde aún sea viable proponer soluciones de videoportero IP y control de accesos antes de la fase final de instalaciones."
-        );
-      } else if (horizonte === "medio") {
-        partes.push(
-          "Prioriza proyectos con entrega o desarrollo previsto en el medio plazo (2–5 años), donde haya tiempo para trabajar especificaciones técnicas y prescripción de soluciones 2N."
-        );
-      } else if (horizonte === "largo") {
-        partes.push(
-          "Puedes incluir también proyectos a más largo plazo (+5 años) si son emblemáticos o de gran volumen, marcándolos igualmente."
-        );
-      }
-
-      if (notas) {
-        partes.push(`Ten en cuenta además lo siguiente a la hora de buscar: ${notas}`);
-      }
-
-      partes.push(
-        "Muy importante: para cada proyecto, evalúa específicamente el potencial de encaje de soluciones de videoportero IP y control de accesos de 2N (por ejemplo: número de accesos peatonales y de vehículos, portales de vivienda, presencia de garajes, trasteros, gimnasios, piscinas, zonas comunes, accesos a oficinas, etc.)."
-      );
-      partes.push(
-        "Utiliza esta evaluación para asignar a cada proyecto una prioridad de encaje 2N (ALTO, MEDIO o BAJO) en función del número de accesos, la complejidad del edificio, el segmento y el presupuesto."
-      );
-      partes.push(
-        "Ordena los proyectos de forma que aparezcan primero los de encaje 2N ALTO, luego MEDIO y por último BAJO."
-      );
-
-      partes.push("SALIDA DE DATOS (MUY IMPORTANTE):");
-      partes.push(
-        "1) Si tu entorno te permite generar archivos, crea un archivo Excel (.xlsx) llamado 'scouting_2n.xlsx' con una única hoja llamada 'Proyectos', utilizando exactamente estas columnas en este orden como cabecera de la primera fila:"
-      );
-      partes.push(
-        "nombre_obra, cliente_principal, ciudad, provincia, tipo, segmento, num_unidades, estado, " +
-        "promotora, constructora, arquitectura, ingenieria, potencial_eur, ano_entrega, encaje_2n, motivo_encaje_2n, enlace_fuente"
-      );
-      partes.push(
-        "Rellena una fila por proyecto con esos datos y añade el archivo Excel como adjunto descargable en tu respuesta."
-      );
-      partes.push(
-        "2) SOLO si no puedes generar ni adjuntar un archivo Excel, devuélveme entonces el resultado EXCLUSIVAMENTE como un único bloque de datos en formato CSV (valores separados por punto y coma ';'), sin textos adicionales antes ni después del CSV."
-      );
-      partes.push(
-        "En ese caso, la PRIMERA LÍNEA del CSV debe ser la cabecera con exactamente estos nombres de columna (en este orden):\n" +
-        "nombre_obra;cliente_principal;ciudad;provincia;tipo;segmento;num_unidades;estado;" +
-        "promotora;constructora;arquitectura;ingenieria;potencial_eur;ano_entrega;" +
-        "encaje_2n;motivo_encaje_2n;enlace_fuente"
-      );
-      partes.push(
-        "Cada línea siguiente debe corresponder a un proyecto. No incluyas comas como separador; utiliza solo ';' como separador de columnas. Si algún dato no está disponible, deja la celda vacía pero mantén la estructura de columnas."
-      );
-      partes.push(
-        "Muy importante: en el modo CSV, NO añadas explicaciones en texto libre, ni resúmenes, ni comentarios fuera del CSV. Devuelve solo el bloque CSV, idealmente dentro de un bloque de código marcado como ```csv ... ``` para poder copiarlo fácilmente."
-      );
-
-      promptGenerado.value = partes.join("\n\n");
-    }
-
-    function limpiarFormulario() {
-      zonasInput.value = "";
-      chkTipo.forEach(c => (c.checked = false));
-      segmentoSel.value = "";
-      ticketMinInput.value = "";
-      chkFase.forEach(c => (c.checked = false));
-      chkPlayer.forEach(c => (c.checked = false));
-      horizonteSel.value = "";
-      notasExtra.value = "";
-      promptGenerado.value = "";
-    }
-
-    btnGenerar.addEventListener("click", generarPrompt);
-    btnLimpiar.addEventListener("click", limpiarFormulario);
-
-    btnCopiar.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(promptGenerado.value || "");
-        btnCopiar.textContent = "Copiado ✔";
-        setTimeout(() => (btnCopiar.textContent = "Copiar prompt"), 1200);
-      } catch {
-        alert("No se ha podido copiar al portapapeles.");
-      }
-    });
-  </script>
+        // Inicializamos al cargar
+        generarPrompt();
+    </script>
 </body>
 </html>
