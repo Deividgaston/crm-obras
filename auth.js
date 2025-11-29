@@ -1,5 +1,5 @@
-// auth.js
-// Guard de autenticación para todas las páginas del CRM
+// auth.js – Guardia global de autenticación para CRM 2N
+// -------------------------------------------------------
 
 import { auth } from "./firebase.js";
 import {
@@ -7,44 +7,56 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-const PUBLIC_PAGES = ["login.html", "login", ""]; // permitimos acceso directo al login
+// Páginas sin autenticación requerida
+const PUBLIC_PAGES = ["login.html", "login", ""];
 
+// Obtener el nombre del archivo actual
 function getCurrentPageName() {
   const path = window.location.pathname;
-  const file = path.split("/").pop() || "";
-  return file.toLowerCase();
+  return (path.split("/").pop() || "").toLowerCase();
 }
 
+// ¿Es página pública?
 function isPublicPage() {
-  const file = getCurrentPageName();
-  return PUBLIC_PAGES.includes(file);
+  return PUBLIC_PAGES.includes(getCurrentPageName());
 }
 
-// Proteger páginas
+// Aplicar la guardia de autenticación
 onAuthStateChanged(auth, (user) => {
+
+  // 🚫 NO autenticado → cualquier página privada redirige a login
   if (!user && !isPublicPage()) {
-    // No logueado → login
-    window.location.href = "login.html";
+    window.location.replace("login.html");
     return;
   }
 
-  // Ya logueado y está en login → mandarlo al dashboard
+  // 🔁 SI autenticado → evitar permanecer en login
   if (user && getCurrentPageName() === "login.html") {
-    window.location.href = "index.html";
+    window.location.replace("index.html");
+    return;
   }
 });
 
-// Logout si existe el botón
+// Logout global si existe el botón
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("btnLogout");
+
   if (btn) {
     btn.addEventListener("click", async () => {
       try {
         await signOut(auth);
-        window.location.href = "login.html";
+
+        // Evitar volver atrás al login
+        window.location.replace("login.html");
+
+        // Limpieza extra (por si algún navegador cachea)
+        setTimeout(() => {
+          window.location.href = "login.html";
+        }, 50);
+
       } catch (err) {
-        console.error("Error al cerrar sesión:", err);
-        alert("No se pudo cerrar sesión. Inténtalo de nuevo.");
+        console.error("❌ Error al cerrar sesión:", err);
+        alert("No se pudo cerrar sesión, inténtalo de nuevo.");
       }
     });
   }
