@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      background: radial-gradient(circle at top, #111827 0, #020617 55%, #000000 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+    }
+    .login-shell {
+      width: 100%;
+      max-width: 420px;
+      padding: 1px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #22c55e, #0ea5e9, #a855f7);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    }
+    .login-card {
+      background: radial-gradient(circle at top left, #020617 0, #020617 45%, #030712 100%);
+      border-radius: 22px;
+      padding: 22px 20px 18px 20px;
+      color: #e5e7eb;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .login-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .login-subtitle {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+    .login-pill {
+      font-size: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 3px 8px;
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.7);
+    }
+    .login-form {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .login-label {
+      font-size: 11px;
+      color: #e5e7eb;
+      margin-bottom: 2px;
+    }
+    .login-input {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: rgba(15, 23, 42, 0.9);
+      color: #f9fafb;
+      padding: 7px 12px;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .login-input::placeholder {
+      color: #6b7280;
+    }
+    .login-input:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+      background: rgba(15, 23, 42, 0.95);
+    }
+    .login-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .login-remember {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: #9ca3af;
+    }
+    .login-remember input {
+      width: 12px;
+      height: 12px;
+      accent-color: #22c55e;
+    }
+    .login-button {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #0b1120;
+      box-shadow: 0 14px 30px rgba(22, 163, 74, 0.45);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+    .login-button:disabled {
+      opacity: 0.7;
+      cursor: default;
+      box-shadow: none;
+    }
+    .login-button:not(:disabled):hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+    .login-button span.icon {
+      font-size: 13px;
+    }
+    .login-footer {
+      margin-top: 10px;
+      font-size: 10px;
+      color: #6b7280;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .login-status {
+      font-size: 10px;
+      min-height: 14px;
+      color: #9ca3af;
+    }
+    .login-status.error {
+      color: #fca5a5;
+    }
+    .login-status.success {
+      color: #bbf7d0;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="login-header">
+        <div>
+          <div class="login-title">CRM 2N · Acceso</div>
+          <div class="login-subtitle">
+            Entrar para gestionar pipeline, clientes, tareas y reportes.
+          </div>
+        </div>
+        <div class="login-pill">
+          Prescripción · Residencial &amp; Terciario
+        </div>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div>
+          <label for="email" class="login-label">Correo electrónico</label>
+          <input
+            type="email"
+            id="email"
+            class="login-input"
+            placeholder="tu.correo@2n-crm.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+        <div>
+          <label for="password" class="login-label">Contraseña</label>
+          <input
+            type="password"
+            id="password"
+            class="login-input"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <div class="login-actions">
+          <label class="login-remember">
+            <input type="checkbox" id="remember" checked />
+            <span>Recordar sesión en este navegador</span>
+          </label>
+          <button type="submit" id="btnLogin" class="login-button">
+            <span class="icon">→</span>
+            <span>Entrar al CRM</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="login-footer">
+        <div class="login-status" id="loginStatus"></div>
+        <div>
+          <span>Acceso privado · Usuarios creados en Firebase Console</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth } from "./firebase.js";
+    import {
+      signInWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const form = document.getElementById("loginForm");
+    const emailInput = document.getElementById("email");
+    const passInput = document.getElementById("password");
+    const rememberInput = document.getElementById("remember");
+    const btnLogin = document.getElementById("btnLogin");
+    const statusEl = document.getElementById("loginStatus");
+
+    function setStatus(message, type = "") {
+      statusEl.textContent = message || "";
+      statusEl.className = "login-status" + (type ? " " + type : "");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const password = passInput.value;
+
+      if (!email || !password) return;
+
+      btnLogin.disabled = true;
+      setStatus("Verificando credenciales...", "");
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        setStatus("Acceso correcto. Entrando al CRM...", "success");
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 400);
+      } catch (err) {
+        console.error("Error login:", err);
+        let msg = "No se ha podido iniciar sesión.";
+        if (err.code === "auth/user-not-found") msg = "Usuario no encontrado.";
+        if (err.code === "auth/wrong-password") msg = "Contraseña incorrecta.";
+        if (err.code === "auth/invalid-email") msg = "Correo electrónico no válido.";
+        setStatus(msg, "error");
+      } finally {
+        btnLogin.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
