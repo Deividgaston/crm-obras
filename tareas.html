@@ -95,6 +95,12 @@
 </head>
 
 <body>
+   <script>
+    const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (esMovil) {
+      window.location.href = "mobile-tareas.html";
+    }
+  </script>
   <div class="topnav">
     <div class="logo">CRM 2N</div>
 
