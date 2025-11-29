@@ -22,7 +22,25 @@
       <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
     </div>
 
-    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+      <button
+        id="btnLogout"
+        type="button"
+        style="
+          font-size:11px;
+          padding:6px 10px;
+          border-radius:999px;
+          border:1px solid #E5E7EB;
+          background:#FFFFFF;
+          color:#111827;
+          cursor:pointer;
+          white-space:nowrap;
+        "
+      >
+        Cerrar sesión
+      </button>
+    </div>
   </div>
 
   <main class="content">
@@ -454,5 +472,8 @@
       }
     });
   </script>
+
+  <!-- Guardia de autenticación -->
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
