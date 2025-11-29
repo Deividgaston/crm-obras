@@ -21,14 +21,14 @@
       }
     }
 
-    /* Estilo extra para las páginas de reporte (para que el PDF se vea más “plantilla”) */
+    /* Lienzo general de reportes */
     .report-page {
       background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
       padding: 16px 10px 24px 10px;
       margin-bottom: 20px;
     }
     .report-inner {
-      max-width: 780px;
+      max-width: 1120px;
       margin: 0 auto;
       background: #FFFFFF;
       border-radius: 16px;
@@ -64,10 +64,10 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     .report-kpi {
-      flex: 1 1 100px;
+      flex: 1 1 140px;
       background: linear-gradient(135deg, #F9FAFB 0%, #EFF6FF 100%);
       border-radius: 10px;
       padding: 6px 8px;
@@ -89,37 +89,55 @@
       color: #9CA3AF;
       margin-top: 2px;
     }
-    .report-chart-container {
-      margin-top: 6px;
-      margin-bottom: 8px;
-      border-radius: 14px;
+
+    /* Cuadros de gráficos en grid 2x2 en pantalla */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .chart-card {
       background: radial-gradient(circle at top left, #EEF2FF 0, #FFFFFF 45%, #F9FAFB 100%);
+      border-radius: 14px;
       border: 1px solid #E5E7EB;
       padding: 10px 12px;
     }
-    .report-chart-wrapper {
-      position: relative;
-      height: 420px; /* gráfico grande para PDF */
+    .chart-card-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 3px;
     }
-    .report-data {
+    .chart-card-sub {
       font-size: 10.5px;
-      color: #4B5563;
-      background: #F9FAFB;
-      border-radius: 10px;
-      border: 1px dashed #D1D5DB;
-      padding: 8px 9px;
+      color: #6B7280;
+      margin-bottom: 6px;
     }
-    .report-data strong {
+    .chart-card-wrapper {
+      position: relative;
+      height: 260px; /* en pantalla más compacto */
+      margin-bottom: 6px;
+    }
+    .chart-card-data {
+      font-size: 10px;
+      color: #4B5563;
+      background: rgba(249, 250, 251, 0.9);
+      border-radius: 8px;
+      border: 1px dashed #D1D5DB;
+      padding: 6px 7px;
+    }
+    .chart-card-data strong {
       color: #111827;
     }
-    .report-data ul {
-      padding-left: 16px;
+    .chart-card-data ul {
+      padding-left: 14px;
       margin: 4px 0 0 0;
     }
-    .report-data li {
+    .chart-card-data li {
       margin-bottom: 2px;
     }
 
+    /* Tabla mini */
     .tabla-mini {
       width: 100%;
       border-collapse: collapse;
@@ -136,6 +154,15 @@
       background: #F3F4F6;
       font-weight: 600;
       color: #111827;
+    }
+
+    @media (max-width: 900px) {
+      .charts-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .chart-card-wrapper {
+        height: 240px;
+      }
     }
   </style>
 </head>
@@ -163,7 +190,7 @@
       <div>
         <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Reportes · Vista analista de mercado</h2>
         <div style="font-size:12px;color:#5A6872;">
-          Control total de obras y clientes, segmentado por provincia, estado, encaje 2N y tipo de cliente.
+          4 gráficos clave en una sola vista · PDF con un gráfico grande por página.
         </div>
       </div>
       <button id="btnExportPDF" class="btn-primary" type="button" style="font-size:11px;padding:6px 12px;">
@@ -199,135 +226,103 @@
         <div style="flex:1;"></div>
 
         <span style="font-size:10.5px;color:#9CA3AF;">
-          El PDF usa estos filtros · Un gráfico grande por hoja con datos debajo.
+          En pantalla ves los 4 · En PDF: 1 gráfico grande por hoja con sus datos.
         </span>
       </div>
     </div>
 
-    <!-- CONTENIDO DEL REPORTE (SE CAPTURA PARA PDF) -->
-    <div id="reportContent">
-
-      <!-- PÁGINA 1: ESTADO DEL PIPELINE -->
-      <section class="report-page" id="page-estado" data-title="Estado del pipeline de proyectos">
-        <div class="report-inner">
-          <div class="report-header-card">
-            <div>
-              <div class="report-title">Página 1 · Estado del pipeline</div>
-              <div class="report-subtitle">
-                Distribución de proyectos por estado (igual que en Pipeline) con KPIs clave.
-              </div>
-            </div>
-            <div class="report-filtros"></div>
-          </div>
-
-          <div class="report-kpis-row">
-            <div class="report-kpi">
-              <div class="report-kpi-label">Proyectos filtrados</div>
-              <div id="kpiProyectos" class="report-kpi-value">–</div>
-              <div class="report-kpi-footnote">Total de obras según filtros actuales.</div>
-            </div>
-            <div class="report-kpi">
-              <div class="report-kpi-label">Obras encaje ALTO / MEDIO</div>
-              <div id="kpiEncajeAltoMedio" class="report-kpi-value">–</div>
-              <div class="report-kpi-footnote">Donde el encaje tecnológico de 2N es muy bueno.</div>
+    <!-- PÁGINA VISUAL: 4 GRÁFICOS JUNTOS -->
+    <section class="report-page">
+      <div class="report-inner">
+        <div class="report-header-card">
+          <div>
+            <div class="report-title">Resumen gráfico CRM 2N</div>
+            <div class="report-subtitle">
+              Pipeline, encaje 2N y clientes activos por segmento y tipo.
             </div>
           </div>
+          <div class="report-filtros" id="textoFiltrosResumen"></div>
+        </div>
 
-          <div class="report-chart-container">
-            <div class="report-chart-wrapper">
+        <div class="report-kpis-row">
+          <div class="report-kpi">
+            <div class="report-kpi-label">Proyectos filtrados</div>
+            <div id="kpiProyectos" class="report-kpi-value">–</div>
+            <div class="report-kpi-footnote">Total de obras según filtros actuales.</div>
+          </div>
+          <div class="report-kpi">
+            <div class="report-kpi-label">Obras encaje ALTO / MEDIO</div>
+            <div id="kpiEncajeAltoMedio" class="report-kpi-value">–</div>
+            <div class="report-kpi-footnote">Donde el encaje tecnológico de 2N es muy bueno.</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <!-- CARD 1: Estado -->
+          <div class="chart-card chart-page" id="card-estado" data-title="Estado del pipeline de proyectos">
+            <div class="chart-card-header">Estado del pipeline</div>
+            <div class="chart-card-sub">
+              Distribución de proyectos por estado (igual que en Pipeline).
+            </div>
+            <div class="chart-card-wrapper">
               <canvas id="chartEstado"></canvas>
             </div>
+            <div class="chart-card-data" id="datosEstado"></div>
           </div>
 
-          <div class="report-data" id="datosEstado"></div>
-        </div>
-      </section>
-
-      <!-- PÁGINA 2: ENCAJE 2N -->
-      <section class="report-page" id="page-encaje" data-title="Encaje 2N en proyectos">
-        <div class="report-inner">
-          <div class="report-header-card">
-            <div>
-              <div class="report-title">Página 2 · Encaje 2N en proyectos filtrados</div>
-              <div class="report-subtitle">
-                Cómo se reparten los proyectos según encaje ALTO / MEDIO / BAJO con soluciones 2N.
-              </div>
+          <!-- CARD 2: Encaje -->
+          <div class="chart-card chart-page" id="card-encaje" data-title="Encaje 2N en proyectos filtrados">
+            <div class="chart-card-header">Encaje 2N en proyectos</div>
+            <div class="chart-card-sub">
+              Cómo se reparten los proyectos según encaje ALTO / MEDIO / BAJO / sin clasificar.
             </div>
-            <div class="report-filtros"></div>
-          </div>
-
-          <div class="report-chart-container">
-            <div class="report-chart-wrapper">
+            <div class="chart-card-wrapper">
               <canvas id="chartEncaje"></canvas>
             </div>
+            <div class="chart-card-data" id="datosEncaje"></div>
           </div>
 
-          <div class="report-data" id="datosEncaje"></div>
-        </div>
-      </section>
-
-      <!-- PÁGINA 3: CLIENTES 2N POR SEGMENTO -->
-      <section class="report-page" id="page-clientes-segmento" data-title="Clientes 2N por segmento">
-        <div class="report-inner">
-          <div class="report-header-card">
-            <div>
-              <div class="report-title">Página 3 · Clientes con 2N activo por segmento</div>
-              <div class="report-subtitle">
-                Solo clientes marcados como “2N ya está trabajando” agrupados por segmento principal.
-              </div>
+          <!-- CARD 3: Clientes 2N por segmento -->
+          <div class="chart-card chart-page" id="card-segmento" data-title="Clientes 2N por segmento">
+            <div class="chart-card-header">Clientes con 2N activo por segmento</div>
+            <div class="chart-card-sub">
+              Solo clientes marcados como “2N ya está trabajando”, agrupados por segmento.
             </div>
-            <div class="report-filtros"></div>
-          </div>
-
-          <div class="report-chart-container">
-            <div class="report-chart-wrapper">
+            <div class="chart-card-wrapper">
               <canvas id="chartSegmento"></canvas>
             </div>
+            <div class="chart-card-data" id="datosSegmento"></div>
           </div>
 
-          <div class="report-data" id="datosSegmento"></div>
-        </div>
-      </section>
-
-      <!-- PÁGINA 4: CLIENTES 2N POR TIPO + TOP CLIENTES -->
-      <section class="report-page" id="page-clientes-tipo" data-title="Clientes 2N por tipo de cliente">
-        <div class="report-inner">
-          <div class="report-header-card">
-            <div>
-              <div class="report-title">Página 4 · Clientes con 2N activo por tipo de cliente</div>
-              <div class="report-subtitle">
-                Promotoras, arquitecturas, ingenierías, fondos, integradores, etc. con 2N ya implantado.
-              </div>
+          <!-- CARD 4: Clientes 2N por tipo -->
+          <div class="chart-card chart-page" id="card-tipo" data-title="Clientes 2N por tipo de cliente">
+            <div class="chart-card-header">Clientes con 2N activo por tipo de cliente</div>
+            <div class="chart-card-sub">
+              Promotoras, arquitecturas, ingenierías, fondos, integradores, etc.
             </div>
-            <div class="report-filtros"></div>
-          </div>
-
-          <div class="report-chart-container">
-            <div class="report-chart-wrapper">
+            <div class="chart-card-wrapper">
               <canvas id="chartClientesTipo"></canvas>
             </div>
-          </div>
-
-          <div class="report-data" id="datosClientesTipo">
-            <div id="textoClientesTipo"></div>
-            <table class="tabla-mini" id="tablaClientes2N">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Tipo</th>
-                  <th>Segmento</th>
-                  <th>Provincia</th>
-                  <th>Obras vinculadas</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- filas generadas por JS -->
-              </tbody>
-            </table>
+            <div class="chart-card-data" id="datosClientesTipo">
+              <div id="textoClientesTipo"></div>
+              <table class="tabla-mini" id="tablaClientes2N">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Segmento</th>
+                    <th>Provincia</th>
+                    <th>Obras</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </section>
-    </div>
+
+      </div>
+    </section>
   </main>
 
   <script type="module">
@@ -354,6 +349,7 @@
 
     const kpiProyectos = document.getElementById("kpiProyectos");
     const kpiEncajeAltoMedio = document.getElementById("kpiEncajeAltoMedio");
+    const textoFiltrosResumen = document.getElementById("textoFiltrosResumen");
 
     const datosEstado = document.getElementById("datosEstado");
     const datosEncaje = document.getElementById("datosEncaje");
@@ -363,7 +359,6 @@
     const tablaClientes2NBody = document.querySelector("#tablaClientes2N tbody");
 
     const btnExportPDF = document.getElementById("btnExportPDF");
-    const reportContent = document.getElementById("reportContent");
 
     function norm(text) {
       return (text || "")
@@ -504,10 +499,8 @@
     }
 
     function updateFiltrosTexto() {
-      const txt = `Provincia: ${fZona.value} · Estado: ${fEstado.value} · Encaje: ${fEncaje.value} · Vista: ${fVista.value}`;
-      document.querySelectorAll(".report-filtros").forEach(el => {
-        el.textContent = txt;
-      });
+      textoFiltrosResumen.textContent =
+        `Provincia: ${fZona.value} · Estado: ${fEstado.value} · Encaje: ${fEncaje.value} · Vista: ${fVista.value}`;
     }
 
     function renderKPIs(proy) {
@@ -532,7 +525,7 @@
 
       const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
       const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
-      const total = data.reduce((a, b) => a + b, 0);
+      const total = data.reduce((a, b) => a + b, 0) || 1;
 
       Chart.register(window.ChartDataLabels);
 
@@ -561,12 +554,13 @@
           cutout: "55%",
           plugins: {
             legend: {
-              position: "bottom",
-              labels: { font: { size: 10 } }
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 } }
             },
             datalabels: {
               formatter: (v) => {
-                if (!total || !v) return "";
+                if (!v) return "";
                 const pct = Math.round((v * 100) / total);
                 return pct ? pct + "%" : "";
               },
@@ -577,7 +571,6 @@
         }
       });
 
-      // texto debajo
       if (!proy.length) {
         datosEstado.innerHTML = "No hay proyectos en esta vista. Ajusta los filtros para ver el pipeline.";
         return;
@@ -587,7 +580,7 @@
       datosEstado.innerHTML = `
         <strong>Lectura rápida:</strong> el pipeline actual se reparte así por estados:<br/>
         ${estadosLista}.<br/><br/>
-        <strong>Insight:</strong> revisa especialmente los proyectos “En curso” con encaje ALTO / MEDIO para priorizar acciones comerciales.
+        <strong>Insight:</strong> prioriza los proyectos “En curso” con encaje ALTO / MEDIO.
       `;
     }
 
@@ -626,8 +619,9 @@
           cutout: "55%",
           plugins: {
             legend: {
-              position: "bottom",
-              labels: { font: { size: 10 } }
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 } }
             },
             datalabels: {
               formatter: (v) => {
@@ -649,10 +643,7 @@
 
       datosEncaje.innerHTML = `
         <strong>Distribución de encaje:</strong><br/>
-        ALTO: <strong>${tAlto}</strong> · MEDIO: <strong>${tMedio}</strong> · BAJO: <strong>${tBajo}</strong> · Sin clasificar: <strong>${tSin}</strong>.<br/><br/>
-        <strong>Recomendación:</strong>
-        centra los esfuerzos en los proyectos con encaje <strong>ALTO</strong> y <strong>MEDIO</strong> y revisa los “Sin clasificar”
-        para no perder oportunidades donde 2N pueda aportar más valor.
+        ALTO: <strong>${tAlto}</strong> · MEDIO: <strong>${tMedio}</strong> · BAJO: <strong>${tBajo}</strong> · Sin clasificar: <strong>${tSin}</strong>.
       `;
     }
 
@@ -696,8 +687,9 @@
           cutout: "55%",
           plugins: {
             legend: {
-              position: "bottom",
-              labels: { font: { size: 10 } }
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 } }
             },
             datalabels: {
               formatter: (v) => {
@@ -715,18 +707,14 @@
       if (!activos.length) {
         datosSegmento.innerHTML = `
           No hay clientes marcados como “2N ya está trabajando con este cliente” en esta vista.
-          Marca primero clientes en la ficha de clientes para ver este gráfico segmentado.
         `;
         return;
       }
 
       const lista = labels.map(l => `${l}: ${counts[l]} clientes`).join(" · ");
-
       datosSegmento.innerHTML = `
-        <strong>Distribución por segmento de los clientes activos 2N:</strong><br/>
-        ${lista}.<br/><br/>
-        <strong>Uso práctico:</strong> este gráfico te ayuda a ver en qué segmentos estás más posicionado con 2N
-        y dónde puedes abrir nuevo mercado (segmentos con menos peso relativo).
+        <strong>Clientes 2N por segmento:</strong><br/>
+        ${lista}.
       `;
     }
 
@@ -770,8 +758,9 @@
           cutout: "55%",
           plugins: {
             legend: {
-              position: "bottom",
-              labels: { font: { size: 10 } }
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 } }
             },
             datalabels: {
               formatter: (v) => {
@@ -788,8 +777,7 @@
 
       if (!activos.length) {
         textoClientesTipo.innerHTML = `
-          No hay clientes con 2N activo en esta vista. Marca clientes en la ficha de clientes
-          (checkbox “2N ya está trabajando con este cliente”) para ver su distribución por tipo.
+          No hay clientes con 2N activo en esta vista.
         `;
         tablaClientes2NBody.innerHTML = "";
         return;
@@ -797,10 +785,8 @@
 
       const resumenTipos = labels.map(l => `${l}: ${counts[l]} clientes`).join(" · ");
       textoClientesTipo.innerHTML = `
-        <strong>Distribución por tipo de cliente con 2N activo:</strong><br/>
-        ${resumenTipos}.<br/><br/>
-        <strong>Insight:</strong> usa esta vista para saber si tu esfuerzo se concentra en promotoras, arquitecturas,
-        integradores, fondos, etc. y equilibrar tu estrategia de prescripción.
+        <strong>Clientes 2N por tipo de cliente:</strong><br/>
+        ${resumenTipos}.
       `;
 
       const topActivos = activos
@@ -823,7 +809,6 @@
 
     function aplicarFiltrosYRender() {
       const { proy, clis } = filtrarDatos();
-
       updateFiltrosTexto();
       renderKPIs(proy);
       renderChartEstado(proy);
@@ -847,78 +832,68 @@
       btnExportPDF.textContent = "Generando PDF...";
 
       try {
-        const pages = Array.from(document.querySelectorAll(".report-page"));
+        const cards = Array.from(document.querySelectorAll(".chart-page"));
         let pdf = null;
-        const pageWidth = 210;   // A4 mm
-        const pageHeight = 297;  // A4 mm
-        const usableHeight = pageHeight - 35; // margen para cabecera
-
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 10;
+        const headerHeight = 18;
         const fechaStr = new Date().toLocaleDateString("es-ES");
 
         function drawHeader(pdfInstance, title, pageIndex) {
           pdfInstance.setFillColor(15, 23, 42);
-          pdfInstance.rect(0, 0, pageWidth, 18, "F");
+          pdfInstance.rect(0, 0, pageWidth, headerHeight, "F");
 
           pdfInstance.setFont("helvetica", "bold");
           pdfInstance.setFontSize(11);
           pdfInstance.setTextColor(255, 255, 255);
-          pdfInstance.text("CRM 2N · Reporte analista de mercado", 10, 8);
+          pdfInstance.text("CRM 2N · Reporte analista de mercado", margin, 7);
 
           pdfInstance.setFont("helvetica", "normal");
           pdfInstance.setFontSize(9);
-          pdfInstance.text(title, 10, 14);
+          pdfInstance.text(title, margin, 14);
 
           pdfInstance.setFontSize(8);
           pdfInstance.setTextColor(209, 213, 219);
-          pdfInstance.text(fechaStr, pageWidth - 10, 8, { align: "right" });
-          pdfInstance.text("Página " + pageIndex, pageWidth - 10, 14, { align: "right" });
+          pdfInstance.text(fechaStr, pageWidth - margin, 7, { align: "right" });
+          pdfInstance.text("Página " + pageIndex, pageWidth - margin, 14, { align: "right" });
 
           pdfInstance.setTextColor(17, 24, 39);
         }
 
-        let globalPageIndex = 1;
+        let pageIndex = 1;
 
-        for (const page of pages) {
-          const title = page.dataset.title || "Reporte CRM 2N";
+        for (const card of cards) {
+          const title = card.dataset.title || "Reporte CRM 2N";
 
-          const canvas = await html2canvas(page, {
+          const canvas = await html2canvas(card, {
             scale: 2,
             useCORS: true,
             windowWidth: document.documentElement.scrollWidth
           });
           const imgData = canvas.toDataURL("image/png");
 
-          const imgWidth = pageWidth - 20;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-          let heightLeft = imgHeight;
-          let offsetY = 0;
-          let sliceIndex = 0;
-
-          while (heightLeft > 0) {
-            if (!pdf) {
-              pdf = new jsPDF("p", "mm", "a4");
-            } else {
-              pdf.addPage();
-            }
-
-            const pageTitle = title + (sliceIndex > 0 ? " (cont.)" : "");
-            drawHeader(pdf, pageTitle, globalPageIndex++);
-
-            const posY = 22;
-            pdf.addImage(
-              imgData,
-              "PNG",
-              10,
-              posY - (offsetY * imgWidth) / imgWidth,
-              imgWidth,
-              imgHeight
-            );
-
-            heightLeft -= usableHeight;
-            offsetY += usableHeight;
-            sliceIndex++;
+          const maxW = pageWidth - margin * 2;
+          const maxH = pageHeight - headerHeight - margin * 2;
+          const imgRatio = canvas.width / canvas.height;
+          let imgW = maxW;
+          let imgH = imgW / imgRatio;
+          if (imgH > maxH) {
+            imgH = maxH;
+            imgW = imgH * imgRatio;
           }
+
+          const offsetX = (pageWidth - imgW) / 2;
+          const offsetY = headerHeight + ((pageHeight - headerHeight - imgH) / 2);
+
+          if (!pdf) {
+            pdf = new jsPDF("p", "mm", "a4");
+          } else {
+            pdf.addPage();
+          }
+
+          drawHeader(pdf, title, pageIndex++);
+          pdf.addImage(imgData, "PNG", offsetX, offsetY, imgW, imgH);
         }
 
         if (pdf) {
