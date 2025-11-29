@@ -1,0 +1,280 @@
+/* =========================================================
+   ESTILOS GLOBALES MOBILE CRM 2N
+   ========================================================= */
+
+body {
+  background: #ffffff !important;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+.mobile-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 10px 40px 10px;
+  background: #ffffff !important;
+}
+
+/* -------------------------------------
+   TITULOS
+---------------------------------------- */
+
+.mobile-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.mobile-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* -------------------------------------
+   BUSCADOR
+---------------------------------------- */
+
+.search-input-mobile {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  padding: 5px 9px;
+  font-size: 11px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  background: #f9fafb;
+}
+
+.search-input-mobile:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
+}
+
+/* -------------------------------------
+   SELECTORES / FILTROS
+---------------------------------------- */
+
+.mobile-select {
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: #f9fafb;
+  min-width: 120px;
+}
+
+.mobile-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
+}
+
+.mobile-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* -------------------------------------
+   KPIs
+---------------------------------------- */
+
+.mobile-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mobile-kpi {
+  flex: 1 1 45%;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 14px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.mobile-kpi-label {
+  font-size: 10px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.mobile-kpi-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.mobile-kpi-footnote {
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+/* -------------------------------------
+   SECCIONES
+---------------------------------------- */
+
+.mobile-section {
+  margin-top: 4px;
+}
+
+.mobile-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.mobile-section-sub {
+  font-size: 10.5px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+/* -------------------------------------
+   TARJETAS
+---------------------------------------- */
+
+.mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.mobile-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.mobile-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.mobile-chip {
+  font-size: 9px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.mobile-chip-activo {
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* PRIORIDADES */
+.chip-prio-alta {
+  border-color: #ef4444;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.chip-prio-media {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.chip-prio-baja {
+  border-color: #22c55e;
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* TIPOS */
+.chip-tipo {
+  border-color: #60a5fa;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* PILLS */
+.mobile-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.mobile-pill {
+  font-size: 9px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* META */
+.mobile-meta {
+  font-size: 9px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* -------------------------------------
+   BOTTOM NAV
+---------------------------------------- */
+
+.mobile-bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 4px 10px 4px;
+  z-index: 20;
+}
+
+.mobile-nav-item {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: #475569;
+  cursor: pointer;
+}
+
+.mobile-nav-item span {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 1px;
+}
+
+.mobile-nav-item.active {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* -------------------------------------
+   FOR LIGHT THEME
+---------------------------------------- */
+
+.topnav, .content {
+  background: #ffffff !important;
+}
