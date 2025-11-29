@@ -58,6 +58,23 @@
       border-style: dashed;
     }
 
+    /* Colores según prioridad máxima de tareas del proyecto */
+    .project-card.project-prio-alta {
+      border-color: #B91C1C;
+      box-shadow: 0 0 0 1px #FCA5A5;
+      background: #FEF2F2;
+    }
+    .project-card.project-prio-media {
+      border-color: #D97706;
+      box-shadow: 0 0 0 1px #FBBF24;
+      background: #FFFBEB;
+    }
+    .project-card.project-prio-baja {
+      border-color: #0369A1;
+      box-shadow: 0 0 0 1px #BAE6FD;
+      background: #EFF6FF;
+    }
+
     .task-header-row {
       display: flex;
       align-items: center;
@@ -120,7 +137,7 @@
           <div>
             <div class="panel-title">Tareas</div>
             <div class="panel-subtitle" id="subtituloTareas">
-              Todas las tareas. Puedes filtrarlas por proyecto arrastrando al panel izquierdo.
+              Todas las tareas. Puedes arrastrarlas a un proyecto para asociarlas.
             </div>
           </div>
           <button class="btn-primary" id="btnNuevaTarea">+ Nueva tarea</button>
@@ -320,6 +337,22 @@
       renderProyectos();
     }
 
+    function getProjectPriority(projectId) {
+      // 0 = sin tareas, 1 = baja, 2 = media, 3 = alta
+      let level = 0;
+      tareas.forEach(t => {
+        if (t.proyecto_id === projectId) {
+          if (t.prioridad === "alta" && level < 3) level = 3;
+          else if (t.prioridad === "media" && level < 2) level = 2;
+          else if (t.prioridad === "baja" && level < 1) level = 1;
+        }
+      });
+      if (level === 3) return "alta";
+      if (level === 2) return "media";
+      if (level === 1) return "baja";
+      return null;
+    }
+
     function renderProyectos() {
       projectKanban.innerHTML = "";
       projectFooter.textContent = "";
@@ -338,6 +371,12 @@
         const card = document.createElement("div");
         card.className = "project-card";
         if (p.id === proyectoActivo) card.classList.add("active-project");
+
+        const prio = getProjectPriority(p.id);
+        if (prio === "alta") card.classList.add("project-prio-alta");
+        else if (prio === "media") card.classList.add("project-prio-media");
+        else if (prio === "baja") card.classList.add("project-prio-baja");
+
         card.dataset.id = p.id;
         card.innerHTML = `<div>${p.nombre}</div>`;
 
@@ -379,6 +418,7 @@
       snap.forEach(d => tareas.push({ id: d.id, ...d.data() }));
       renderKanban();
       renderNotas();
+      renderProyectos(); // refresca colores de proyectos según prioridad
     }
 
     function actualizarSubtituloTareas() {
@@ -510,7 +550,6 @@
       proyectoActivo = proyectoId;
       await cargarTareas();
       actualizarSubtituloTareas();
-      renderProyectos();
     }
 
     async function crearNotaRapida() {
