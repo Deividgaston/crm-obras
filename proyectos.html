@@ -24,7 +24,25 @@
             <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
         </div>
 
-        <input type="text" class="search-box" placeholder="Buscar..." />
+        <div style="display:flex;align-items:center;gap:8px;">
+            <input type="text" class="search-box" placeholder="Buscar..." />
+            <button
+                id="btnLogout"
+                type="button"
+                style="
+                    font-size:11px;
+                    padding:6px 10px;
+                    border-radius:999px;
+                    border:1px solid #E5E7EB;
+                    background:#FFFFFF;
+                    color:#111827;
+                    cursor:pointer;
+                    white-space:nowrap;
+                "
+            >
+                Cerrar sesión
+            </button>
+        </div>
     </div>
 
     <main class="content">
@@ -202,7 +220,7 @@
 
     <script type="module">
 
-        import { db } from "./firebase.js";
+        import { db, auth } from "./firebase.js";
         import {
             collection,
             getDocs,
@@ -440,7 +458,7 @@
                 });
             });
 
-            // 👉 NUEVO: click en título abre modal de edición
+            // click en título abre modal de edición
             document.querySelectorAll(".proj-title-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
                     const id = btn.dataset.id;
@@ -506,9 +524,15 @@
 
             try {
                 if (id) {
+                    // actualización: no tocamos ownerId
                     await updateDoc(doc(db, "proyectos", id), payload);
                 } else {
-                    await addDoc(collection(db, "proyectos"), payload);
+                    // creación: añadimos ownerId según el usuario autenticado
+                    const ownerId = auth.currentUser ? auth.currentUser.uid : null;
+                    await addDoc(collection(db, "proyectos"), {
+                        ...payload,
+                        ownerId: ownerId || ""
+                    });
                 }
 
                 projectDialog.close();
@@ -603,8 +627,13 @@
                 }
 
                 const ref = collection(db, "proyectos");
+                const ownerId = auth.currentUser ? auth.currentUser.uid : null;
+
                 for (const p of toImport) {
-                    await addDoc(ref, p);
+                    await addDoc(ref, {
+                        ...p,
+                        ownerId: ownerId || ""
+                    });
                 }
 
                 alert(`Importados ${toImport.length} proyectos.\nDuplicados ignorados: ${duplicates.length}`);
@@ -705,7 +734,7 @@
                 ciudad: getCell(row, HEADER_MAP.ciudad).toString().trim(),
                 provincia: getCell(row, HEADER_MAP.provincia).toString().trim(),
 
-                // 🔥 TODO IMPORTADO → SIEMPRE ESTADO DETECTADO
+                // TODO IMPORTADO → SIEMPRE ESTADO DETECTADO
                 estado: "Detectado",
 
                 prioridad: getCell(row, HEADER_MAP.prioridad) || "Media",
@@ -736,5 +765,7 @@
 
     </script>
 
+    <!-- Guardia de autenticación -->
+    <script type="module" src="auth.js"></script>
 </body>
 </html>
