@@ -25,7 +25,25 @@
       <div class="nav-item" onclick="location.href='reportes.html'">Reportes</div>
     </div>
 
-    <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="text" class="search-box" placeholder="(Solo UI) Buscar..." />
+      <button
+        id="btnLogout"
+        type="button"
+        style="
+          font-size:11px;
+          padding:6px 10px;
+          border-radius:999px;
+          border:1px solid #E5E7EB;
+          background:#FFFFFF;
+          color:#111827;
+          cursor:pointer;
+          white-space:nowrap;
+        "
+      >
+        Cerrar sesión
+      </button>
+    </div>
   </div>
 
   <main class="content">
@@ -248,7 +266,7 @@
 
   <!-- SCRIPT PRINCIPAL -->
   <script type="module">
-    import { db } from "./firebase.js";
+    import { db, auth } from "./firebase.js";
     import {
       collection,
       getDocs,
@@ -610,20 +628,30 @@
         trabaja_con_2n: document.getElementById("cliTrabaja2N").checked,
       };
 
-      if (clienteEditandoId) {
-        await updateDoc(doc(db, "clientes", clienteEditandoId), payload);
-        const idx = clientes.findIndex(c => c.id === clienteEditandoId);
-        if (idx !== -1) clientes[idx] = { ...clientes[idx], ...payload };
-      } else {
-        const ref = await addDoc(collection(db, "clientes"), { ...payload, fuente: "manual" });
-        clientes.push({ id: ref.id, ...payload, fuente: "manual" });
+      try {
+        if (clienteEditandoId) {
+          await updateDoc(doc(db, "clientes", clienteEditandoId), payload);
+          const idx = clientes.findIndex(c => c.id === clienteEditandoId);
+          if (idx !== -1) clientes[idx] = { ...clientes[idx], ...payload };
+        } else {
+          const ownerId = auth.currentUser ? auth.currentUser.uid : null;
+          const ref = await addDoc(collection(db, "clientes"), {
+            ...payload,
+            fuente: "manual",
+            ownerId: ownerId || ""
+          });
+          clientes.push({ id: ref.id, ...payload, fuente: "manual", ownerId: ownerId || "" });
+        }
+
+        recalcularVinculaciones();
+        inicializarFiltroZonasClientes();
+        aplicarFiltrosClientes();
+
+        clienteDialog.close();
+      } catch (err) {
+        console.error("Error guardando cliente:", err);
+        alert("Error guardando el cliente.");
       }
-
-      recalcularVinculaciones();
-      inicializarFiltroZonasClientes();
-      aplicarFiltrosClientes();
-
-      clienteDialog.close();
     });
 
     // ======= ELIMINAR SELECCIONADOS =======
@@ -635,14 +663,19 @@
       }
       if (!confirm(`Vas a eliminar ${marcados.length} clientes. ¿Seguro?`)) return;
 
-      const ids = marcados.map(ch => ch.dataset.id);
-      for (const id of ids) {
-        await deleteDoc(doc(db, "clientes", id));
+      try {
+        const ids = marcados.map(ch => ch.dataset.id);
+        for (const id of ids) {
+          await deleteDoc(doc(db, "clientes", id));
+        }
+        clientes = clientes.filter(c => !ids.includes(c.id));
+        recalcularVinculaciones();
+        inicializarFiltroZonasClientes();
+        aplicarFiltrosClientes();
+      } catch (err) {
+        console.error("Error eliminando clientes:", err);
+        alert("Error eliminando clientes.");
       }
-      clientes = clientes.filter(c => !ids.includes(c.id));
-      recalcularVinculaciones();
-      inicializarFiltroZonasClientes();
-      aplicarFiltrosClientes();
     });
 
     // ======= SCOUTING: PROMPT =======
@@ -763,7 +796,7 @@
 
         persona_contacto: (getField(row, ["persona_contacto","contacto"]) || "").toString().trim(),
         cargo_contacto: (getField(row, ["cargo_contacto","cargo","puesto"]) || "").toString().trim(),
-        telefono_contacto: (getField(row, ["telefono_contacto","tel_contacto"]) || "").toString().trim(),
+        telefono_contacto: (getField(row, ["telefono_contacto","tel_contacto"]) || "").toString().toString().trim(),
         email_contacto: (getField(row, ["email_contacto","correo_contacto"]) || "").toString().trim(),
 
         web: (getField(row, ["web","url","pagina"]) || "").toString().trim(),
@@ -794,6 +827,7 @@
 
       const headers = lines[0].split(";");
       let added = 0, skipped = 0;
+      const ownerId = auth.currentUser ? auth.currentUser.uid : null;
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(";");
@@ -806,8 +840,11 @@
         const key = buildClienteKey(payload);
         if (existingKeys.has(key)) { skipped++; continue; }
 
-        const ref = await addDoc(collection(db, "clientes"), payload);
-        clientes.push({ id: ref.id, ...payload });
+        const ref = await addDoc(collection(db, "clientes"), {
+          ...payload,
+          ownerId: ownerId || ""
+        });
+        clientes.push({ id: ref.id, ...payload, ownerId: ownerId || "" });
         existingKeys.add(key);
         added++;
       }
@@ -822,10 +859,11 @@
       }
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets["Clientes"] || workbook.Sheets[workbook.SheetNames[0]];
+      const sheet = XLSX.Sheets["Clientes"] || XLSX.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
       let added = 0, skipped = 0;
+      const ownerId = auth.currentUser ? auth.currentUser.uid : null;
 
       for (const row of json) {
         const payload = mapRowClientes(row, "scouting_excel");
@@ -834,8 +872,11 @@
         const key = buildClienteKey(payload);
         if (existingKeys.has(key)) { skipped++; continue; }
 
-        const ref = await addDoc(collection(db, "clientes"), payload);
-        clientes.push({ id: ref.id, ...payload });
+        const ref = await addDoc(collection(db, "clientes"), {
+          ...payload,
+          ownerId: ownerId || ""
+        });
+        clientes.push({ id: ref.id, ...payload, ownerId: ownerId || "" });
         existingKeys.add(key);
         added++;
       }
@@ -852,5 +893,8 @@
     // ARRANQUE
     cargarClientesYProyectos();
   </script>
+
+  <!-- Guardia de autenticación -->
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
