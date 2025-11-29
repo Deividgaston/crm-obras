@@ -27,6 +27,15 @@
 </head>
 
 <body>
+  <script>
+  // Detección sencilla de móvil
+  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (esMovil) {
+    window.location.href = "mobile-index.html";
+  }
+</script>
+
   <!-- NAV SUPERIOR -->
   <div class="topnav">
     <div class="logo">CRM 2N</div>
