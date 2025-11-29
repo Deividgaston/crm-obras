@@ -20,6 +20,123 @@
         display: none;
       }
     }
+
+    /* Estilo extra para las páginas de reporte (para que el PDF se vea más “plantilla”) */
+    .report-page {
+      background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+      padding: 16px 10px 24px 10px;
+      margin-bottom: 20px;
+    }
+    .report-inner {
+      max-width: 780px;
+      margin: 0 auto;
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
+      padding: 18px 20px 20px 20px;
+      border: 1px solid #E5E7EB;
+    }
+    .report-header-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #E5E7EB;
+      padding-bottom: 8px;
+    }
+    .report-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+    .report-subtitle {
+      font-size: 11px;
+      color: #6B7280;
+      margin-top: 2px;
+    }
+    .report-filtros {
+      font-size: 10px;
+      color: #9CA3AF;
+      text-align: right;
+      max-width: 260px;
+    }
+    .report-kpis-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .report-kpi {
+      flex: 1 1 100px;
+      background: linear-gradient(135deg, #F9FAFB 0%, #EFF6FF 100%);
+      border-radius: 10px;
+      padding: 6px 8px;
+      border: 1px solid #E5E7EB;
+    }
+    .report-kpi-label {
+      font-size: 10px;
+      color: #6B7280;
+      margin-bottom: 2px;
+    }
+    .report-kpi-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.1;
+    }
+    .report-kpi-footnote {
+      font-size: 9px;
+      color: #9CA3AF;
+      margin-top: 2px;
+    }
+    .report-chart-container {
+      margin-top: 6px;
+      margin-bottom: 8px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top left, #EEF2FF 0, #FFFFFF 45%, #F9FAFB 100%);
+      border: 1px solid #E5E7EB;
+      padding: 10px 12px;
+    }
+    .report-chart-wrapper {
+      position: relative;
+      height: 420px; /* gráfico grande para PDF */
+    }
+    .report-data {
+      font-size: 10.5px;
+      color: #4B5563;
+      background: #F9FAFB;
+      border-radius: 10px;
+      border: 1px dashed #D1D5DB;
+      padding: 8px 9px;
+    }
+    .report-data strong {
+      color: #111827;
+    }
+    .report-data ul {
+      padding-left: 16px;
+      margin: 4px 0 0 0;
+    }
+    .report-data li {
+      margin-bottom: 2px;
+    }
+
+    .tabla-mini {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      font-size: 9.5px;
+    }
+    .tabla-mini th,
+    .tabla-mini td {
+      border: 1px solid #E5E7EB;
+      padding: 3px 4px;
+      text-align: left;
+    }
+    .tabla-mini th {
+      background: #F3F4F6;
+      font-weight: 600;
+      color: #111827;
+    }
   </style>
 </head>
 
@@ -46,7 +163,7 @@
       <div>
         <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Reportes · Vista analista de mercado</h2>
         <div style="font-size:12px;color:#5A6872;">
-          Control total de obras y clientes, segmentado por provincia, estado y encaje 2N. Exporta el informe a PDF.
+          Control total de obras y clientes, segmentado por provincia, estado, encaje 2N y tipo de cliente.
         </div>
       </div>
       <button id="btnExportPDF" class="btn-primary" type="button" style="font-size:11px;padding:6px 12px;">
@@ -82,7 +199,7 @@
         <div style="flex:1;"></div>
 
         <span style="font-size:10.5px;color:#9CA3AF;">
-          El PDF se genera con los filtros actuales (una hoja por cada sección).
+          El PDF usa estos filtros · Un gráfico grande por hoja con datos debajo.
         </span>
       </div>
     </div>
@@ -90,118 +207,126 @@
     <!-- CONTENIDO DEL REPORTE (SE CAPTURA PARA PDF) -->
     <div id="reportContent">
 
-      <!-- SECCIÓN 1: OVERVIEW -->
-      <section id="section-overview" style="margin-bottom:16px;">
-        <!-- KPIs -->
-        <div class="kpi-row" style="margin-bottom:14px;">
-          <div class="kpi-card">
-            <div class="kpi-label">Proyectos filtrados</div>
-            <div id="kpiProyectos" class="kpi-value">–</div>
-            <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Total de obras dentro de los filtros.</div>
+      <!-- PÁGINA 1: ESTADO DEL PIPELINE -->
+      <section class="report-page" id="page-estado" data-title="Estado del pipeline de proyectos">
+        <div class="report-inner">
+          <div class="report-header-card">
+            <div>
+              <div class="report-title">Página 1 · Estado del pipeline</div>
+              <div class="report-subtitle">
+                Distribución de proyectos por estado (igual que en Pipeline) con KPIs clave.
+              </div>
+            </div>
+            <div class="report-filtros"></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Clientes filtrados</div>
-            <div id="kpiClientes" class="kpi-value">–</div>
-            <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Clientes activos en la provincia seleccionada.</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Obras encaje ALTO / MEDIO</div>
-            <div id="kpiEncajeAltoMedio" class="kpi-value">–</div>
-            <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Pipeline donde 2N encaja muy bien.</div>
-          </div>
-        </div>
 
-        <!-- CHARTS FILA 1 -->
-        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;">
-          <!-- Proyectos por estado (DONUT) -->
-          <div class="card">
-            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-              Distribución de proyectos por estado
+          <div class="report-kpis-row">
+            <div class="report-kpi">
+              <div class="report-kpi-label">Proyectos filtrados</div>
+              <div id="kpiProyectos" class="report-kpi-value">–</div>
+              <div class="report-kpi-footnote">Total de obras según filtros actuales.</div>
             </div>
-            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-              Igual que el pipeline: estados reales de tus proyectos.
+            <div class="report-kpi">
+              <div class="report-kpi-label">Obras encaje ALTO / MEDIO</div>
+              <div id="kpiEncajeAltoMedio" class="report-kpi-value">–</div>
+              <div class="report-kpi-footnote">Donde el encaje tecnológico de 2N es muy bueno.</div>
             </div>
-            <div style="position:relative;height:230px;">
+          </div>
+
+          <div class="report-chart-container">
+            <div class="report-chart-wrapper">
               <canvas id="chartEstado"></canvas>
             </div>
           </div>
 
-          <!-- Encaje 2N (DONUT) -->
-          <div class="card">
-            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-              Encaje 2N en proyectos filtrados
-            </div>
-            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-              Clasificación ALTO / MEDIO / BAJO vs sin clasificar.
-            </div>
-            <div style="position:relative;height:230px;">
-              <canvas id="chartEncaje"></canvas>
-            </div>
-          </div>
+          <div class="report-data" id="datosEstado"></div>
         </div>
       </section>
 
-      <!-- SECCIÓN 2: CLIENTES 2N -->
-      <section id="section-clientes-2n" style="margin-bottom:16px;">
-        <!-- CHARTS FILA 2 -->
-        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
-          <!-- Clientes 2N por segmento (DONUT) -->
-          <div class="card">
-            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-              Clientes 2N por segmento
+      <!-- PÁGINA 2: ENCAJE 2N -->
+      <section class="report-page" id="page-encaje" data-title="Encaje 2N en proyectos">
+        <div class="report-inner">
+          <div class="report-header-card">
+            <div>
+              <div class="report-title">Página 2 · Encaje 2N en proyectos filtrados</div>
+              <div class="report-subtitle">
+                Cómo se reparten los proyectos según encaje ALTO / MEDIO / BAJO con soluciones 2N.
+              </div>
             </div>
-            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-              Solo clientes donde <strong>2N ya está trabajando</strong>, agrupados por segmento.
+            <div class="report-filtros"></div>
+          </div>
+
+          <div class="report-chart-container">
+            <div class="report-chart-wrapper">
+              <canvas id="chartEncaje"></canvas>
             </div>
-            <div style="position:relative;height:230px;">
+          </div>
+
+          <div class="report-data" id="datosEncaje"></div>
+        </div>
+      </section>
+
+      <!-- PÁGINA 3: CLIENTES 2N POR SEGMENTO -->
+      <section class="report-page" id="page-clientes-segmento" data-title="Clientes 2N por segmento">
+        <div class="report-inner">
+          <div class="report-header-card">
+            <div>
+              <div class="report-title">Página 3 · Clientes con 2N activo por segmento</div>
+              <div class="report-subtitle">
+                Solo clientes marcados como “2N ya está trabajando” agrupados por segmento principal.
+              </div>
+            </div>
+            <div class="report-filtros"></div>
+          </div>
+
+          <div class="report-chart-container">
+            <div class="report-chart-wrapper">
               <canvas id="chartSegmento"></canvas>
             </div>
           </div>
 
-          <!-- Clientes 2N por tipo (DONUT) -->
-          <div class="card">
-            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-              Clientes 2N por tipo de cliente
+          <div class="report-data" id="datosSegmento"></div>
+        </div>
+      </section>
+
+      <!-- PÁGINA 4: CLIENTES 2N POR TIPO + TOP CLIENTES -->
+      <section class="report-page" id="page-clientes-tipo" data-title="Clientes 2N por tipo de cliente">
+        <div class="report-inner">
+          <div class="report-header-card">
+            <div>
+              <div class="report-title">Página 4 · Clientes con 2N activo por tipo de cliente</div>
+              <div class="report-subtitle">
+                Promotoras, arquitecturas, ingenierías, fondos, integradores, etc. con 2N ya implantado.
+              </div>
             </div>
-            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-              Promotoras, arquitecturas, ingenierías, fondos, integradores, etc. (solo con 2N activo).
-            </div>
-            <div style="position:relative;height:230px;">
+            <div class="report-filtros"></div>
+          </div>
+
+          <div class="report-chart-container">
+            <div class="report-chart-wrapper">
               <canvas id="chartClientesTipo"></canvas>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- SECCIÓN 3: TABLAS + RESUMEN -->
-      <section id="section-tablas">
-        <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
-          <!-- Tabla principal (solo PDF) -->
-          <div class="card solo-pdf">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <div id="tablaTitulo" style="font-size:12px;font-weight:600;color:#111827;">
-                Detalle de proyectos
-              </div>
-              <div style="font-size:10px;color:#9CA3AF;">
-                Ordenado por relevancia (encaje y estado).
-              </div>
-            </div>
-            <div id="tablaDatosWrapper"></div>
-            <div id="tablaEmpty" class="empty-state" style="display:none;">
-              No hay datos para los filtros seleccionados.
-            </div>
-          </div>
-
-          <!-- Resumen de indicadores (visible también en pantalla) -->
-          <div class="card">
-            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-              Resumen ejecutivo
-            </div>
-            <div id="resumenEjecutivo" style="font-size:11px;color:#4B5563;display:flex;flex-direction:column;gap:6px;"></div>
+          <div class="report-data" id="datosClientesTipo">
+            <div id="textoClientesTipo"></div>
+            <table class="tabla-mini" id="tablaClientes2N">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Tipo</th>
+                  <th>Segmento</th>
+                  <th>Provincia</th>
+                  <th>Obras vinculadas</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- filas generadas por JS -->
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
-
     </div>
   </main>
 
@@ -228,13 +353,14 @@
     const buscadorGlobal = document.getElementById("buscadorGlobal");
 
     const kpiProyectos = document.getElementById("kpiProyectos");
-    const kpiClientes = document.getElementById("kpiClientes");
     const kpiEncajeAltoMedio = document.getElementById("kpiEncajeAltoMedio");
 
-    const tablaTitulo = document.getElementById("tablaTitulo");
-    const tablaDatosWrapper = document.getElementById("tablaDatosWrapper");
-    const tablaEmpty = document.getElementById("tablaEmpty");
-    const resumenEjecutivo = document.getElementById("resumenEjecutivo");
+    const datosEstado = document.getElementById("datosEstado");
+    const datosEncaje = document.getElementById("datosEncaje");
+    const datosSegmento = document.getElementById("datosSegmento");
+    const datosClientesTipo = document.getElementById("datosClientesTipo");
+    const textoClientesTipo = document.getElementById("textoClientesTipo");
+    const tablaClientes2NBody = document.querySelector("#tablaClientes2N tbody");
 
     const btnExportPDF = document.getElementById("btnExportPDF");
     const reportContent = document.getElementById("reportContent");
@@ -279,16 +405,10 @@
 
     function inicializarFiltroProvincia() {
       const provincias = new Set();
-
-      proyectos.forEach(p => {
-        if (p.provincia) provincias.add(p.provincia);
-      });
-      clientes.forEach(c => {
-        if (c.provincia) provincias.add(c.provincia);
-      });
+      proyectos.forEach(p => { if (p.provincia) provincias.add(p.provincia); });
+      clientes.forEach(c => { if (c.provincia) provincias.add(c.provincia); });
 
       const lista = [...provincias].filter(z => z).sort((a, b) => a.localeCompare(b, "es"));
-
       fZona.innerHTML =
         '<option value="Todas">Provincia: todas</option>' +
         lista.map(z => `<option value="${z}">${z}</option>`).join("");
@@ -296,9 +416,7 @@
 
     function inicializarFiltroEstado() {
       const estadosSet = new Set();
-      proyectos.forEach(p => {
-        if (p.estado) estadosSet.add(p.estado);
-      });
+      proyectos.forEach(p => { if (p.estado) estadosSet.add(p.estado); });
       const lista = [...estadosSet].sort((a, b) => a.localeCompare(b, "es"));
       fEstado.innerHTML =
         '<option value="Todos">Estado proyecto: todos</option>' +
@@ -360,9 +478,7 @@
             p.encaje_2n,
             p.cliente_principal,
             p.promotora
-          ]
-            .join(" ")
-            .toLowerCase();
+          ].join(" ").toLowerCase();
           return blob.includes(txt);
         });
 
@@ -373,9 +489,7 @@
             c.segmento,
             c.ciudad,
             c.provincia
-          ]
-            .join(" ")
-            .toLowerCase();
+          ].join(" ").toLowerCase();
           return blob.includes(txt);
         });
       }
@@ -389,9 +503,15 @@
       return { proy, clis };
     }
 
-    function renderKPIs(proy, clis) {
+    function updateFiltrosTexto() {
+      const txt = `Provincia: ${fZona.value} · Estado: ${fEstado.value} · Encaje: ${fEncaje.value} · Vista: ${fVista.value}`;
+      document.querySelectorAll(".report-filtros").forEach(el => {
+        el.textContent = txt;
+      });
+    }
+
+    function renderKPIs(proy) {
       kpiProyectos.textContent = proy.length;
-      kpiClientes.textContent = clis.length;
 
       const encAltoMedio = proy.filter(p => {
         const e = (p.encaje_2n || "").toString().toUpperCase().trim();
@@ -403,8 +523,8 @@
     function renderChartEstado(proy) {
       if (chartEstado) chartEstado.destroy();
       const ctx = document.getElementById("chartEstado").getContext("2d");
-      const counts = {};
 
+      const counts = {};
       proy.forEach(p => {
         const e = p.estado || "Sin estado";
         counts[e] = (counts[e] || 0) + 1;
@@ -456,6 +576,19 @@
           }
         }
       });
+
+      // texto debajo
+      if (!proy.length) {
+        datosEstado.innerHTML = "No hay proyectos en esta vista. Ajusta los filtros para ver el pipeline.";
+        return;
+      }
+
+      const estadosLista = labels.map(l => `${l}: ${counts[l]} proyectos`).join(" · ");
+      datosEstado.innerHTML = `
+        <strong>Lectura rápida:</strong> el pipeline actual se reparte así por estados:<br/>
+        ${estadosLista}.<br/><br/>
+        <strong>Insight:</strong> revisa especialmente los proyectos “En curso” con encaje ALTO / MEDIO para priorizar acciones comerciales.
+      `;
     }
 
     function renderChartEncaje(proy) {
@@ -463,7 +596,6 @@
       const ctx = document.getElementById("chartEncaje").getContext("2d");
 
       const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
-
       proy.forEach(p => {
         const e = (p.encaje_2n || "").toString().toUpperCase().trim();
         if (e === "ALTO") counts.ALTO++;
@@ -474,7 +606,7 @@
 
       const labels = ["ALTO", "MEDIO", "BAJO", "SIN"];
       const data = [counts.ALTO, counts.MEDIO, counts.BAJO, counts.SIN];
-      const total = data.reduce((a, b) => a + b, 0);
+      const total = data.reduce((a, b) => a + b, 0) || 1;
 
       chartEncaje = new Chart(ctx, {
         type: "doughnut",
@@ -499,7 +631,7 @@
             },
             datalabels: {
               formatter: (v) => {
-                if (!total || !v) return "";
+                if (!v) return "";
                 const pct = Math.round((v * 100) / total);
                 return pct ? pct + "%" : "";
               },
@@ -509,6 +641,19 @@
           }
         }
       });
+
+      const tAlto = counts.ALTO;
+      const tMedio = counts.MEDIO;
+      const tBajo = counts.BAJO;
+      const tSin = counts.SIN;
+
+      datosEncaje.innerHTML = `
+        <strong>Distribución de encaje:</strong><br/>
+        ALTO: <strong>${tAlto}</strong> · MEDIO: <strong>${tMedio}</strong> · BAJO: <strong>${tBajo}</strong> · Sin clasificar: <strong>${tSin}</strong>.<br/><br/>
+        <strong>Recomendación:</strong>
+        centra los esfuerzos en los proyectos con encaje <strong>ALTO</strong> y <strong>MEDIO</strong> y revisa los “Sin clasificar”
+        para no perder oportunidades donde 2N pueda aportar más valor.
+      `;
     }
 
     function renderChartSegmento(clis) {
@@ -524,7 +669,7 @@
 
       const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
       const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
-      const total = data.reduce((a, b) => a + b, 0);
+      const total = data.reduce((a, b) => a + b, 0) || 1;
 
       chartSegmento = new Chart(ctx, {
         type: "doughnut",
@@ -556,7 +701,7 @@
             },
             datalabels: {
               formatter: (v) => {
-                if (!total || !v) return "";
+                if (!v) return "";
                 const pct = Math.round((v * 100) / total);
                 return pct ? pct + "%" : "";
               },
@@ -566,6 +711,23 @@
           }
         }
       });
+
+      if (!activos.length) {
+        datosSegmento.innerHTML = `
+          No hay clientes marcados como “2N ya está trabajando con este cliente” en esta vista.
+          Marca primero clientes en la ficha de clientes para ver este gráfico segmentado.
+        `;
+        return;
+      }
+
+      const lista = labels.map(l => `${l}: ${counts[l]} clientes`).join(" · ");
+
+      datosSegmento.innerHTML = `
+        <strong>Distribución por segmento de los clientes activos 2N:</strong><br/>
+        ${lista}.<br/><br/>
+        <strong>Uso práctico:</strong> este gráfico te ayuda a ver en qué segmentos estás más posicionado con 2N
+        y dónde puedes abrir nuevo mercado (segmentos con menos peso relativo).
+      `;
     }
 
     function renderChartClientesTipo(clis) {
@@ -581,7 +743,7 @@
 
       const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
       const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
-      const total = data.reduce((a, b) => a + b, 0);
+      const total = data.reduce((a, b) => a + b, 0) || 1;
 
       chartClientesTipo = new Chart(ctx, {
         type: "doughnut",
@@ -613,7 +775,7 @@
             },
             datalabels: {
               formatter: (v) => {
-                if (!total || !v) return "";
+                if (!v) return "";
                 const pct = Math.round((v * 100) / total);
                 return pct ? pct + "%" : "";
               },
@@ -623,204 +785,51 @@
           }
         }
       });
-    }
 
-    function renderTabla(proy, clis) {
-      const vista = fVista.value;
-      let html = "";
-
-      if (vista === "clientes") {
-        if (!clis.length) {
-          tablaDatosWrapper.innerHTML = "";
-          tablaEmpty.style.display = "block";
-          tablaTitulo.textContent = "Detalle de clientes";
-          return;
-        }
-        tablaEmpty.style.display = "none";
-        tablaTitulo.textContent = "Detalle de clientes";
-
-        html += `
-          <table>
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Tipo</th>
-                <th>Segmento</th>
-                <th>Provincia</th>
-                <th>Obras</th>
-                <th>2N</th>
-              </tr>
-            </thead>
-            <tbody>
+      if (!activos.length) {
+        textoClientesTipo.innerHTML = `
+          No hay clientes con 2N activo en esta vista. Marca clientes en la ficha de clientes
+          (checkbox “2N ya está trabajando con este cliente”) para ver su distribución por tipo.
         `;
-        clis
-          .slice()
-          .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
-          .forEach(c => {
-            const trabaja2N = !!c.trabaja_con_2n;
-            const badge2N = trabaja2N
-              ? '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#DCFCE7;color:#166534;">2N</span>'
-              : '<span style="font-size:10px;color:#9CA3AF;">—</span>';
-            html += `
-              <tr>
-                <td>${c.nombre_display || ""}</td>
-                <td>${c.tipo || ""}</td>
-                <td>${c.segmento || ""}</td>
-                <td>${c.provincia || ""}</td>
-                <td>${c.num_obras || 0}</td>
-                <td>${badge2N}</td>
-              </tr>
-            `;
-          });
-        html += "</tbody></table>";
-        tablaDatosWrapper.innerHTML = html;
+        tablaClientes2NBody.innerHTML = "";
         return;
       }
 
-      if (!proy.length) {
-        tablaDatosWrapper.innerHTML = "";
-        tablaEmpty.style.display = "block";
-        tablaTitulo.textContent = "Detalle de proyectos";
-        return;
-      }
-      tablaEmpty.style.display = "none";
-      tablaTitulo.textContent = "Detalle de proyectos";
-
-      html += `
-        <table>
-          <thead>
-            <tr>
-              <th>Proyecto</th>
-              <th>Provincia</th>
-              <th>Estado</th>
-              <th>Encaje 2N</th>
-              <th>Cliente principal</th>
-              <th>Segmento</th>
-            </tr>
-          </thead>
-          <tbody>
+      const resumenTipos = labels.map(l => `${l}: ${counts[l]} clientes`).join(" · ");
+      textoClientesTipo.innerHTML = `
+        <strong>Distribución por tipo de cliente con 2N activo:</strong><br/>
+        ${resumenTipos}.<br/><br/>
+        <strong>Insight:</strong> usa esta vista para saber si tu esfuerzo se concentra en promotoras, arquitecturas,
+        integradores, fondos, etc. y equilibrar tu estrategia de prescripción.
       `;
 
-      const pesoEncaje = (e) => {
-        const v = (e || "").toString().toUpperCase().trim();
-        if (v === "ALTO") return 3;
-        if (v === "MEDIO") return 2;
-        if (v === "BAJO") return 1;
-        return 0;
-      };
-      const pesoEstado = (e) => {
-        if (e === "Ganado") return 3;
-        if (e === "En curso") return 2;
-        if (e === "Perdido") return 1;
-        return 0;
-      };
-
-      proy
-        .slice()
-        .sort((a, b) => {
-          const pa = pesoEncaje(a.encaje_2n) + pesoEstado(a.estado);
-          const pb = pesoEncaje(b.encaje_2n) + pesoEstado(b.estado);
-          return pb - pa;
-        })
-        .forEach(p => {
-          const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
-          let badge;
-          if (enc === "ALTO") {
-            badge = '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#DCFCE7;color:#166534;">ALTO</span>';
-          } else if (enc === "MEDIO") {
-            badge = '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#FEF9C3;color:#92400E;">MEDIO</span>';
-          } else if (enc === "BAJO") {
-            badge = '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#FFE4E6;color:#9F1239;">BAJO</span>';
-          } else {
-            badge = '<span style="font-size:10px;color:#9CA3AF;">—</span>';
-          }
-
-          html += `
-            <tr>
-              <td>${p.nombre_obra || p.nombre || ""}</td>
-              <td>${p.provincia || ""}</td>
-              <td>${p.estado || ""}</td>
-              <td>${badge}</td>
-              <td>${p.cliente_principal || p.promotora || ""}</td>
-              <td>${p.segmento || p.tipo_activo || ""}</td>
-            </tr>
-          `;
-        });
-
-      html += "</tbody></table>";
-      tablaDatosWrapper.innerHTML = html;
-    }
-
-    function renderResumenEjecutivo(proy, clis) {
-      const totalProy = proy.length;
-      const totalCli = clis.length;
-
-      const encCounts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
-      proy.forEach(p => {
-        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
-        if (e === "ALTO") encCounts.ALTO++;
-        else if (e === "MEDIO") encCounts.MEDIO++;
-        else if (e === "BAJO") encCounts.BAJO++;
-        else encCounts.SIN++;
-      });
-
-      const clientesConObra = clis.filter(c => (c.num_obras || 0) > 0).length;
-      const clientes2N = clis.filter(c => c.trabaja_con_2n);
-      const clientes2NporSegmento = {};
-      clientes2N.forEach(c => {
-        const seg = c.segmento || "Sin segmento";
-        clientes2NporSegmento[seg] = (clientes2NporSegmento[seg] || 0) + 1;
-      });
-
-      const clientesClave = clis
+      const topActivos = activos
         .slice()
         .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
-        .slice(0, 5)
-        .map(c => `${c.nombre_display || ""} (${c.num_obras || 0})`)
-        .join(", ");
+        .slice(0, 15);
 
-      const listaSeg = Object.keys(clientes2NporSegmento)
-        .map(seg => `${seg}: ${clientes2NporSegmento[seg]}`)
-        .join(" · ");
-
-      resumenEjecutivo.innerHTML = `
-        <div>
-          <strong style="color:#111827;">Cobertura actual de pipeline:</strong><br/>
-          Hay <strong>${totalProy}</strong> proyectos dentro de los filtros activos, con un total de
-          <strong>${encCounts.ALTO + encCounts.MEDIO}</strong> obras en las que el encaje de 2N se considera
-          <strong>ALTO / MEDIO</strong>.
-        </div>
-        <div>
-          <strong style="color:#111827;">Calidad de segmentación del encaje:</strong><br/>
-          Encaje ALTO: <strong>${encCounts.ALTO}</strong> · MEDIO: <strong>${encCounts.MEDIO}</strong> ·
-          BAJO: <strong>${encCounts.BAJO}</strong> · Sin clasificar: <strong>${encCounts.SIN}</strong>.
-        </div>
-        <div>
-          <strong style="color:#111827;">Base de clientes activa:</strong><br/>
-          Hay <strong>${totalCli}</strong> clientes dentro de los filtros, de los cuales
-          <strong>${clientesConObra}</strong> tienen al menos una obra vinculada.
-        </div>
-        <div>
-          <strong style="color:#111827;">Clientes con los que ya trabaja 2N (por segmento):</strong><br/>
-          ${listaSeg || "No hay clientes marcados como 2N en esta vista."}
-        </div>
-        <div>
-          <strong style="color:#111827;">Clientes clave por nº de obras:</strong><br/>
-          ${clientesClave || "Sin clientes destacados en esta vista."}
-        </div>
-      `;
+      tablaClientes2NBody.innerHTML = topActivos
+        .map(c => `
+          <tr>
+            <td>${c.nombre_display || ""}</td>
+            <td>${c.tipo || ""}</td>
+            <td>${c.segmento || ""}</td>
+            <td>${c.provincia || ""}</td>
+            <td>${c.num_obras || 0}</td>
+          </tr>
+        `)
+        .join("");
     }
 
     function aplicarFiltrosYRender() {
       const { proy, clis } = filtrarDatos();
 
-      renderKPIs(proy, clis);
+      updateFiltrosTexto();
+      renderKPIs(proy);
       renderChartEstado(proy);
       renderChartEncaje(proy);
       renderChartSegmento(clis);
       renderChartClientesTipo(clis);
-      renderTabla(proy, clis);
-      renderResumenEjecutivo(proy, clis);
     }
 
     fVista.addEventListener("change", aplicarFiltrosYRender);
@@ -837,55 +846,90 @@
       btnExportPDF.disabled = true;
       btnExportPDF.textContent = "Generando PDF...";
 
-      const soloPdfBlocks = Array.from(document.querySelectorAll(".solo-pdf"));
-      const prevDisplay = soloPdfBlocks.map(el => el.style.display);
-      soloPdfBlocks.forEach(el => {
-        el.style.display = "block";
-      });
-
-      const sectionIds = ["section-overview", "section-clientes-2n", "section-tablas"];
-
       try {
+        const pages = Array.from(document.querySelectorAll(".report-page"));
         let pdf = null;
-        const pageWidth = 210;   // A4 width mm
-        const pageHeight = 297;  // A4 height mm
+        const pageWidth = 210;   // A4 mm
+        const pageHeight = 297;  // A4 mm
+        const usableHeight = pageHeight - 35; // margen para cabecera
 
-        for (let i = 0; i < sectionIds.length; i++) {
-          const section = document.getElementById(sectionIds[i]);
-          if (!section) continue;
+        const fechaStr = new Date().toLocaleDateString("es-ES");
 
-          const canvas = await html2canvas(section, {
+        function drawHeader(pdfInstance, title, pageIndex) {
+          pdfInstance.setFillColor(15, 23, 42);
+          pdfInstance.rect(0, 0, pageWidth, 18, "F");
+
+          pdfInstance.setFont("helvetica", "bold");
+          pdfInstance.setFontSize(11);
+          pdfInstance.setTextColor(255, 255, 255);
+          pdfInstance.text("CRM 2N · Reporte analista de mercado", 10, 8);
+
+          pdfInstance.setFont("helvetica", "normal");
+          pdfInstance.setFontSize(9);
+          pdfInstance.text(title, 10, 14);
+
+          pdfInstance.setFontSize(8);
+          pdfInstance.setTextColor(209, 213, 219);
+          pdfInstance.text(fechaStr, pageWidth - 10, 8, { align: "right" });
+          pdfInstance.text("Página " + pageIndex, pageWidth - 10, 14, { align: "right" });
+
+          pdfInstance.setTextColor(17, 24, 39);
+        }
+
+        let globalPageIndex = 1;
+
+        for (const page of pages) {
+          const title = page.dataset.title || "Reporte CRM 2N";
+
+          const canvas = await html2canvas(page, {
             scale: 2,
             useCORS: true,
             windowWidth: document.documentElement.scrollWidth
           });
           const imgData = canvas.toDataURL("image/png");
 
-          if (!pdf) {
-            pdf = new jsPDF("p", "mm", "a4");
-          } else {
-            pdf.addPage();
-          }
-
           const imgWidth = pageWidth - 20;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          const posY = 10;
 
-          pdf.addImage(imgData, "PNG", 10, posY, imgWidth, imgHeight);
+          let heightLeft = imgHeight;
+          let offsetY = 0;
+          let sliceIndex = 0;
+
+          while (heightLeft > 0) {
+            if (!pdf) {
+              pdf = new jsPDF("p", "mm", "a4");
+            } else {
+              pdf.addPage();
+            }
+
+            const pageTitle = title + (sliceIndex > 0 ? " (cont.)" : "");
+            drawHeader(pdf, pageTitle, globalPageIndex++);
+
+            const posY = 22;
+            pdf.addImage(
+              imgData,
+              "PNG",
+              10,
+              posY - (offsetY * imgWidth) / imgWidth,
+              imgWidth,
+              imgHeight
+            );
+
+            heightLeft -= usableHeight;
+            offsetY += usableHeight;
+            sliceIndex++;
+          }
         }
 
         if (pdf) {
           pdf.save("reporte_crm_2n.pdf");
         } else {
-          alert("No hay secciones para exportar.");
+          alert("No hay datos para exportar.");
         }
       } catch (err) {
         console.error("Error generando PDF:", err);
         alert("Ha ocurrido un error al generar el PDF.");
       } finally {
-        soloPdfBlocks.forEach((el, i) => {
-          el.style.display = prevDisplay[i];
-        });
         btnExportPDF.disabled = false;
         btnExportPDF.textContent = "📄 Descargar PDF del reporte";
       }
