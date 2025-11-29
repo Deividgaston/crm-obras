@@ -27,12 +27,10 @@
       cursor: grab;
       transition: 0.15s;
     }
-
     .pipeline-card:hover {
       box-shadow: 0 3px 10px rgba(0,0,0,0.08);
       transform: translateY(-1px);
     }
-
     .pipeline-card:active {
       cursor: grabbing;
     }
@@ -45,16 +43,36 @@
       border: 1px solid #D1D5DB;
       cursor: pointer;
       transition: 0.15s;
+      font-size: 13px;
     }
-
     .project-card:hover {
       background: #EEF2FF;
       border-color: #4C6EF5;
     }
+    .project-card.active-project {
+      background: #E0E7FF;
+      border-color: #4C6EF5;
+    }
+    .project-card.drag-over-project {
+      background: #DBEAFE;
+      border-style: dashed;
+    }
 
-    .active-project {
-      background: #E0E7FF !important;
-      border-color: #4C6EF5 !important;
+    .task-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .task-header-row-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .task-checkbox {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -77,7 +95,6 @@
   </div>
 
   <main class="content">
-
     <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Tareas · Seguimiento</h2>
 
     <div class="columns" style="grid-template-columns: 1.1fr 2.2fr 0.9fr; align-items:flex-start; gap:20px;">
@@ -87,7 +104,16 @@
       =============================== -->
       <aside class="panel">
         <div class="panel-title">Proyectos</div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <input
+            id="filtroProyectos"
+            type="text"
+            class="search-input"
+            placeholder="Filtrar por nombre..."
+          />
+        </div>
         <div id="projectKanban"></div>
+        <div id="projectFooter" style="font-size:11px;color:#6B7280;margin-top:6px;"></div>
       </aside>
 
       <!-- ==============================
@@ -97,8 +123,10 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div>
             <div class="panel-title">Tareas</div>
+            <div class="panel-subtitle" id="subtituloTareas">
+              Selecciona un proyecto a la izquierda para ver y crear tareas asociadas.
+            </div>
           </div>
-
           <button class="btn-primary" id="btnNuevaTarea">+ Nueva tarea</button>
         </div>
 
@@ -159,7 +187,6 @@
       <input type="hidden" id="tareaProyectoHidden" />
 
       <div class="form-grid">
-
         <div class="form-group">
           <label>Título</label>
           <input id="tareaTitulo" type="text" required />
@@ -168,6 +195,10 @@
         <div class="form-group">
           <label>Fecha</label>
           <input id="tareaFechaUnica" type="date" />
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="btn-secondary" id="btnFechaHoy" style="padding:3px 8px;font-size:11px;">Hoy</button>
+            <button type="button" class="btn-secondary" id="btnFechaSemana" style="padding:3px 8px;font-size:11px;">+1 semana</button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -227,7 +258,6 @@
        SCRIPT
   =============================== -->
   <script type="module">
-
     import { db } from "./firebase.js";
     import {
       collection,
@@ -245,45 +275,120 @@
     const collTareas = collection(db, "tareas");
     const collProyectos = collection(db, "proyectos");
 
+    const projectKanban = document.getElementById("projectKanban");
+    const projectFooter = document.getElementById("projectFooter");
+    const filtroProyectos = document.getElementById("filtroProyectos");
+
+    const countPendiente = document.getElementById("countPendiente");
+    const countProceso = document.getElementById("countProceso");
+    const countHecho = document.getElementById("countHecho");
+
+    const notaRapidaTexto = document.getElementById("notaRapidaTexto");
+    const listaNotasRapidas = document.getElementById("listaNotasRapidas");
+
+    const tareaDialog = document.getElementById("tareaDialog");
+    const tareaForm = document.getElementById("tareaForm");
+
+    const tareaId = document.getElementById("tareaId");
+    const tareaTitulo = document.getElementById("tareaTitulo");
+    const tareaFechaUnica = document.getElementById("tareaFechaUnica");
+    const tareaEstado = document.getElementById("tareaEstado");
+    const tareaPrioridad = document.getElementById("tareaPrioridad");
+    const tareaTipo = document.getElementById("tareaTipo");
+    const tareaRecurrenteChk = document.getElementById("tareaRecurrenteChk");
+    const tareaRecurrenteDias = document.getElementById("tareaRecurrenteDias");
+    const tareaDescripcion = document.getElementById("tareaDescripcion");
+    const tareaProyectoHidden = document.getElementById("tareaProyectoHidden");
+    const btnBorrarTarea = document.getElementById("btnBorrarTarea");
+    const btnFechaHoy = document.getElementById("btnFechaHoy");
+    const btnFechaSemana = document.getElementById("btnFechaSemana");
+    const subtituloTareas = document.getElementById("subtituloTareas");
+
+    document.getElementById("btnNuevaTarea").onclick = () => abrirTarea(null);
+    document.getElementById("btnCrearNotaRapida").onclick = crearNotaRapida;
+
+    filtroProyectos.oninput = renderProyectos;
+
+    btnFechaHoy.onclick = () => {
+      const hoy = new Date().toISOString().slice(0,10);
+      tareaFechaUnica.value = hoy;
+    };
+
+    btnFechaSemana.onclick = () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      tareaFechaUnica.value = d.toISOString().slice(0,10);
+    };
+
     async function cargarProyectos() {
       const snap = await getDocs(collProyectos);
       proyectos = [];
-
       snap.forEach(d => {
         const data = d.data();
+        const nombre = data.nombre_display || data.nombre || "";
+        if (!nombre) return;
         proyectos.push({
           id: d.id,
-          nombre: data.nombre_display || data.nombre || ""
+          nombre
         });
       });
-
       renderProyectos();
     }
 
     function renderProyectos() {
-      const cont = document.getElementById("projectKanban");
-      cont.innerHTML = "";
+      projectKanban.innerHTML = "";
+      projectFooter.textContent = "";
 
-      proyectos.forEach(p => {
+      let lista = proyectos;
+      const q = (filtroProyectos.value || "").toLowerCase();
+      if (q) {
+        lista = lista.filter(p => p.nombre.toLowerCase().includes(q));
+      }
+
+      const totalCoinciden = lista.length;
+      const max = 10;
+      lista = lista.slice(0, max);
+
+      lista.forEach(p => {
         const card = document.createElement("div");
         card.className = "project-card";
+        if (p.id === proyectoActivo) card.classList.add("active-project");
         card.dataset.id = p.id;
         card.innerHTML = `
-          <div style="font-size:14px;font-weight:600;color:#111;">
-            ${p.nombre}
-          </div>
+          <div>${p.nombre}</div>
         `;
 
-        if (proyectoActivo === p.id) card.classList.add("active-project");
-
-        card.onclick = () => {
+        card.addEventListener("click", () => {
           proyectoActivo = p.id;
+          actualizarSubtituloTareas();
           renderProyectos();
           renderKanban();
-        };
+        });
 
-        cont.appendChild(card);
+        // Permitir soltar tareas encima del proyecto para asignarlas
+        card.addEventListener("dragover", e => {
+          e.preventDefault();
+          card.classList.add("drag-over-project");
+        });
+        card.addEventListener("dragleave", () => {
+          card.classList.remove("drag-over-project");
+        });
+        card.addEventListener("drop", async e => {
+          e.preventDefault();
+          card.classList.remove("drag-over-project");
+          const tareaIdDrag = e.dataTransfer.getData("tareaId");
+          if (!tareaIdDrag) return;
+          await asignarTareaAProyecto(tareaIdDrag, p.id);
+        });
+
+        projectKanban.appendChild(card);
       });
+
+      if (totalCoinciden > max) {
+        projectFooter.textContent = `Mostrando ${max} de ${totalCoinciden} proyectos. Ajusta el filtro para ver otros.`;
+      } else if (!lista.length) {
+        projectFooter.textContent = "Sin proyectos que coincidan con el filtro.";
+      }
     }
 
     async function cargarTareas() {
@@ -294,25 +399,38 @@
       renderNotas();
     }
 
+    function actualizarSubtituloTareas() {
+      if (!proyectoActivo) {
+        subtituloTareas.textContent = "Selecciona un proyecto a la izquierda para ver y crear tareas asociadas.";
+      } else {
+        const p = proyectos.find(x => x.id === proyectoActivo);
+        subtituloTareas.textContent = p
+          ? `Tareas del proyecto: ${p.nombre}`
+          : "Tareas del proyecto seleccionado.";
+      }
+    }
+
     function renderKanban() {
-      const est = { pendiente: [], proceso: [], hecho: [] };
+      const estados = { pendiente: [], proceso: [], hecho: [] };
 
       tareas.forEach(t => {
         if (proyectoActivo && t.proyecto_id !== proyectoActivo) return;
-        est[t.estado || "pendiente"].push(t);
+        const est = t.estado || "pendiente";
+        if (!estados[est]) estados[est] = [];
+        estados[est].push(t);
       });
 
-      document.getElementById("countPendiente").textContent = est.pendiente.length;
-      document.getElementById("countProceso").textContent = est.proceso.length;
-      document.getElementById("countHecho").textContent = est.hecho.length;
+      countPendiente.textContent = estados.pendiente.length;
+      countProceso.textContent = estados.proceso.length;
+      countHecho.textContent = estados.hecho.length;
 
-      ["pendiente","proceso","hecho"].forEach(e=>{
-        const cont = document.querySelector(`.kanban-column-body[data-estado="${e}"]`);
+      ["pendiente","proceso","hecho"].forEach(estado => {
+        const cont = document.querySelector(`.kanban-column-body[data-estado="${estado}"]`);
         cont.innerHTML = "";
-        est[e].forEach(t => cont.appendChild(cardTarea(t)));
+        estados[estado].forEach(t => cont.appendChild(cardTarea(t)));
       });
 
-      activarDrag();
+      activarDragEnColumnas();
     }
 
     function cardTarea(t) {
@@ -328,19 +446,25 @@
           ? "background:#E0F2FE;color:#0369A1;"
           : "background:#E5E7EB;color:#374151;";
 
-      const proyecto = proyectos.find(x => x.id === t.proyecto_id)?.nombre || "";
+      const proyectoNombre =
+        proyectos.find(x => x.id === t.proyecto_id)?.nombre || "";
 
       d.innerHTML = `
-        <div style="display:flex;justify-content:space-between;">
-          <button class="link-button" data-id="${t.id}" style="font-weight:600;">
-            ${t.titulo}
-          </button>
+        <div class="task-header-row">
+          <div class="task-header-row-left">
+            <input type="checkbox" class="task-checkbox" ${t.estado === "hecho" ? "checked" : ""} />
+            <button class="link-button" data-id="${t.id}" style="font-weight:600;">
+              ${t.titulo}
+            </button>
+          </div>
           <span style="font-size:10px;padding:2px 6px;border-radius:999px;${badge}">
             ${t.prioridad.toUpperCase()}
           </span>
         </div>
 
-        <div style="font-size:11px;color:#6B7280;margin-top:3px;">${proyecto}</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:3px;">
+          ${proyectoNombre}
+        </div>
 
         <div style="font-size:11px;color:#4B5563;margin-top:4px;">
           ${(t.descripcion || "").slice(0,120)}
@@ -352,61 +476,63 @@
         </div>
       `;
 
-      d.querySelector("button").onclick = () => abrir(t.id);
+      const boton = d.querySelector("button.link-button");
+      boton.addEventListener("click", () => abrirTarea(t.id));
+
+      const checkbox = d.querySelector(".task-checkbox");
+      checkbox.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const nuevoEstado = checkbox.checked ? "hecho" : "pendiente";
+        await moverTareaEstado(t.id, nuevoEstado);
+      });
+
+      d.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("tareaId", t.id);
+      });
+
       return d;
     }
 
-    function activarDrag() {
-      const cards = document.querySelectorAll(".pipeline-card");
+    function activarDragEnColumnas() {
       const cols = document.querySelectorAll(".kanban-column-body");
-
-      cards.forEach(c => {
-        c.addEventListener("dragstart", e => {
-          e.dataTransfer.setData("id", c.dataset.id);
-        });
-      });
-
       cols.forEach(col => {
         col.addEventListener("dragover", e => e.preventDefault());
-        col.addEventListener("drop", e => {
-          const id = e.dataTransfer.getData("id");
-          mover(id, col.dataset.estado);
+        col.addEventListener("drop", async e => {
+          const id = e.dataTransfer.getData("tareaId");
+          if (!id) return;
+          await moverTareaEstado(id, col.dataset.estado);
         });
       });
     }
 
-    async function mover(id, estado) {
+    async function moverTareaEstado(id, nuevoEstado) {
       const ref = doc(db, "tareas", id);
-      await updateDoc(ref, { estado });
-      cargarTareas();
+      const t = tareas.find(x => x.id === id);
+      if (!t) return;
+
+      if (nuevoEstado === "hecho" && t.es_recurrente && t.recurrente_dias) {
+        const base = t.fecha ? new Date(t.fecha) : new Date();
+        base.setDate(base.getDate() + Number(t.recurrente_dias || 7));
+        const nuevaFecha = base.toISOString().slice(0,10);
+        await updateDoc(ref, { estado: "pendiente", fecha: nuevaFecha });
+      } else {
+        await updateDoc(ref, { estado: nuevoEstado });
+      }
+
+      await cargarTareas();
     }
 
-    /* ==============
-       NOTAS RÁPIDAS
-    =============== */
-    function renderNotas() {
-      const cont = document.getElementById("listaNotasRapidas");
-      cont.innerHTML = "";
-
-      const notas = tareas.filter(t => t.tipo === "nota");
-
-      notas.forEach(n => {
-        const li = document.createElement("div");
-        li.className = "activity-item";
-
-        li.innerHTML = `
-          <div class="activity-title">${n.titulo}</div>
-          <div class="activity-sub">${(n.descripcion || "").slice(0,130)}</div>
-          <div class="activity-meta">${n.fecha}</div>
-        `;
-
-        li.onclick = () => abrir(n.id);
-        cont.appendChild(li);
-      });
+    async function asignarTareaAProyecto(tareaId, proyectoId) {
+      const ref = doc(db, "tareas", tareaId);
+      await updateDoc(ref, { proyecto_id: proyectoId });
+      await cargarTareas();
+      proyectoActivo = proyectoId;
+      actualizarSubtituloTareas();
+      renderProyectos();
     }
 
-    document.getElementById("btnCrearNotaRapida").onclick = async () => {
-      const texto = document.getElementById("notaRapidaTexto").value.trim();
+    async function crearNotaRapida() {
+      const texto = notaRapidaTexto.value.trim();
       if (!texto) return;
 
       const hoy = new Date().toISOString().slice(0,10);
@@ -421,92 +547,116 @@
         proyecto_id: proyectoActivo || null
       });
 
-      document.getElementById("notaRapidaTexto").value = "";
-      cargarTareas();
-    };
+      notaRapidaTexto.value = "";
+      await cargarTareas();
+    }
 
-    /* ==============
-       MODAL TAREA
-    =============== */
-    document.getElementById("btnNuevaTarea").onclick = () => abrir(null);
+    function renderNotas() {
+      listaNotasRapidas.innerHTML = "";
+      const notas = tareas
+        .filter(t => t.tipo === "nota")
+        .sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
 
-    function abrir(id) {
-      if (!proyectoActivo) {
-        alert("Selecciona un proyecto en el panel izquierdo.");
+      if (!notas.length) {
+        const e = document.createElement("div");
+        e.className = "empty-state";
+        e.textContent = "Sin notas rápidas.";
+        listaNotasRapidas.appendChild(e);
+        return;
+      }
+
+      notas.forEach(n => {
+        const li = document.createElement("div");
+        li.className = "activity-item";
+
+        li.innerHTML = `
+          <div class="activity-title">${n.titulo}</div>
+          <div class="activity-meta">${n.fecha}</div>
+        `;
+
+        li.addEventListener("click", () => abrirTarea(n.id));
+        listaNotasRapidas.appendChild(li);
+      });
+    }
+
+    function abrirTarea(id) {
+      if (!proyectoActivo && !id) {
+        alert("Selecciona primero un proyecto para asociar la tarea.");
         return;
       }
 
       if (!id) {
-        document.getElementById("tareaId").value = "";
-        document.getElementById("tareaTitulo").value = "";
-        document.getElementById("tareaFechaUnica").value = "";
-        document.getElementById("tareaEstado").value = "pendiente";
-        document.getElementById("tareaPrioridad").value = "media";
-        document.getElementById("tareaTipo").value = "seguimiento";
-        document.getElementById("tareaRecurrenteChk").checked = false;
-        document.getElementById("tareaDescripcion").value = "";
-        document.getElementById("tareaProyectoHidden").value = proyectoActivo;
-        document.getElementById("btnBorrarTarea").style.display = "none";
+        tareaId.value = "";
+        tareaTitulo.value = "";
+        tareaFechaUnica.value = "";
+        tareaEstado.value = "pendiente";
+        tareaPrioridad.value = "media";
+        tareaTipo.value = "seguimiento";
+        tareaRecurrenteChk.checked = false;
+        tareaRecurrenteDias.value = 7;
+        tareaDescripcion.value = "";
+        tareaProyectoHidden.value = proyectoActivo;
+        btnBorrarTarea.style.display = "none";
       } else {
         const t = tareas.find(x => x.id === id);
+        if (!t) return;
 
-        document.getElementById("tareaId").value = t.id;
-        document.getElementById("tareaTitulo").value = t.titulo;
-        document.getElementById("tareaFechaUnica").value = t.fecha || "";
-        document.getElementById("tareaEstado").value = t.estado;
-        document.getElementById("tareaPrioridad").value = t.prioridad;
-        document.getElementById("tareaTipo").value = t.tipo;
-        document.getElementById("tareaDescripcion").value = t.descripcion || "";
-        document.getElementById("tareaRecurrenteChk").checked = !!t.es_recurrente;
-        document.getElementById("tareaRecurrenteDias").value = t.recurrente_dias || 7;
-        document.getElementById("tareaProyectoHidden").value = t.proyecto_id;
-
-        document.getElementById("btnBorrarTarea").style.display = "inline-block";
+        tareaId.value = t.id;
+        tareaTitulo.value = t.titulo || "";
+        tareaFechaUnica.value = t.fecha || "";
+        tareaEstado.value = t.estado || "pendiente";
+        tareaPrioridad.value = t.prioridad || "media";
+        tareaTipo.value = t.tipo || "seguimiento";
+        tareaRecurrenteChk.checked = !!t.es_recurrente;
+        tareaRecurrenteDias.value = t.recurrente_dias || 7;
+        tareaDescripcion.value = t.descripcion || "";
+        tareaProyectoHidden.value = t.proyecto_id || proyectoActivo || "";
+        btnBorrarTarea.style.display = "inline-block";
       }
 
-      document.getElementById("tareaDialog").showModal();
+      tareaDialog.showModal();
     }
 
-    document.getElementById("tareaForm").onsubmit = async (e) => {
+    tareaForm.onsubmit = async (e) => {
       e.preventDefault();
+      const id = tareaId.value;
 
-      const id = document.getElementById("tareaId").value;
       const payload = {
-        titulo: document.getElementById("tareaTitulo").value.trim(),
-        fecha: document.getElementById("tareaFechaUnica").value || null,
-        estado: document.getElementById("tareaEstado").value,
-        prioridad: document.getElementById("tareaPrioridad").value,
-        tipo: document.getElementById("tareaTipo").value,
-        es_recurrente: document.getElementById("tareaRecurrenteChk").checked,
-        recurrente_dias: document.getElementById("tareaRecurrenteChk").checked
-          ? Number(document.getElementById("tareaRecurrenteDias").value)
+        titulo: tareaTitulo.value.trim(),
+        fecha: tareaFechaUnica.value || null,
+        estado: tareaEstado.value,
+        prioridad: tareaPrioridad.value,
+        tipo: tareaTipo.value,
+        es_recurrente: tareaRecurrenteChk.checked,
+        recurrente_dias: tareaRecurrenteChk.checked
+          ? Number(tareaRecurrenteDias.value || "7")
           : null,
-        descripcion: document.getElementById("tareaDescripcion").value.trim(),
-        proyecto_id: proyectoActivo
+        descripcion: tareaDescripcion.value.trim(),
+        proyecto_id: tareaProyectoHidden.value || proyectoActivo
       };
 
       if (id) {
-        await updateDoc(doc(db,"tareas",id), payload);
+        await updateDoc(doc(db, "tareas", id), payload);
       } else {
         await addDoc(collTareas, payload);
       }
 
       tareaDialog.close();
-      cargarTareas();
+      await cargarTareas();
     };
 
-    document.getElementById("btnBorrarTarea").onclick = async () => {
-      const id = document.getElementById("tareaId").value;
+    btnBorrarTarea.onclick = async () => {
+      const id = tareaId.value;
       if (!id) return;
-      await deleteDoc(doc(db,"tareas",id));
+      await deleteDoc(doc(db, "tareas", id));
       tareaDialog.close();
-      cargarTareas();
+      await cargarTareas();
     };
 
+    // INIT
     cargarProyectos();
     cargarTareas();
-
+    actualizarSubtituloTareas();
   </script>
-
 </body>
 </html>
