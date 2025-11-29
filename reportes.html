@@ -13,6 +13,14 @@
   <!-- PDF (html2canvas + jsPDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    @media screen {
+      .solo-pdf {
+        display: none;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -38,7 +46,7 @@
       <div>
         <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Reportes · Vista analista de mercado</h2>
         <div style="font-size:12px;color:#5A6872;">
-          Control total de obras y clientes, segmentado por zona, estado y encaje 2N. Exporta el informe a PDF.
+          Control total de obras y clientes, segmentado por provincia, estado y encaje 2N. Exporta el informe a PDF.
         </div>
       </div>
       <button id="btnExportPDF" class="btn-primary" type="button" style="font-size:11px;padding:6px 12px;">
@@ -56,14 +64,11 @@
         </select>
 
         <select id="fZona" class="select-input" style="max-width:200px;">
-          <option value="Todas">Zonas: todas</option>
+          <option value="Todas">Provincia: todas</option>
         </select>
 
-        <select id="fEstado" class="select-input" style="max-width:180px;">
+        <select id="fEstado" class="select-input" style="max-width:200px;">
           <option value="Todos">Estado proyecto: todos</option>
-          <option value="En curso">En curso</option>
-          <option value="Ganado">Ganado</option>
-          <option value="Perdido">Perdido</option>
         </select>
 
         <select id="fEncaje" class="select-input" style="max-width:180px;">
@@ -77,7 +82,7 @@
         <div style="flex:1;"></div>
 
         <span style="font-size:10.5px;color:#9CA3AF;">
-          El PDF se genera con los filtros actuales.
+          El PDF se genera con los filtros actuales (incluye las tablas detalladas).
         </span>
       </div>
     </div>
@@ -94,10 +99,10 @@
         <div class="kpi-card">
           <div class="kpi-label">Clientes filtrados</div>
           <div id="kpiClientes" class="kpi-value">–</div>
-          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Clientes con actividad en las zonas seleccionadas.</div>
+          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Clientes activos en la provincia seleccionada.</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Obras con encaje ALTO / MEDIO</div>
+          <div class="kpi-label">Obras encaje ALTO / MEDIO</div>
           <div id="kpiEncajeAltoMedio" class="kpi-value">–</div>
           <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Pipeline donde 2N encaja muy bien.</div>
         </div>
@@ -105,20 +110,20 @@
 
       <!-- CHARTS FILA 1 -->
       <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
-        <!-- Proyectos por estado -->
+        <!-- Proyectos por estado (DONUT) -->
         <div class="card">
           <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
             Distribución de proyectos por estado
           </div>
           <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-            Vista rápida de la madurez del pipeline.
+            Igual que el pipeline: estados reales de tus proyectos.
           </div>
-          <div style="position:relative;height:220px;">
+          <div style="position:relative;height:230px;">
             <canvas id="chartEstado"></canvas>
           </div>
         </div>
 
-        <!-- Encaje 2N -->
+        <!-- Encaje 2N (DONUT) -->
         <div class="card">
           <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
             Encaje 2N en proyectos filtrados
@@ -126,7 +131,7 @@
           <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
             Clasificación ALTO / MEDIO / BAJO vs sin clasificar.
           </div>
-          <div style="position:relative;height:220px;">
+          <div style="position:relative;height:230px;">
             <canvas id="chartEncaje"></canvas>
           </div>
         </div>
@@ -134,20 +139,20 @@
 
       <!-- CHARTS FILA 2 -->
       <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
-        <!-- Encaje por tipo de activo (si existe) o segmento -->
+        <!-- Clientes 2N por segmento (DONUT) -->
         <div class="card">
           <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-            Proyectos por tipo de activo / segmento
+            Clientes 2N por segmento
           </div>
           <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-            Mix entre residencial, terciario y otros (si está informado en los proyectos).
+            Solo clientes donde <strong>2N ya está trabajando</strong>, agrupados por segmento.
           </div>
-          <div style="position:relative;height:220px;">
+          <div style="position:relative;height:230px;">
             <canvas id="chartSegmento"></canvas>
           </div>
         </div>
 
-        <!-- Top clientes por nº de obras -->
+        <!-- Top clientes por nº de obras (DONUT) -->
         <div class="card">
           <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
             Top clientes por nº de obras
@@ -155,7 +160,7 @@
           <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
             Ranking de clientes según volumen de proyectos asignados.
           </div>
-          <div style="position:relative;height:220px;">
+          <div style="position:relative;height:230px;">
             <canvas id="chartTopClientes"></canvas>
           </div>
         </div>
@@ -163,8 +168,8 @@
 
       <!-- LISTAS DETALLADAS -->
       <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
-        <!-- Tabla principal -->
-        <div class="card">
+        <!-- Tabla principal (solo PDF) -->
+        <div class="card solo-pdf">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <div id="tablaTitulo" style="font-size:12px;font-weight:600;color:#111827;">
               Detalle de proyectos
@@ -179,7 +184,7 @@
           </div>
         </div>
 
-        <!-- Resumen de indicadores -->
+        <!-- Resumen de indicadores (visible también en pantalla) -->
         <div class="card">
           <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
             Resumen ejecutivo
@@ -262,22 +267,32 @@
       });
     }
 
-    function inicializarFiltroZonas() {
-      const zonasSet = new Set();
+    function inicializarFiltroProvincia() {
+      const provincias = new Set();
 
       proyectos.forEach(p => {
-        if (p.ciudad) zonasSet.add(p.ciudad);
-        if (p.provincia) zonasSet.add(p.provincia);
+        if (p.provincia) provincias.add(p.provincia);
       });
       clientes.forEach(c => {
-        if (c.ciudad) zonasSet.add(c.ciudad);
-        if (c.provincia) zonasSet.add(c.provincia);
+        if (c.provincia) provincias.add(c.provincia);
       });
 
-      const zonas = [...zonasSet].filter(z => z).sort((a, b) => a.localeCompare(b, "es"));
+      const lista = [...provincias].filter(z => z).sort((a, b) => a.localeCompare(b, "es"));
+
       fZona.innerHTML =
-        '<option value="Todas">Zonas: todas</option>' +
-        zonas.map(z => `<option value="${z}">${z}</option>`).join("");
+        '<option value="Todas">Provincia: todas</option>' +
+        lista.map(z => `<option value="${z}">${z}</option>`).join("");
+    }
+
+    function inicializarFiltroEstado() {
+      const estadosSet = new Set();
+      proyectos.forEach(p => {
+        if (p.estado) estadosSet.add(p.estado);
+      });
+      const lista = [...estadosSet].sort((a, b) => a.localeCompare(b, "es"));
+      fEstado.innerHTML =
+        '<option value="Todos">Estado proyecto: todos</option>' +
+        lista.map(e => `<option value="${e}">${e}</option>`).join("");
     }
 
     async function cargarDatos() {
@@ -290,13 +305,14 @@
       clientes = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
 
       buildClientesView();
-      inicializarFiltroZonas();
+      inicializarFiltroProvincia();
+      inicializarFiltroEstado();
       aplicarFiltrosYRender();
     }
 
     function filtrarDatos() {
       const vista = fVista.value;
-      const zona = fZona.value;
+      const provincia = fZona.value;
       const estado = fEstado.value;
       const encaje = fEncaje.value;
       const txt = norm(buscadorGlobal.value);
@@ -304,13 +320,9 @@
       let proy = proyectos.slice();
       let clis = clientesView.slice();
 
-      if (zona !== "Todas") {
-        proy = proy.filter(
-          p => p.ciudad === zona || p.provincia === zona
-        );
-        clis = clis.filter(
-          c => c.ciudad === zona || c.provincia === zona
-        );
+      if (provincia !== "Todas") {
+        proy = proy.filter(p => p.provincia === provincia);
+        clis = clis.filter(c => c.provincia === provincia);
       }
 
       if (estado !== "Todos") {
@@ -379,47 +391,57 @@
     }
 
     function renderChartEstado(proy) {
-      const counts = { "En curso": 0, Ganado: 0, Perdido: 0, Otros: 0 };
-      proy.forEach(p => {
-        const e = p.estado || "";
-        if (e === "En curso") counts["En curso"]++;
-        else if (e === "Ganado") counts.Ganado++;
-        else if (e === "Perdido") counts.Perdido++;
-        else counts.Otros++;
-      });
-
-      const data = [counts["En curso"], counts.Ganado, counts.Perdido, counts.Otros];
-      const labels = ["En curso", "Ganado", "Perdido", "Otros"];
-
       if (chartEstado) chartEstado.destroy();
       const ctx = document.getElementById("chartEstado").getContext("2d");
+      const counts = {};
+
+      proy.forEach(p => {
+        const e = p.estado || "Sin estado";
+        counts[e] = (counts[e] || 0) + 1;
+      });
+
+      const labels = Object.keys(counts);
+      const data = labels.map(l => counts[l]);
+      const total = data.reduce((a, b) => a + b, 0);
+
+      Chart.register(window.ChartDataLabels);
+
       chartEstado = new Chart(ctx, {
-        type: "bar",
+        type: "doughnut",
         data: {
           labels,
           datasets: [
             {
               data,
-              backgroundColor: ["#60A5FA", "#22C55E", "#F97373", "#E5E7EB"]
+              backgroundColor: [
+                "#60A5FA",
+                "#34D399",
+                "#F97373",
+                "#FBBF24",
+                "#A855F7",
+                "#E5E7EB"
+              ],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
             }
           ]
         },
         options: {
           responsive: true,
+          cutout: "55%",
           plugins: {
-            legend: { display: false },
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 10 } }
+            },
             datalabels: {
-              anchor: "end",
-              align: "top",
-              formatter: (v) => (v ? v : ""),
-              font: { size: 10, weight: "600" },
-              color: "#111827"
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 1 }
+              formatter: (v, ctx) => {
+                if (!total || !v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 9, weight: "600" }
             }
           }
         }
@@ -427,6 +449,9 @@
     }
 
     function renderChartEncaje(proy) {
+      if (chartEncaje) chartEncaje.destroy();
+      const ctx = document.getElementById("chartEncaje").getContext("2d");
+
       const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
 
       proy.forEach(p => {
@@ -437,21 +462,18 @@
         else counts.SIN++;
       });
 
+      const labels = ["ALTO", "MEDIO", "BAJO", "SIN"];
       const data = [counts.ALTO, counts.MEDIO, counts.BAJO, counts.SIN];
       const total = data.reduce((a, b) => a + b, 0);
-
-      if (chartEncaje) chartEncaje.destroy();
-      const ctx = document.getElementById("chartEncaje").getContext("2d");
-      Chart.register(window.ChartDataLabels);
 
       chartEncaje = new Chart(ctx, {
         type: "doughnut",
         data: {
-          labels: ["ALTO", "MEDIO", "BAJO", "SIN"],
+          labels,
           datasets: [
             {
               data,
-              backgroundColor: ["#16A34A", "#FACC15", "#FB923C", "#E5E7EB"],
+              backgroundColor: ["#16A34A", "#FACC15", "#FB7185", "#E5E7EB"],
               borderColor: "#FFFFFF",
               borderWidth: 2
             }
@@ -461,61 +483,75 @@
           responsive: true,
           cutout: "55%",
           plugins: {
-            legend: { position: "bottom", labels: { font: { size: 11 } } },
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 10 } }
+            },
             datalabels: {
-              formatter: (v, ctx) => {
+              formatter: (v) => {
                 if (!total || !v) return "";
                 const pct = Math.round((v * 100) / total);
                 return pct ? pct + "%" : "";
               },
               color: "#111827",
-              font: { size: 10, weight: "600" }
+              font: { size: 9, weight: "600" }
             }
           }
         }
       });
     }
 
-    function renderChartSegmento(proy) {
+    function renderChartSegmento(clis) {
+      if (chartSegmento) chartSegmento.destroy();
+      const ctx = document.getElementById("chartSegmento").getContext("2d");
+
+      const activos = clis.filter(c => c.trabaja_con_2n);
       const counts = {};
-      proy.forEach(p => {
-        const seg = p.segmento || p.tipo_activo || "Sin segmento";
+      activos.forEach(c => {
+        const seg = c.segmento || "Sin segmento";
         counts[seg] = (counts[seg] || 0) + 1;
       });
 
-      const labels = Object.keys(counts);
-      const data = labels.map(l => counts[l]);
+      const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
+      const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
+      const total = data.reduce((a, b) => a + b, 0);
 
-      if (chartSegmento) chartSegmento.destroy();
-      const ctx = document.getElementById("chartSegmento").getContext("2d");
       chartSegmento = new Chart(ctx, {
-        type: "bar",
+        type: "doughnut",
         data: {
           labels,
           datasets: [
             {
               data,
-              backgroundColor: "#4F46E5"
+              backgroundColor: [
+                "#4F46E5",
+                "#22C55E",
+                "#F97316",
+                "#0EA5E9",
+                "#A855F7",
+                "#E5E7EB"
+              ],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
             }
           ]
         },
         options: {
           responsive: true,
+          cutout: "55%",
           plugins: {
-            legend: { display: false },
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 10 } }
+            },
             datalabels: {
-              anchor: "end",
-              align: "top",
-              formatter: (v) => (v ? v : ""),
-              font: { size: 9, weight: "600" },
-              color: "#111827"
-            }
-          },
-          scales: {
-            x: { ticks: { font: { size: 9 } } },
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 1 }
+              formatter: (v) => {
+                if (!total || !v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 9, weight: "600" }
             }
           }
         }
@@ -523,47 +559,56 @@
     }
 
     function renderChartTopClientes(clis) {
+      if (chartTopClientes) chartTopClientes.destroy();
+      const ctx = document.getElementById("chartTopClientes").getContext("2d");
+
       const top = clis
         .slice()
         .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
         .filter(c => (c.num_obras || 0) > 0)
-        .slice(0, 8);
+        .slice(0, 6);
 
-      const labels = top.map(c => c.nombre_display || "");
-      const data = top.map(c => c.num_obras || 0);
+      const labels = top.length ? top.map(c => c.nombre_display || "") : ["Sin datos"];
+      const data = top.length ? top.map(c => c.num_obras || 0) : [1];
+      const total = data.reduce((a, b) => a + b, 0);
 
-      if (chartTopClientes) chartTopClientes.destroy();
-      const ctx = document.getElementById("chartTopClientes").getContext("2d");
       chartTopClientes = new Chart(ctx, {
-        type: "bar",
+        type: "doughnut",
         data: {
           labels,
           datasets: [
             {
               data,
-              backgroundColor: "#22C55E"
+              backgroundColor: [
+                "#22C55E",
+                "#4ADE80",
+                "#A7F3D0",
+                "#6EE7B7",
+                "#BBF7D0",
+                "#E5E7EB"
+              ],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
             }
           ]
         },
         options: {
-          indexAxis: "y",
           responsive: true,
+          cutout: "55%",
           plugins: {
-            legend: { display: false },
-            datalabels: {
-              anchor: "end",
-              align: "right",
-              formatter: (v) => (v ? v : ""),
-              font: { size: 9, weight: "600" },
-              color: "#111827"
-            }
-          },
-          scales: {
-            x: {
-              beginAtZero: true,
-              ticks: { stepSize: 1 }
+            legend: {
+              position: "bottom",
+              labels: { font: { size: 10 } }
             },
-            y: { ticks: { font: { size: 9 } } }
+            datalabels: {
+              formatter: (v) => {
+                if (!total || !v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 9, weight: "600" }
+            }
           }
         }
       });
@@ -590,7 +635,6 @@
                 <th>Cliente</th>
                 <th>Tipo</th>
                 <th>Segmento</th>
-                <th>Ciudad</th>
                 <th>Provincia</th>
                 <th>Obras</th>
                 <th>2N</th>
@@ -611,7 +655,6 @@
                 <td>${c.nombre_display || ""}</td>
                 <td>${c.tipo || ""}</td>
                 <td>${c.segmento || ""}</td>
-                <td>${c.ciudad || ""}</td>
                 <td>${c.provincia || ""}</td>
                 <td>${c.num_obras || 0}</td>
                 <td>${badge2N}</td>
@@ -637,7 +680,7 @@
           <thead>
             <tr>
               <th>Proyecto</th>
-              <th>Ciudad</th>
+              <th>Provincia</th>
               <th>Estado</th>
               <th>Encaje 2N</th>
               <th>Cliente principal</th>
@@ -684,7 +727,7 @@
           html += `
             <tr>
               <td>${p.nombre_obra || p.nombre || ""}</td>
-              <td>${p.ciudad || p.provincia || ""}</td>
+              <td>${p.provincia || ""}</td>
               <td>${p.estado || ""}</td>
               <td>${badge}</td>
               <td>${p.cliente_principal || p.promotora || ""}</td>
@@ -711,12 +754,23 @@
       });
 
       const clientesConObra = clis.filter(c => (c.num_obras || 0) > 0).length;
+      const clientes2N = clis.filter(c => c.trabaja_con_2n);
+      const clientes2NporSegmento = {};
+      clientes2N.forEach(c => {
+        const seg = c.segmento || "Sin segmento";
+        clientes2NporSegmento[seg] = (clientes2NporSegmento[seg] || 0) + 1;
+      });
+
       const clientesClave = clis
         .slice()
         .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
         .slice(0, 5)
         .map(c => `${c.nombre_display || ""} (${c.num_obras || 0})`)
         .join(", ");
+
+      const listaSeg = Object.keys(clientes2NporSegmento)
+        .map(seg => `${seg}: ${clientes2NporSegmento[seg]}`)
+        .join(" · ");
 
       resumenEjecutivo.innerHTML = `
         <div>
@@ -726,7 +780,7 @@
           <strong>ALTO / MEDIO</strong>.
         </div>
         <div>
-          <strong style="color:#111827;">Calidad de segmentación:</strong><br/>
+          <strong style="color:#111827;">Calidad de segmentación del encaje:</strong><br/>
           Encaje ALTO: <strong>${encCounts.ALTO}</strong> · MEDIO: <strong>${encCounts.MEDIO}</strong> ·
           BAJO: <strong>${encCounts.BAJO}</strong> · Sin clasificar: <strong>${encCounts.SIN}</strong>.
         </div>
@@ -734,6 +788,10 @@
           <strong style="color:#111827;">Base de clientes activa:</strong><br/>
           Hay <strong>${totalCli}</strong> clientes dentro de los filtros, de los cuales
           <strong>${clientesConObra}</strong> tienen al menos una obra vinculada.
+        </div>
+        <div>
+          <strong style="color:#111827;">Clientes con los que ya trabaja 2N (por segmento):</strong><br/>
+          ${listaSeg || "No hay clientes marcados como 2N en esta vista."}
         </div>
         <div>
           <strong style="color:#111827;">Clientes clave por nº de obras:</strong><br/>
@@ -748,7 +806,7 @@
       renderKPIs(proy, clis);
       renderChartEstado(proy);
       renderChartEncaje(proy);
-      renderChartSegmento(proy);
+      renderChartSegmento(clis);
       renderChartTopClientes(clis);
       renderTabla(proy, clis);
       renderResumenEjecutivo(proy, clis);
@@ -767,6 +825,13 @@
       const { jsPDF } = window.jspdf;
       btnExportPDF.disabled = true;
       btnExportPDF.textContent = "Generando PDF...";
+
+      // mostrar las tablas solo-pdf durante la captura
+      const soloPdfBlocks = Array.from(document.querySelectorAll(".solo-pdf"));
+      const prevDisplay = soloPdfBlocks.map(el => el.style.display);
+      soloPdfBlocks.forEach(el => {
+        el.style.display = "block";
+      });
 
       try {
         const canvas = await html2canvas(reportContent, {
@@ -792,7 +857,14 @@
         while (heightLeft > 0) {
           pdf.addPage();
           position = 10;
-          pdf.addImage(imgData, "PNG", 10, position - (imgHeight - heightLeft), imgWidth, imgHeight);
+          pdf.addImage(
+            imgData,
+            "PNG",
+            10,
+            position - (imgHeight - heightLeft),
+            imgWidth,
+            imgHeight
+          );
           heightLeft -= (pageHeight - 20);
         }
 
@@ -801,6 +873,10 @@
         console.error("Error generando PDF:", err);
         alert("Ha ocurrido un error al generar el PDF.");
       } finally {
+        // restaurar estado visual
+        soloPdfBlocks.forEach((el, i) => {
+          el.style.display = prevDisplay[i];
+        });
         btnExportPDF.disabled = false;
         btnExportPDF.textContent = "📄 Descargar PDF del reporte";
       }
