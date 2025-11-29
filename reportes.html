@@ -115,7 +115,7 @@
     }
     .chart-card-wrapper {
       position: relative;
-      height: 260px; /* en pantalla más compacto */
+      height: 360px; /* MÁS GRANDE PARA EL GRÁFICO + LEYENDA DERECHA */
       margin-bottom: 6px;
     }
     .chart-card-data {
@@ -161,7 +161,7 @@
         grid-template-columns: minmax(0, 1fr);
       }
       .chart-card-wrapper {
-        height: 240px;
+        height: 300px;
       }
     }
   </style>
@@ -551,12 +551,13 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           cutout: "55%",
           plugins: {
             legend: {
               position: "right",
               align: "center",
-              labels: { font: { size: 9 } }
+              labels: { font: { size: 9 }, usePointStyle: true }
             },
             datalabels: {
               formatter: (v) => {
@@ -567,6 +568,9 @@
               color: "#111827",
               font: { size: 9, weight: "600" }
             }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
           }
         }
       });
@@ -616,12 +620,13 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           cutout: "55%",
           plugins: {
             legend: {
               position: "right",
               align: "center",
-              labels: { font: { size: 9 } }
+              labels: { font: { size: 9 }, usePointStyle: true }
             },
             datalabels: {
               formatter: (v) => {
@@ -632,6 +637,9 @@
               color: "#111827",
               font: { size: 9, weight: "600" }
             }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
           }
         }
       });
@@ -684,12 +692,13 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           cutout: "55%",
           plugins: {
             legend: {
               position: "right",
               align: "center",
-              labels: { font: { size: 9 } }
+              labels: { font: { size: 9 }, usePointStyle: true }
             },
             datalabels: {
               formatter: (v) => {
@@ -700,6 +709,9 @@
               color: "#111827",
               font: { size: 9, weight: "600" }
             }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
           }
         }
       });
@@ -755,12 +767,13 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           cutout: "55%",
           plugins: {
             legend: {
               position: "right",
               align: "center",
-              labels: { font: { size: 9 } }
+              labels: { font: { size: 9 }, usePointStyle: true }
             },
             datalabels: {
               formatter: (v) => {
@@ -771,6 +784,9 @@
               color: "#111827",
               font: { size: 9, weight: "600" }
             }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
           }
         }
       });
