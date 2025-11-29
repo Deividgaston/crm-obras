@@ -99,9 +99,7 @@
 
     <div class="columns" style="grid-template-columns: 1.1fr 2.2fr 0.9fr; align-items:flex-start; gap:20px;">
 
-      <!-- ==============================
-           KANBAN DE PROYECTOS
-      =============================== -->
+      <!-- PROYECTOS -->
       <aside class="panel">
         <div class="panel-title">Proyectos</div>
         <div class="form-group" style="margin-bottom:8px;">
@@ -116,15 +114,13 @@
         <div id="projectFooter" style="font-size:11px;color:#6B7280;margin-top:6px;"></div>
       </aside>
 
-      <!-- ==============================
-           KANBAN DE TAREAS
-      =============================== -->
+      <!-- TAREAS (KANBAN) -->
       <section class="panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div>
             <div class="panel-title">Tareas</div>
             <div class="panel-subtitle" id="subtituloTareas">
-              Selecciona un proyecto a la izquierda para ver y crear tareas asociadas.
+              Todas las tareas. Puedes filtrarlas por proyecto arrastrando al panel izquierdo.
             </div>
           </div>
           <button class="btn-primary" id="btnNuevaTarea">+ Nueva tarea</button>
@@ -159,9 +155,7 @@
         </div>
       </section>
 
-      <!-- ==============================
-           NOTAS RÁPIDAS
-      =============================== -->
+      <!-- NOTAS RÁPIDAS -->
       <aside class="panel">
         <div class="panel-title">Notas rápidas</div>
 
@@ -176,9 +170,7 @@
     </div>
   </main>
 
-  <!-- ==============================
-       MODAL CREAR / EDITAR TAREA
-  =============================== -->
+  <!-- MODAL TAREA -->
   <dialog id="tareaDialog">
     <div class="modal-header">Tarea</div>
 
@@ -254,9 +246,6 @@
     </form>
   </dialog>
 
-  <!-- ==============================
-       SCRIPT
-  =============================== -->
   <script type="module">
     import { db } from "./firebase.js";
     import {
@@ -306,7 +295,6 @@
 
     document.getElementById("btnNuevaTarea").onclick = () => abrirTarea(null);
     document.getElementById("btnCrearNotaRapida").onclick = crearNotaRapida;
-
     filtroProyectos.oninput = renderProyectos;
 
     btnFechaHoy.onclick = () => {
@@ -325,12 +313,9 @@
       proyectos = [];
       snap.forEach(d => {
         const data = d.data();
-        const nombre = data.nombre_display || data.nombre || "";
+        const nombre = data.nombre_obra || data.nombre_display || data.nombre || "";
         if (!nombre) return;
-        proyectos.push({
-          id: d.id,
-          nombre
-        });
+        proyectos.push({ id: d.id, nombre });
       });
       renderProyectos();
     }
@@ -354,9 +339,7 @@
         card.className = "project-card";
         if (p.id === proyectoActivo) card.classList.add("active-project");
         card.dataset.id = p.id;
-        card.innerHTML = `
-          <div>${p.nombre}</div>
-        `;
+        card.innerHTML = `<div>${p.nombre}</div>`;
 
         card.addEventListener("click", () => {
           proyectoActivo = p.id;
@@ -365,7 +348,6 @@
           renderKanban();
         });
 
-        // Permitir soltar tareas encima del proyecto para asignarlas
         card.addEventListener("dragover", e => {
           e.preventDefault();
           card.classList.add("drag-over-project");
@@ -401,7 +383,7 @@
 
     function actualizarSubtituloTareas() {
       if (!proyectoActivo) {
-        subtituloTareas.textContent = "Selecciona un proyecto a la izquierda para ver y crear tareas asociadas.";
+        subtituloTareas.textContent = "Todas las tareas. Puedes arrastrarlas a un proyecto para asociarlas.";
       } else {
         const p = proyectos.find(x => x.id === proyectoActivo);
         subtituloTareas.textContent = p
@@ -447,7 +429,7 @@
           : "background:#E5E7EB;color:#374151;";
 
       const proyectoNombre =
-        proyectos.find(x => x.id === t.proyecto_id)?.nombre || "";
+        proyectos.find(x => x.id === t.proyecto_id)?.nombre || "Sin proyecto";
 
       d.innerHTML = `
         <div class="task-header-row">
@@ -458,7 +440,7 @@
             </button>
           </div>
           <span style="font-size:10px;padding:2px 6px;border-radius:999px;${badge}">
-            ${t.prioridad.toUpperCase()}
+            ${t.prioridad?.toUpperCase() || ""}
           </span>
         </div>
 
@@ -472,7 +454,7 @@
 
         <div style="font-size:10px;color:#6B7280;margin-top:6px;display:flex;justify-content:space-between;">
           <span>${t.fecha || ""}</span>
-          <span>${t.tipo}</span>
+          <span>${t.tipo || ""}</span>
         </div>
       `;
 
@@ -525,8 +507,8 @@
     async function asignarTareaAProyecto(tareaId, proyectoId) {
       const ref = doc(db, "tareas", tareaId);
       await updateDoc(ref, { proyecto_id: proyectoId });
-      await cargarTareas();
       proyectoActivo = proyectoId;
+      await cargarTareas();
       actualizarSubtituloTareas();
       renderProyectos();
     }
@@ -568,23 +550,16 @@
       notas.forEach(n => {
         const li = document.createElement("div");
         li.className = "activity-item";
-
         li.innerHTML = `
           <div class="activity-title">${n.titulo}</div>
           <div class="activity-meta">${n.fecha}</div>
         `;
-
         li.addEventListener("click", () => abrirTarea(n.id));
         listaNotasRapidas.appendChild(li);
       });
     }
 
     function abrirTarea(id) {
-      if (!proyectoActivo && !id) {
-        alert("Selecciona primero un proyecto para asociar la tarea.");
-        return;
-      }
-
       if (!id) {
         tareaId.value = "";
         tareaTitulo.value = "";
@@ -595,7 +570,7 @@
         tareaRecurrenteChk.checked = false;
         tareaRecurrenteDias.value = 7;
         tareaDescripcion.value = "";
-        tareaProyectoHidden.value = proyectoActivo;
+        tareaProyectoHidden.value = proyectoActivo || "";
         btnBorrarTarea.style.display = "none";
       } else {
         const t = tareas.find(x => x.id === id);
@@ -610,7 +585,7 @@
         tareaRecurrenteChk.checked = !!t.es_recurrente;
         tareaRecurrenteDias.value = t.recurrente_dias || 7;
         tareaDescripcion.value = t.descripcion || "";
-        tareaProyectoHidden.value = t.proyecto_id || proyectoActivo || "";
+        tareaProyectoHidden.value = t.proyecto_id || "";
         btnBorrarTarea.style.display = "inline-block";
       }
 
@@ -632,7 +607,7 @@
           ? Number(tareaRecurrenteDias.value || "7")
           : null,
         descripcion: tareaDescripcion.value.trim(),
-        proyecto_id: tareaProyectoHidden.value || proyectoActivo
+        proyecto_id: tareaProyectoHidden.value || proyectoActivo || null
       };
 
       if (id) {
@@ -653,7 +628,6 @@
       await cargarTareas();
     };
 
-    // INIT
     cargarProyectos();
     cargarTareas();
     actualizarSubtituloTareas();
