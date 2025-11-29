@@ -89,6 +89,8 @@
       align-items: center;
       justify-content: space-between;
       margin-top: 4px;
+      gap: 6px;
+      flex-wrap: wrap;
     }
     .login-remember {
       display: flex;
@@ -120,12 +122,6 @@
       transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
       white-space: nowrap;
     }
-    .login-button.secondary {
-      background: transparent;
-      border: 1px solid #4b5563;
-      color: #e5e7eb;
-      box-shadow: none;
-    }
     .login-button:disabled {
       opacity: 0.7;
       cursor: default;
@@ -137,6 +133,30 @@
     }
     .login-button span.icon {
       font-size: 13px;
+    }
+    .login-button-ghost {
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      padding: 7px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+      white-space: nowrap;
+    }
+    .login-button-ghost:disabled {
+      opacity: 0.7;
+      cursor: default;
+    }
+    .login-button-ghost:not(:disabled):hover {
+      background: rgba(31,41,55,1);
+      border-color: #6b7280;
+      transform: translateY(-1px);
     }
     .login-footer {
       margin-top: 10px;
@@ -159,18 +179,19 @@
     .login-status.success {
       color: #bbf7d0;
     }
-    .login-separator {
-      display:flex;
-      align-items:center;
-      gap:6px;
-      margin:8px 0 6px 0;
-      font-size:10px;
-      color:#6b7280;
+    .login-divider {
+      margin-top: 8px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: #6b7280;
     }
-    .login-separator span.line {
-      flex:1;
-      height:1px;
-      background:rgba(55,65,81,0.7);
+    .login-divider-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(75,85,99,0.6);
     }
   </style>
 </head>
@@ -189,7 +210,6 @@
         </div>
       </div>
 
-      <!-- LOGIN FORM -->
       <form id="loginForm" class="login-form">
         <div>
           <label for="email" class="login-label">Correo electrónico</label>
@@ -197,8 +217,9 @@
             type="email"
             id="email"
             class="login-input"
-            placeholder="tu.correo@2n-crm.com"
+            placeholder="tu.correo@empresa.com"
             autocomplete="email"
+            required
           />
         </div>
         <div>
@@ -209,6 +230,7 @@
             class="login-input"
             placeholder="••••••••"
             autocomplete="current-password"
+            required
           />
         </div>
 
@@ -219,21 +241,20 @@
           </label>
           <button type="submit" id="btnLogin" class="login-button">
             <span class="icon">→</span>
-            <span>Entrar</span>
+            <span>Entrar al CRM</span>
           </button>
         </div>
       </form>
 
-      <div class="login-separator">
-        <span class="line"></span>
+      <div class="login-divider">
+        <div class="login-divider-line"></div>
         <span>o</span>
-        <span class="line"></span>
+        <div class="login-divider-line"></div>
       </div>
 
-      <!-- BOTÓN GOOGLE -->
-      <div style="display:flex;justify-content:flex-end;margin-bottom:2px;">
-        <button type="button" id="btnGoogle" class="login-button secondary">
-          <span class="icon">🟢</span>
+      <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+        <button id="btnLoginGoogle" class="login-button-ghost" type="button">
+          <span class="icon">G</span>
           <span>Entrar con Google</span>
         </button>
       </div>
@@ -241,7 +262,7 @@
       <div class="login-footer">
         <div class="login-status" id="loginStatus"></div>
         <div>
-          <span>Acceso privado · Usuarios vía email o Google</span>
+          <span>Acceso privado · Usuarios gestionados en Firebase</span>
         </div>
       </div>
     </div>
@@ -252,7 +273,11 @@
     import {
       signInWithEmailAndPassword,
       GoogleAuthProvider,
-      signInWithPopup
+      signInWithPopup,
+      setPersistence,
+      browserLocalPersistence,
+      browserSessionPersistence,
+      onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const form = document.getElementById("loginForm");
@@ -260,7 +285,7 @@
     const passInput = document.getElementById("password");
     const rememberInput = document.getElementById("remember");
     const btnLogin = document.getElementById("btnLogin");
-    const btnGoogle = document.getElementById("btnGoogle");
+    const btnLoginGoogle = document.getElementById("btnLoginGoogle");
     const statusEl = document.getElementById("loginStatus");
 
     const provider = new GoogleAuthProvider();
@@ -270,22 +295,31 @@
       statusEl.className = "login-status" + (type ? " " + type : "");
     }
 
-    // LOGIN EMAIL / CONTRASEÑA
+    async function applyPersistence() {
+      const remember = !!rememberInput.checked;
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+    }
+
+    // Redirigir si ya hay sesión iniciada
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "index.html";
+      }
+    });
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
       const password = passInput.value;
 
-      if (!email || !password) {
-        setStatus("Introduce correo y contraseña.", "error");
-        return;
-      }
+      if (!email || !password) return;
 
       btnLogin.disabled = true;
-      btnGoogle.disabled = true;
+      btnLoginGoogle.disabled = true;
       setStatus("Verificando credenciales...", "");
 
       try {
+        await applyPersistence();
         await signInWithEmailAndPassword(auth, email, password);
         setStatus("Acceso correcto. Entrando al CRM...", "success");
         setTimeout(() => {
@@ -300,17 +334,17 @@
         setStatus(msg, "error");
       } finally {
         btnLogin.disabled = false;
-        btnGoogle.disabled = false;
+        btnLoginGoogle.disabled = false;
       }
     });
 
-    // LOGIN CON GOOGLE
-    btnGoogle.addEventListener("click", async () => {
+    btnLoginGoogle.addEventListener("click", async () => {
       btnLogin.disabled = true;
-      btnGoogle.disabled = true;
-      setStatus("Abriendo ventana de Google...", "");
+      btnLoginGoogle.disabled = true;
+      setStatus("Conectando con Google...", "");
 
       try {
+        await applyPersistence();
         await signInWithPopup(auth, provider);
         setStatus("Acceso correcto con Google. Entrando al CRM...", "success");
         setTimeout(() => {
@@ -320,12 +354,12 @@
         console.error("Error login Google:", err);
         let msg = "No se ha podido iniciar sesión con Google.";
         if (err.code === "auth/popup-closed-by-user") {
-          msg = "Se ha cerrado la ventana de Google.";
+          msg = "Ventana de Google cerrada antes de completar el acceso.";
         }
         setStatus(msg, "error");
       } finally {
         btnLogin.disabled = false;
-        btnGoogle.disabled = false;
+        btnLoginGoogle.disabled = false;
       }
     });
   </script>
