@@ -15,121 +15,51 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      align-items: stretch;
+    @media screen {
+      .solo-pdf {
+        display: none;
+      }
     }
-    .chart-card {
+
+    /* Lienzo general de reportes */
+    .report-page {
+      background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+      padding: 16px 10px 24px 10px;
+      margin-bottom: 20px;
+    }
+    .report-inner {
+      max-width: 1120px;
+      margin: 0 auto;
       background: #FFFFFF;
-      border-radius: 12px;
-      padding: 8px 10px 8px 10px;
+      border-radius: 16px;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
+      padding: 18px 20px 20px 20px;
       border: 1px solid #E5E7EB;
-      display: flex;
-      flex-direction: column;
-      min-height: 260px;
     }
-    .chart-card-header {
+    .report-header-card {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 4px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #E5E7EB;
+      padding-bottom: 8px;
     }
-    .chart-card-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #111827;
+    .report-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0F172A;
     }
-    .chart-card-sub {
-      font-size: 10.5px;
+    .report-subtitle {
+      font-size: 11px;
       color: #6B7280;
-      margin-bottom: 6px;
+      margin-top: 2px;
     }
-    .chart-card-wrapper {
-      position: relative;
-      height: 360px; /* MÁS GRANDE PARA EL GRÁFICO + LEYENDA DERECHA */
-      margin-bottom: 6px;
-    }
-    .chart-card-data {
+    .report-filtros {
       font-size: 10px;
-      color: #4B5563;
-      background: #F9FAFB;
-      padding: 6px 7px;
-      border-radius: 8px;
-      border: 1px dashed #E5E7EB;
+      color: #9CA3AF;
+      text-align: right;
+      max-width: 260px;
     }
-    .chart-legend-right {
-      position: absolute;
-      top: 18px;
-      right: 2px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 10px;
-      background: rgba(255,255,255,0.9);
-      padding: 4px 6px;
-      border-radius: 8px;
-      border: 1px solid #E5E7EB;
-      max-width: 140px;
-      pointer-events: none;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .legend-color {
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(15,23,42,0.15);
-    }
-    .chart-container-inner {
-      position: relative;
-      height: 100%;
-      padding-right: 150px; /* deja espacio a la derecha para la leyenda */
-    }
-    .chart-canvas {
-      position: absolute;
-      inset: 0 150px 0 0;
-    }
-
-    .filtros-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-    .select-input {
-      border-radius: 999px;
-      border: 1px solid #D1D5DB;
-      background: #F9FAFB;
-      font-size: 11px;
-      padding: 4px 8px;
-      color: #111827;
-    }
-    .select-input:focus {
-      outline: none;
-      border-color: #2563EB;
-      box-shadow: 0 0 0 1px rgba(37,99,235,0.15);
-      background: #FFFFFF;
-    }
-    .search-input {
-      border-radius: 999px;
-      border: 1px solid #D1D5DB;
-      padding: 4px 8px;
-      font-size: 11px;
-      min-width: 140px;
-    }
-    .search-input:focus {
-      outline: none;
-      border-color: #2563EB;
-      box-shadow: 0 0 0 1px rgba(37,99,235,0.15);
-      background: #FFFFFF;
-    }
-
     .report-kpis-row {
       display: flex;
       flex-wrap: wrap;
@@ -142,9 +72,6 @@
       border-radius: 10px;
       padding: 6px 8px;
       border: 1px solid #E5E7EB;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
     }
     .report-kpi-label {
       font-size: 10px;
@@ -160,19 +87,68 @@
     .report-kpi-footnote {
       font-size: 9px;
       color: #9CA3AF;
+      margin-top: 2px;
     }
 
+    /* Cuadros de gráficos en grid 2x2 en pantalla */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .chart-card {
+      background: radial-gradient(circle at top left, #EEF2FF 0, #FFFFFF 45%, #F9FAFB 100%);
+      border-radius: 14px;
+      border: 1px solid #E5E7EB;
+      padding: 10px 12px;
+    }
+    .chart-card-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 3px;
+    }
+    .chart-card-sub {
+      font-size: 10.5px;
+      color: #6B7280;
+      margin-bottom: 6px;
+    }
+    .chart-card-wrapper {
+      position: relative;
+      height: 360px; /* MÁS GRANDE PARA EL GRÁFICO + LEYENDA DERECHA */
+      margin-bottom: 6px;
+    }
+    .chart-card-data {
+      font-size: 10px;
+      color: #4B5563;
+      background: rgba(249, 250, 251, 0.9);
+      border-radius: 8px;
+      border: 1px dashed #D1D5DB;
+      padding: 6px 7px;
+    }
+    .chart-card-data strong {
+      color: #111827;
+    }
+    .chart-card-data ul {
+      padding-left: 14px;
+      margin: 4px 0 0 0;
+    }
+    .chart-card-data li {
+      margin-bottom: 2px;
+    }
+
+    /* Tabla mini */
     .tabla-mini {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 6px;
-      font-size: 10px;
+      margin-top: 4px;
+      font-size: 9.5px;
     }
     .tabla-mini th,
     .tabla-mini td {
+      border: 1px solid #E5E7EB;
       padding: 3px 4px;
       text-align: left;
-      border: 1px solid #E5E7EB;
     }
     .tabla-mini th {
       background: #F3F4F6;
@@ -184,19 +160,8 @@
       .charts-grid {
         grid-template-columns: minmax(0, 1fr);
       }
-
       .chart-card-wrapper {
-        height: 320px;
-      }
-
-      .chart-container-inner {
-        padding-right: 130px;
-      }
-      .chart-canvas {
-        inset: 0 130px 0 0;
-      }
-      .chart-legend-right {
-        max-width: 130px;
+        height: 300px;
       }
     }
   </style>
@@ -218,7 +183,12 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;">
-      <input type="text" class="search-box" id="buscadorGlobal" placeholder="Filtrar proyectos / clientes..." />
+      <input
+        type="text"
+        class="search-box"
+        id="buscadorGlobal"
+        placeholder="Filtrar proyectos / clientes..."
+      />
       <button
         id="btnLogout"
         type="button"
@@ -252,169 +222,130 @@
     </div>
 
     <!-- FILTROS -->
-    <div class="card" style="margin-bottom:10px;">
-      <div class="filtros-bar">
-        <select id="fVista" class="select-input">
-          <option value="general">Vista general</option>
-          <option value="solo2n">Clientes que trabajan con 2N</option>
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <select id="fVista" class="select-input" style="max-width:180px;">
+          <option value="mixto">Vista: Mixta</option>
+          <option value="proyectos">Solo proyectos</option>
+          <option value="clientes">Solo clientes</option>
         </select>
 
-        <select id="fZona" class="select-input">
-          <option value="Todas">Todas las zonas</option>
+        <select id="fZona" class="select-input" style="max-width:200px;">
+          <option value="Todas">Provincia: todas</option>
         </select>
 
-        <select id="fEstado" class="select-input">
-          <option value="Todos">Todos los estados</option>
+        <select id="fEstado" class="select-input" style="max-width:200px;">
+          <option value="Todos">Estado proyecto: todos</option>
         </select>
 
-        <select id="fEncaje" class="select-input">
-          <option value="Todos">Todos los encajes 2N</option>
-          <option value="ALTO">Encaje ALTO</option>
-          <option value="MEDIO">Encaje MEDIO</option>
-          <option value="BAJO">Encaje BAJO</option>
-          <option value="SIN">Sin dato de encaje</option>
+        <select id="fEncaje" class="select-input" style="max-width:180px;">
+          <option value="Todos">Encaje 2N: todos</option>
+          <option value="ALTO">ALTO</option>
+          <option value="MEDIO">MEDIO</option>
+          <option value="BAJO">BAJO</option>
+          <option value="SIN">Sin clasificar</option>
         </select>
 
-        <input
-          id="buscadorLocal"
-          type="text"
-          class="search-input"
-          placeholder="Filtrar por obra / cliente..."
-        />
-      </div>
+        <div style="flex:1;"></div>
 
-      <div style="font-size:10.5px;color:#6B7280;">
-        <span id="textoFiltrosResumen"></span>
+        <span style="font-size:10.5px;color:#9CA3AF;">
+          En pantalla ves los 4 · En PDF: 1 gráfico grande por hoja con sus datos.
+        </span>
       </div>
     </div>
 
-    <!-- KPIs -->
-    <div class="report-kpis-row">
-      <div class="report-kpi">
-        <div class="report-kpi-label">Proyectos en vista actual</div>
-        <div class="report-kpi-value" id="kpiProyectos">–</div>
-        <div class="report-kpi-footnote">
-          Contando todos los estados (detectado → ganado/perdido/paralizado).
+    <!-- PÁGINA VISUAL: 4 GRÁFICOS JUNTOS -->
+    <section class="report-page">
+      <div class="report-inner">
+        <div class="report-header-card">
+          <div>
+            <div class="report-title">Resumen gráfico CRM 2N</div>
+            <div class="report-subtitle">
+              Pipeline, encaje 2N y clientes activos por segmento y tipo.
+            </div>
+          </div>
+          <div class="report-filtros" id="textoFiltrosResumen"></div>
         </div>
-      </div>
-      <div class="report-kpi">
-        <div class="report-kpi-label">Encaje 2N alto + medio</div>
-        <div class="report-kpi-value" id="kpiEncajeAltoMedio">–</div>
-        <div class="report-kpi-footnote">
-          Número de obras donde 2N encaja muy bien o razonablemente bien.
-        </div>
-      </div>
-    </div>
 
-    <!-- GRID 2x2 GRÁFICOS -->
-    <div class="charts-grid" id="chartsGrid">
-
-      <!-- 1) ESTADO DEL PIPELINE -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-card-title">Estado del pipeline</div>
-        </div>
-        <div class="chart-card-sub">
-          Distribución de proyectos por estado actual (detectado, prescripción, oferta, negociación, ganado, perdido, paralizado).
-        </div>
-        <div class="chart-card-wrapper">
-          <div class="chart-container-inner">
-            <canvas id="chartEstado" class="chart-canvas"></canvas>
-            <div id="legendEstado" class="chart-legend-right"></div>
+        <div class="report-kpis-row">
+          <div class="report-kpi">
+            <div class="report-kpi-label">Proyectos filtrados</div>
+            <div id="kpiProyectos" class="report-kpi-value">–</div>
+            <div class="report-kpi-footnote">Total de obras según filtros actuales.</div>
+          </div>
+          <div class="report-kpi">
+            <div class="report-kpi-label">Obras encaje ALTO / MEDIO</div>
+            <div id="kpiEncajeAltoMedio" class="report-kpi-value">–</div>
+            <div class="report-kpi-footnote">Donde el encaje tecnológico de 2N es muy bueno.</div>
           </div>
         </div>
-        <div id="datosEstado" class="chart-card-data">
-          Sin datos aún.
-        </div>
-      </div>
 
-      <!-- 2) ENCAJE 2N -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-card-title">Encaje 2N en los proyectos</div>
-        </div>
-        <div class="chart-card-sub">
-          Obras donde las soluciones 2N tienen un encaje alto, medio, bajo o sin dato.
-        </div>
-        <div class="chart-card-wrapper">
-          <div class="chart-container-inner">
-            <canvas id="chartEncaje" class="chart-canvas"></canvas>
-            <div id="legendEncaje" class="chart-legend-right"></div>
+        <div class="charts-grid">
+          <!-- CARD 1: Estado -->
+          <div class="chart-card chart-page" id="card-estado" data-title="Estado del pipeline de proyectos">
+            <div class="chart-card-header">Estado del pipeline</div>
+            <div class="chart-card-sub">
+              Distribución de proyectos por estado (igual que en Pipeline).
+            </div>
+            <div class="chart-card-wrapper">
+              <canvas id="chartEstado"></canvas>
+            </div>
+            <div class="chart-card-data" id="datosEstado"></div>
+          </div>
+
+          <!-- CARD 2: Encaje -->
+          <div class="chart-card chart-page" id="card-encaje" data-title="Encaje 2N en proyectos filtrados">
+            <div class="chart-card-header">Encaje 2N en proyectos</div>
+            <div class="chart-card-sub">
+              Cómo se reparten los proyectos según encaje ALTO / MEDIO / BAJO / sin clasificar.
+            </div>
+            <div class="chart-card-wrapper">
+              <canvas id="chartEncaje"></canvas>
+            </div>
+            <div class="chart-card-data" id="datosEncaje"></div>
+          </div>
+
+          <!-- CARD 3: Clientes 2N por segmento -->
+          <div class="chart-card chart-page" id="card-segmento" data-title="Clientes 2N por segmento">
+            <div class="chart-card-header">Clientes con 2N activo por segmento</div>
+            <div class="chart-card-sub">
+              Solo clientes marcados como “2N ya está trabajando”, agrupados por segmento.
+            </div>
+            <div class="chart-card-wrapper">
+              <canvas id="chartSegmento"></canvas>
+            </div>
+            <div class="chart-card-data" id="datosSegmento"></div>
+          </div>
+
+          <!-- CARD 4: Clientes 2N por tipo -->
+          <div class="chart-card chart-page" id="card-tipo" data-title="Clientes 2N por tipo de cliente">
+            <div class="chart-card-header">Clientes con 2N activo por tipo de cliente</div>
+            <div class="chart-card-sub">
+              Promotoras, arquitecturas, ingenierías, fondos, integradores, etc.
+            </div>
+            <div class="chart-card-wrapper">
+              <canvas id="chartClientesTipo"></canvas>
+            </div>
+            <div class="chart-card-data" id="datosClientesTipo">
+              <div id="textoClientesTipo"></div>
+              <table class="tabla-mini" id="tablaClientes2N">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Segmento</th>
+                    <th>Provincia</th>
+                    <th>Obras</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <div id="datosEncaje" class="chart-card-data">
-          Sin datos aún.
-        </div>
-      </div>
 
-      <!-- 3) SEGMENTO / TIPO DE PROYECTO -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-card-title">Proyectos por segmento</div>
-        </div>
-        <div class="chart-card-sub">
-          Segmento de los proyectos (BTR, BTS, coliving, hotel, oficinas, residencial, etc.).
-        </div>
-        <div class="chart-card-wrapper">
-          <div class="chart-container-inner">
-            <canvas id="chartSegmento" class="chart-canvas"></canvas>
-            <div id="legendSegmento" class="chart-legend-right"></div>
-          </div>
-        </div>
-        <div id="datosSegmento" class="chart-card-data">
-          Sin datos aún.
-        </div>
       </div>
-
-      <!-- 4) CLIENTES QUE TRABAJAN CON 2N -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-card-title">Clientes que trabajan con 2N por tipo</div>
-        </div>
-        <div class="chart-card-sub">
-          Tipo de cliente (promotora, arquitectura, ingeniería, fondo, etc.) que ya tiene proyectos activos con 2N.
-        </div>
-        <div class="chart-card-wrapper">
-          <div class="chart-container-inner">
-            <canvas id="chartClientesTipo" class="chart-canvas"></canvas>
-            <div id="legendClientesTipo" class="chart-legend-right"></div>
-          </div>
-        </div>
-        <div id="datosClientesTipo" class="chart-card-data">
-          Sin datos aún.
-        </div>
-      </div>
-
-    </div>
-
-    <!-- TABLA MINI DE CLIENTES 2N -->
-    <div class="card" style="margin-top:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div style="font-size:11.5px;font-weight:600;color:#111827;">
-          Clientes con proyectos activos 2N (vista actual)
-        </div>
-        <div id="textoClientesTipo" style="font-size:10px;color:#6B7280;">
-          Sin datos.
-        </div>
-      </div>
-
-      <div style="max-height:220px;overflow:auto;">
-        <table class="tabla-mini" id="tablaClientes2N">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Tipo</th>
-              <th>Segmento</th>
-              <th>Provincia</th>
-              <th># Obras activas</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Se rellena por JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </section>
   </main>
 
   <script type="module">
@@ -463,25 +394,20 @@
     function contarObrasPorClienteNombre(nombreCliente) {
       const target = (nombreCliente || "").toString().toLowerCase().trim();
       if (!target) return 0;
-      return proyectos.filter(p => {
-        const c = (p.cliente_principal || "").toString().toLowerCase().trim();
-        return c === target;
-      }).length;
-    }
-
-    async function cargarDatos() {
-      const [snapProy, snapCli] = await Promise.all([
-        getDocs(collection(db, "proyectos")),
-        getDocs(collection(db, "clientes"))
-      ]);
-
-      proyectos = snapProy.docs.map(d => ({ id: d.id, ...d.data() }));
-      clientes = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      buildClientesView();
-      inicializarFiltroProvincia();
-      inicializarFiltroEstado();
-      aplicarFiltrosYRender();
+      let contador = 0;
+      proyectos.forEach(p => {
+        const campos = [
+          p.cliente_principal,
+          p.promotora,
+          p.constructora,
+          p.arquitectura,
+          p.ingenieria
+        ];
+        if (campos.some(v => (v || "").toString().toLowerCase().trim() === target)) {
+          contador++;
+        }
+      });
+      return contador;
     }
 
     function buildClientesView() {
@@ -500,30 +426,45 @@
       proyectos.forEach(p => { if (p.provincia) provincias.add(p.provincia); });
       clientes.forEach(c => { if (c.provincia) provincias.add(c.provincia); });
 
-      const arr = Array.from(provincias).sort((a, b) => a.localeCompare(b, "es"));
-
-      fZona.innerHTML = '<option value="Todas">Todas las zonas</option>' +
-        arr.map(z => `<option value="${z}">${z}</option>`).join("");
+      const lista = [...provincias].filter(z => z).sort((a, b) => a.localeCompare(b, "es"));
+      fZona.innerHTML =
+        '<option value="Todas">Provincia: todas</option>' +
+        lista.map(z => `<option value="${z}">${z}</option>`).join("");
     }
 
     function inicializarFiltroEstado() {
       const estadosSet = new Set();
       proyectos.forEach(p => { if (p.estado) estadosSet.add(p.estado); });
-      const arr = Array.from(estadosSet).sort((a, b) => a.localeCompare(b, "es"));
+      const lista = [...estadosSet].sort((a, b) => a.localeCompare(b, "es"));
+      fEstado.innerHTML =
+        '<option value="Todos">Estado proyecto: todos</option>' +
+        lista.map(e => `<option value="${e}">${e}</option>`).join("");
+    }
 
-      fEstado.innerHTML = '<option value="Todos">Todos los estados</option>' +
-        arr.map(e => `<option value="${e}">${e}</option>`).join("");
+    async function cargarDatos() {
+      const [snapProy, snapCli] = await Promise.all([
+        getDocs(collection(db, "proyectos")),
+        getDocs(collection(db, "clientes"))
+      ]);
+
+      proyectos = snapProy.docs.map(d => ({ id: d.id, ...d.data() }));
+      clientes = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      buildClientesView();
+      inicializarFiltroProvincia();
+      inicializarFiltroEstado();
+      aplicarFiltrosYRender();
     }
 
     function filtrarDatos() {
-      let proy = [...proyectos];
-      let clis = [...clientesView];
-
       const vista = fVista.value;
       const provincia = fZona.value;
       const estado = fEstado.value;
       const encaje = fEncaje.value;
-      const texto = norm(buscadorGlobal.value || "");
+      const txt = norm(buscadorGlobal.value);
+
+      let proy = proyectos.slice();
+      let clis = clientesView.slice();
 
       if (provincia !== "Todas") {
         proy = proy.filter(p => p.provincia === provincia);
@@ -538,26 +479,25 @@
         proy = proy.filter(p => {
           const e = (p.encaje_2n || "").toString().toUpperCase().trim();
           if (encaje === "SIN") {
-            return !e;
+            return !["ALTO", "MEDIO", "BAJO"].includes(e);
           }
           return e === encaje;
         });
       }
 
-      if (vista === "solo2n") {
-        proy = proy.filter(p => !!p.encaje_2n && ["ALTO", "MEDIO"].includes((p.encaje_2n || "").toString().toUpperCase().trim()));
-        clis = clis.filter(c => c.trabaja_con_2n === true);
-      }
-
-      if (texto) {
+      if (txt) {
         proy = proy.filter(p => {
           const blob = [
             p.nombre_obra,
-            p.cliente_principal,
+            p.nombre,
             p.ciudad,
-            p.provincia
-          ].join(" ");
-          return norm(blob).includes(texto);
+            p.provincia,
+            p.estado,
+            p.encaje_2n,
+            p.cliente_principal,
+            p.promotora
+          ].join(" ").toLowerCase();
+          return blob.includes(txt);
         });
 
         clis = clis.filter(c => {
@@ -565,269 +505,330 @@
             c.nombre_display,
             c.tipo,
             c.segmento,
+            c.ciudad,
             c.provincia
-          ].join(" ");
-          return norm(blob).includes(texto);
+          ].join(" ").toLowerCase();
+          return blob.includes(txt);
         });
       }
 
+      if (vista === "proyectos") {
+        return { proy, clis: [] };
+      }
+      if (vista === "clientes") {
+        return { proy: [], clis };
+      }
       return { proy, clis };
     }
 
-    function actualizarResumenFiltros({ proy, clis }) {
-      const totalProy = proy.length;
-      const encajeAlto = proy.filter(p => (p.encaje_2n || "").toString().toUpperCase().trim() === "ALTO").length;
-      const encajeMedio = proy.filter(p => (p.encaje_2n || "").toString().toUpperCase().trim() === "MEDIO").length;
-
-      kpiProyectos.textContent = totalProy || "0";
-      kpiEncajeAltoMedio.textContent = (encajeAlto + encajeMedio) || "0";
-
-      const partes = [];
-      if (fVista.value === "solo2n") partes.push("Vista: solo clientes que trabajan con 2N");
-      if (fZona.value !== "Todas") partes.push(`Zona: ${fZona.value}`);
-      if (fEstado.value !== "Todos") partes.push(`Estado: ${fEstado.value}`);
-      if (fEncaje.value !== "Todos") {
-        partes.push(
-          fEncaje.value === "SIN"
-            ? "Encaje: sin dato"
-            : `Encaje 2N: ${fEncaje.value}`
-        );
-      }
-      if (!partes.length) {
-        textoFiltrosResumen.textContent = "Vista general sin filtros adicionales.";
-      } else {
-        textoFiltrosResumen.textContent = partes.join(" · ");
-      }
+    function updateFiltrosTexto() {
+      textoFiltrosResumen.textContent =
+        `Provincia: ${fZona.value} · Estado: ${fEstado.value} · Encaje: ${fEncaje.value} · Vista: ${fVista.value}`;
     }
 
-    function destroyChartIfExists(chart) {
-      if (chart) chart.destroy();
+    function renderKPIs(proy) {
+      kpiProyectos.textContent = proy.length;
+
+      const encAltoMedio = proy.filter(p => {
+        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
+        return e === "ALTO" || e === "MEDIO";
+      }).length;
+      kpiEncajeAltoMedio.textContent = encAltoMedio;
     }
 
-    function colorPalette() {
-      return [
-        "#1D4ED8", "#EC4899", "#10B981", "#F97316", "#6366F1",
-        "#14B8A6", "#F59E0B", "#8B5CF6", "#22C55E", "#EF4444"
-      ];
-    }
+    function renderChartEstado(proy) {
+      if (chartEstado) chartEstado.destroy();
+      const ctx = document.getElementById("chartEstado").getContext("2d");
 
-    function buildPieConfig(labels, data) {
-      const colors = colorPalette().slice(0, labels.length);
-      return {
-        type: "pie",
+      const counts = {};
+      proy.forEach(p => {
+        const e = p.estado || "Sin estado";
+        counts[e] = (counts[e] || 0) + 1;
+      });
+
+      const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
+      const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
+      const total = data.reduce((a, b) => a + b, 0) || 1;
+
+      Chart.register(window.ChartDataLabels);
+
+      chartEstado = new Chart(ctx, {
+        type: "doughnut",
         data: {
           labels,
           datasets: [
             {
               data,
-              backgroundColor: colors,
+              backgroundColor: [
+                "#60A5FA",
+                "#34D399",
+                "#F97373",
+                "#FBBF24",
+                "#A855F7",
+                "#E5E7EB"
+              ],
               borderColor: "#FFFFFF",
-              borderWidth: 1
+              borderWidth: 2
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
+          cutout: "55%",
           plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0) || 1;
-                  const value = context.parsed;
-                  const pct = ((value / total) * 100).toFixed(1);
-                  return `${context.label}: ${value} (${pct}%)`;
-                }
-              }
+            legend: {
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 }, usePointStyle: true }
             },
             datalabels: {
+              formatter: (v) => {
+                if (!v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
               color: "#111827",
-              font: { size: 10, weight: "600" },
-              formatter: (value, ctx) => {
-                const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0) || 1;
-                const pct = (value / total) * 100;
-                return pct >= 5 ? `${pct.toFixed(0)}%` : "";
-              }
+              font: { size: 9, weight: "600" }
             }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
           }
-        },
-        plugins: [ChartDataLabels]
-      };
-    }
-
-    function renderLegend(containerId, labels, data) {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      el.innerHTML = "";
-
-      const total = data.reduce((a, b) => a + b, 0) || 1;
-      const colors = colorPalette().slice(0, labels.length);
-
-      labels.forEach((label, idx) => {
-        const value = data[idx] || 0;
-        const pct = ((value / total) * 100) || 0;
-
-        const item = document.createElement("div");
-        item.className = "legend-item";
-        item.innerHTML = `
-          <div class="legend-color" style="background:${colors[idx]};"></div>
-          <div style="flex:1;">
-            <div style="font-size:10px;color:#111827;">${label}</div>
-            <div style="font-size:9px;color:#6B7280;">${value} · ${pct.toFixed(1)}%</div>
-          </div>
-        `;
-        el.appendChild(item);
-      });
-    }
-
-    function renderChartEstado(proyFiltrados) {
-      const conteo = {
-        "Detectado": 0,
-        "En Prescripción": 0,
-        "Oferta Enviada": 0,
-        "Negociación": 0,
-        "Ganado": 0,
-        "Perdido": 0,
-        "Paralizado": 0
-      };
-
-      proyFiltrados.forEach(p => {
-        const estado = p.estado || "Detectado";
-        if (conteo[estado] === undefined) conteo[estado] = 0;
-        conteo[estado]++;
+        }
       });
 
-      const labels = Object.keys(conteo);
-      const data = labels.map(l => conteo[l] || 0);
-
-      destroyChartIfExists(chartEstado);
-      const ctx = document.getElementById("chartEstado").getContext("2d");
-      const cfg = buildPieConfig(labels, data);
-      chartEstado = new Chart(ctx, cfg);
-
-      renderLegend("legendEstado", labels, data);
-
-      const total = data.reduce((a, b) => a + b, 0);
-      if (!total) {
-        datosEstado.textContent = "No hay proyectos en la vista actual.";
-      } else {
-        datosEstado.textContent = `Total proyectos: ${total}. Estados dominantes: ${
-          labels
-            .map((l, idx) => ({ label: l, value: data[idx] }))
-            .sort((a, b) => (b.value || 0) - (a.value || 0))
-            .slice(0, 3)
-            .map(x => `${x.label} (${x.value})`)
-            .join(", ")
-        }.`;
+      if (!proy.length) {
+        datosEstado.innerHTML = "No hay proyectos en esta vista. Ajusta los filtros para ver el pipeline.";
+        return;
       }
+
+      const estadosLista = labels.map(l => `${l}: ${counts[l]} proyectos`).join(" · ");
+      datosEstado.innerHTML = `
+        <strong>Lectura rápida:</strong> el pipeline actual se reparte así por estados:<br/>
+        ${estadosLista}.<br/><br/>
+        <strong>Insight:</strong> prioriza los proyectos “En curso” con encaje ALTO / MEDIO.
+      `;
     }
 
-    function renderChartEncaje(proyFiltrados) {
-      const conteo = {
-        "ALTO": 0,
-        "MEDIO": 0,
-        "BAJO": 0,
-        "SIN DATO": 0
-      };
-
-      proyFiltrados.forEach(p => {
-        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
-        if (e === "ALTO") conteo["ALTO"]++;
-        else if (e === "MEDIO") conteo["MEDIO"]++;
-        else if (e === "BAJO") conteo["BAJO"]++;
-        else conteo["SIN DATO"]++;
-      });
-
-      const labels = Object.keys(conteo);
-      const data = labels.map(l => conteo[l] || 0);
-
-      destroyChartIfExists(chartEncaje);
+    function renderChartEncaje(proy) {
+      if (chartEncaje) chartEncaje.destroy();
       const ctx = document.getElementById("chartEncaje").getContext("2d");
-      const cfg = buildPieConfig(labels, data);
-      chartEncaje = new Chart(ctx, cfg);
 
-      renderLegend("legendEncaje", labels, data);
-
-      const total = data.reduce((a, b) => a + b, 0);
-      if (!total) {
-        datosEncaje.textContent = "No hay datos de encaje para los proyectos de la vista actual.";
-      } else {
-        const altoMedio = conteo["ALTO"] + conteo["MEDIO"];
-        const pct = ((altoMedio / total) * 100).toFixed(1);
-        datosEncaje.textContent =
-          `Total proyectos: ${total}. Encaje ALTO + MEDIO en ${altoMedio} obras (${pct}%).`;
-      }
-    }
-
-    function renderChartSegmento(proyFiltrados) {
-      const conteo = {};
-      proyFiltrados.forEach(p => {
-        let seg = (p.segmento || p.tipo || "Sin segmento").toString().trim();
-        if (!seg) seg = "Sin segmento";
-        if (!conteo[seg]) conteo[seg] = 0;
-        conteo[seg]++;
+      const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
+      proy.forEach(p => {
+        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
+        if (e === "ALTO") counts.ALTO++;
+        else if (e === "MEDIO") counts.MEDIO++;
+        else if (e === "BAJO") counts.BAJO++;
+        else counts.SIN++;
       });
 
-      const labels = Object.keys(conteo);
-      const data = labels.map(l => conteo[l] || 0);
+      const labels = ["ALTO", "MEDIO", "BAJO", "SIN"];
+      const data = [counts.ALTO, counts.MEDIO, counts.BAJO, counts.SIN];
+      const total = data.reduce((a, b) => a + b, 0) || 1;
 
-      destroyChartIfExists(chartSegmento);
+      chartEncaje = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: ["#16A34A", "#FACC15", "#FB7185", "#E5E7EB"],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "55%",
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 }, usePointStyle: true }
+            },
+            datalabels: {
+              formatter: (v) => {
+                if (!v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 9, weight: "600" }
+            }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
+          }
+        }
+      });
+
+      const tAlto = counts.ALTO;
+      const tMedio = counts.MEDIO;
+      const tBajo = counts.BAJO;
+      const tSin = counts.SIN;
+
+      datosEncaje.innerHTML = `
+        <strong>Distribución de encaje:</strong><br/>
+        ALTO: <strong>${tAlto}</strong> · MEDIO: <strong>${tMedio}</strong> · BAJO: <strong>${tBajo}</strong> · Sin clasificar: <strong>${tSin}</strong>.
+      `;
+    }
+
+    function renderChartSegmento(clis) {
+      if (chartSegmento) chartSegmento.destroy();
       const ctx = document.getElementById("chartSegmento").getContext("2d");
-      const cfg = buildPieConfig(labels, data);
-      chartSegmento = new Chart(ctx, cfg);
 
-      renderLegend("legendSegmento", labels, data);
-
-      const total = data.reduce((a, b) => a + b, 0);
-      if (!total) {
-        datosSegmento.textContent = "No hay proyectos suficientes para mostrar segmentos.";
-      } else {
-        datosSegmento.textContent =
-          `Total proyectos: ${total}. Segmentos principales: ${
-            labels
-              .map((l, idx) => ({ label: l, value: data[idx] }))
-              .sort((a, b) => (b.value || 0) - (a.value || 0))
-              .slice(0, 3)
-              .map(x => `${x.label} (${x.value})`)
-              .join(", ")
-          }.`;
-      }
-    }
-
-    function renderChartClientesTipo(clientesFiltrados) {
-      const solo2n = clientesFiltrados.filter(c => c.trabaja_con_2n === true);
-
-      const conteo = {};
-      solo2n.forEach(c => {
-        const tipo = (c.tipo || "Sin tipo").toString().trim();
-        if (!conteo[tipo]) conteo[tipo] = 0;
-        conteo[tipo] += c.num_obras || 1;
+      const activos = clis.filter(c => c.trabaja_con_2n);
+      const counts = {};
+      activos.forEach(c => {
+        const seg = c.segmento || "Sin segmento";
+        counts[seg] = (counts[seg] || 0) + 1;
       });
 
-      const labels = Object.keys(conteo);
-      const data = labels.map(l => conteo[l] || 0);
+      const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
+      const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
+      const total = data.reduce((a, b) => a + b, 0) || 1;
 
-      destroyChartIfExists(chartClientesTipo);
-      const ctx = document.getElementById("chartClientesTipo").getContext("2d");
-      const cfg = buildPieConfig(labels, data);
-      chartClientesTipo = new Chart(ctx, cfg);
+      chartSegmento = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: [
+                "#4F46E5",
+                "#22C55E",
+                "#F97316",
+                "#0EA5E9",
+                "#A855F7",
+                "#E5E7EB"
+              ],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "55%",
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 }, usePointStyle: true }
+            },
+            datalabels: {
+              formatter: (v) => {
+                if (!v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 9, weight: "600" }
+            }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
+          }
+        }
+      });
 
-      renderLegend("legendClientesTipo", labels, data);
-
-      const totalClientes2N = solo2n.length;
-      const totalObras2N = data.reduce((a, b) => a + b, 0);
-
-      if (!totalClientes2N) {
-        datosClientesTipo.textContent =
-          "No hay clientes marcados como que trabajan con 2N en la vista actual.";
-      } else {
-        datosClientesTipo.textContent =
-          `Clientes activos con 2N: ${totalClientes2N}. Obras asociadas en la vista: ${totalObras2N}.`;
+      if (!activos.length) {
+        datosSegmento.innerHTML = `
+          No hay clientes marcados como “2N ya está trabajando con este cliente” en esta vista.
+        `;
+        return;
       }
 
-      const topActivos = solo2n
+      const lista = labels.map(l => `${l}: ${counts[l]} clientes`).join(" · ");
+      datosSegmento.innerHTML = `
+        <strong>Clientes 2N por segmento:</strong><br/>
+        ${lista}.
+      `;
+    }
+
+    function renderChartClientesTipo(clis) {
+      if (chartClientesTipo) chartClientesTipo.destroy();
+      const ctx = document.getElementById("chartClientesTipo").getContext("2d");
+
+      const activos = clis.filter(c => c.trabaja_con_2n);
+      const counts = {};
+      activos.forEach(c => {
+        const tipo = c.tipo || "Sin tipo";
+        counts[tipo] = (counts[tipo] || 0) + 1;
+      });
+
+      const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
+      const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
+      const total = data.reduce((a, b) => a + b, 0) || 1;
+
+      chartClientesTipo = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: [
+                "#22C55E",
+                "#4ADE80",
+                "#A7F3D0",
+                "#6EE7B7",
+                "#BBF7D0",
+                "#E5E7EB"
+              ],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "55%",
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: { font: { size: 9 }, usePointStyle: true }
+            },
+            datalabels: {
+              formatter: (v) => {
+                if (!v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 9, weight: "600" }
+            }
+          },
+          layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
+          }
+        }
+      });
+
+      if (!activos.length) {
+        textoClientesTipo.innerHTML = `
+          No hay clientes con 2N activo en esta vista.
+        `;
+        tablaClientes2NBody.innerHTML = "";
+        return;
+      }
+
+      const resumenTipos = labels.map(l => `${l}: ${counts[l]} clientes`).join(" · ");
+      textoClientesTipo.innerHTML = `
+        <strong>Clientes 2N por tipo de cliente:</strong><br/>
+        ${resumenTipos}.
+      `;
+
+      const topActivos = activos
         .slice()
         .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
         .slice(0, 15);
@@ -847,12 +848,11 @@
 
     function aplicarFiltrosYRender() {
       const { proy, clis } = filtrarDatos();
-
-      actualizarResumenFiltros({ proy, clis });
-
+      updateFiltrosTexto();
+      renderKPIs(proy);
       renderChartEstado(proy);
       renderChartEncaje(proy);
-      renderChartSegmento(proy);
+      renderChartSegmento(clis);
       renderChartClientesTipo(clis);
     }
 
@@ -860,69 +860,85 @@
     fZona.addEventListener("change", aplicarFiltrosYRender);
     fEstado.addEventListener("change", aplicarFiltrosYRender);
     fEncaje.addEventListener("change", aplicarFiltrosYRender);
-    document.getElementById("buscadorLocal").addEventListener("input", aplicarFiltrosYRender);
-    buscadorGlobal.addEventListener("input", aplicarFiltrosYRender);
+    buscadorGlobal.addEventListener("input", () => {
+      clearTimeout(buscadorGlobal._t);
+      buscadorGlobal._t = setTimeout(aplicarFiltrosYRender, 200);
+    });
 
     btnExportPDF.addEventListener("click", async () => {
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ format: "a4", unit: "pt" });
-
-      const charts = [
-        { id: "chartEstado", title: "Estado del pipeline" },
-        { id: "chartEncaje", title: "Encaje 2N en los proyectos" },
-        { id: "chartSegmento", title: "Proyectos por segmento" },
-        { id: "chartClientesTipo", title: "Clientes que trabajan con 2N por tipo" }
-      ];
-
       btnExportPDF.disabled = true;
       btnExportPDF.textContent = "Generando PDF...";
 
       try {
-        for (let i = 0; i < charts.length; i++) {
-          const { id, title } = charts[i];
-          const canvas = document.getElementById(id);
+        const cards = Array.from(document.querySelectorAll(".chart-page"));
+        let pdf = null;
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 10;
+        const headerHeight = 18;
+        const fechaStr = new Date().toLocaleDateString("es-ES");
 
-          if (!canvas) continue;
+        function drawHeader(pdfInstance, title, pageIndex) {
+          pdfInstance.setFillColor(15, 23, 42);
+          pdfInstance.rect(0, 0, pageWidth, headerHeight, "F");
 
-          const canvasRect = canvas.getBoundingClientRect();
-          const clone = canvas.cloneNode(true);
-          const wrapper = document.createElement("div");
-          wrapper.style.position = "relative";
-          wrapper.style.width = canvasRect.width + "px";
-          wrapper.style.height = canvasRect.height + "px";
-          wrapper.appendChild(clone);
-          document.body.appendChild(wrapper);
+          pdfInstance.setFont("helvetica", "bold");
+          pdfInstance.setFontSize(11);
+          pdfInstance.setTextColor(255, 255, 255);
+          pdfInstance.text("CRM 2N · Reporte analista de mercado", margin, 7);
 
-          const canvasImg = await html2canvas(wrapper, { scale: 2 });
-          const imgData = canvasImg.toDataURL("image/png");
+          pdfInstance.setFont("helvetica", "normal");
+          pdfInstance.setFontSize(9);
+          pdfInstance.text(title, margin, 14);
 
-          const pageWidth = pdf.internal.pageSize.getWidth();
-          const pageHeight = pdf.internal.pageSize.getHeight();
+          pdfInstance.setFontSize(8);
+          pdfInstance.setTextColor(209, 213, 219);
+          pdfInstance.text(fechaStr, pageWidth - margin, 7, { align: "right" });
+          pdfInstance.text("Página " + pageIndex, pageWidth - margin, 14, { align: "right" });
 
-          const margin = 40;
-          const availableWidth = pageWidth - margin * 2;
-          const availableHeight = pageHeight - margin * 2 - 40;
+          pdfInstance.setTextColor(17, 24, 39);
+        }
 
-          let imgWidth = availableWidth;
-          let imgHeight = (canvasImg.height * imgWidth) / canvasImg.width;
+        let pageIndex = 1;
 
-          if (imgHeight > availableHeight) {
-            imgHeight = availableHeight;
-            imgWidth = (canvasImg.width * imgHeight) / canvasImg.height;
+        for (const card of cards) {
+          const title = card.dataset.title || "Reporte CRM 2N";
+
+          const canvas = await html2canvas(card, {
+            scale: 2,
+            useCORS: true,
+            windowWidth: document.documentElement.scrollWidth
+          });
+          const imgData = canvas.toDataURL("image/png");
+
+          const maxW = pageWidth - margin * 2;
+          const maxH = pageHeight - headerHeight - margin * 2;
+          const imgRatio = canvas.width / canvas.height;
+          let imgW = maxW;
+          let imgH = imgW / imgRatio;
+          if (imgH > maxH) {
+            imgH = maxH;
+            imgW = imgH * imgRatio;
           }
 
-          if (i > 0) pdf.addPage();
+          const offsetX = (pageWidth - imgW) / 2;
+          const offsetY = headerHeight + ((pageHeight - headerHeight - imgH) / 2);
 
-          pdf.setFontSize(14);
-          pdf.setTextColor(17, 24, 39);
-          pdf.text(title, margin, margin + 10);
+          if (!pdf) {
+            pdf = new jsPDF("p", "mm", "a4");
+          } else {
+            pdf.addPage();
+          }
 
-          const x = (pageWidth - imgWidth) / 2;
-          const y = margin + 30;
+          drawHeader(pdf, title, pageIndex++);
+          pdf.addImage(imgData, "PNG", offsetX, offsetY, imgW, imgH);
+        }
 
-          pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
-
-          document.body.removeChild(wrapper);
+        if (pdf) {
+          pdf.save("reporte_crm_2n.pdf");
+        } else {
+          alert("No hay datos para exportar.");
         }
       } catch (err) {
         console.error("Error generando PDF:", err);
