@@ -82,116 +82,126 @@
         <div style="flex:1;"></div>
 
         <span style="font-size:10.5px;color:#9CA3AF;">
-          El PDF se genera con los filtros actuales (incluye las tablas detalladas).
+          El PDF se genera con los filtros actuales (una hoja por cada sección).
         </span>
       </div>
     </div>
 
     <!-- CONTENIDO DEL REPORTE (SE CAPTURA PARA PDF) -->
     <div id="reportContent">
-      <!-- KPIs -->
-      <div class="kpi-row" style="margin-bottom:14px;">
-        <div class="kpi-card">
-          <div class="kpi-label">Proyectos filtrados</div>
-          <div id="kpiProyectos" class="kpi-value">–</div>
-          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Total de obras dentro de los filtros.</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Clientes filtrados</div>
-          <div id="kpiClientes" class="kpi-value">–</div>
-          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Clientes activos en la provincia seleccionada.</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Obras encaje ALTO / MEDIO</div>
-          <div id="kpiEncajeAltoMedio" class="kpi-value">–</div>
-          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Pipeline donde 2N encaja muy bien.</div>
-        </div>
-      </div>
 
-      <!-- CHARTS FILA 1 -->
-      <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
-        <!-- Proyectos por estado (DONUT) -->
-        <div class="card">
-          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-            Distribución de proyectos por estado
+      <!-- SECCIÓN 1: OVERVIEW -->
+      <section id="section-overview" style="margin-bottom:16px;">
+        <!-- KPIs -->
+        <div class="kpi-row" style="margin-bottom:14px;">
+          <div class="kpi-card">
+            <div class="kpi-label">Proyectos filtrados</div>
+            <div id="kpiProyectos" class="kpi-value">–</div>
+            <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Total de obras dentro de los filtros.</div>
           </div>
-          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-            Igual que el pipeline: estados reales de tus proyectos.
+          <div class="kpi-card">
+            <div class="kpi-label">Clientes filtrados</div>
+            <div id="kpiClientes" class="kpi-value">–</div>
+            <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Clientes activos en la provincia seleccionada.</div>
           </div>
-          <div style="position:relative;height:230px;">
-            <canvas id="chartEstado"></canvas>
+          <div class="kpi-card">
+            <div class="kpi-label">Obras encaje ALTO / MEDIO</div>
+            <div id="kpiEncajeAltoMedio" class="kpi-value">–</div>
+            <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Pipeline donde 2N encaja muy bien.</div>
           </div>
         </div>
 
-        <!-- Encaje 2N (DONUT) -->
-        <div class="card">
-          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-            Encaje 2N en proyectos filtrados
-          </div>
-          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-            Clasificación ALTO / MEDIO / BAJO vs sin clasificar.
-          </div>
-          <div style="position:relative;height:230px;">
-            <canvas id="chartEncaje"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- CHARTS FILA 2 -->
-      <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
-        <!-- Clientes 2N por segmento (DONUT) -->
-        <div class="card">
-          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-            Clientes 2N por segmento
-          </div>
-          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-            Solo clientes donde <strong>2N ya está trabajando</strong>, agrupados por segmento.
-          </div>
-          <div style="position:relative;height:230px;">
-            <canvas id="chartSegmento"></canvas>
-          </div>
-        </div>
-
-        <!-- Top clientes por nº de obras (DONUT) -->
-        <div class="card">
-          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-            Top clientes por nº de obras
-          </div>
-          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
-            Ranking de clientes según volumen de proyectos asignados.
-          </div>
-          <div style="position:relative;height:230px;">
-            <canvas id="chartTopClientes"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- LISTAS DETALLADAS -->
-      <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
-        <!-- Tabla principal (solo PDF) -->
-        <div class="card solo-pdf">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div id="tablaTitulo" style="font-size:12px;font-weight:600;color:#111827;">
-              Detalle de proyectos
+        <!-- CHARTS FILA 1 -->
+        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;">
+          <!-- Proyectos por estado (DONUT) -->
+          <div class="card">
+            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+              Distribución de proyectos por estado
             </div>
-            <div style="font-size:10px;color:#9CA3AF;">
-              Ordenado por relevancia (encaje y estado).
+            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+              Igual que el pipeline: estados reales de tus proyectos.
+            </div>
+            <div style="position:relative;height:230px;">
+              <canvas id="chartEstado"></canvas>
             </div>
           </div>
-          <div id="tablaDatosWrapper"></div>
-          <div id="tablaEmpty" class="empty-state" style="display:none;">
-            No hay datos para los filtros seleccionados.
-          </div>
-        </div>
 
-        <!-- Resumen de indicadores (visible también en pantalla) -->
-        <div class="card">
-          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
-            Resumen ejecutivo
+          <!-- Encaje 2N (DONUT) -->
+          <div class="card">
+            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+              Encaje 2N en proyectos filtrados
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+              Clasificación ALTO / MEDIO / BAJO vs sin clasificar.
+            </div>
+            <div style="position:relative;height:230px;">
+              <canvas id="chartEncaje"></canvas>
+            </div>
           </div>
-          <div id="resumenEjecutivo" style="font-size:11px;color:#4B5563;display:flex;flex-direction:column;gap:6px;"></div>
         </div>
-      </div>
+      </section>
+
+      <!-- SECCIÓN 2: CLIENTES 2N -->
+      <section id="section-clientes-2n" style="margin-bottom:16px;">
+        <!-- CHARTS FILA 2 -->
+        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
+          <!-- Clientes 2N por segmento (DONUT) -->
+          <div class="card">
+            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+              Clientes 2N por segmento
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+              Solo clientes donde <strong>2N ya está trabajando</strong>, agrupados por segmento.
+            </div>
+            <div style="position:relative;height:230px;">
+              <canvas id="chartSegmento"></canvas>
+            </div>
+          </div>
+
+          <!-- Clientes 2N por tipo (DONUT) -->
+          <div class="card">
+            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+              Clientes 2N por tipo de cliente
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+              Promotoras, arquitecturas, ingenierías, fondos, integradores, etc. (solo con 2N activo).
+            </div>
+            <div style="position:relative;height:230px;">
+              <canvas id="chartClientesTipo"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 3: TABLAS + RESUMEN -->
+      <section id="section-tablas">
+        <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
+          <!-- Tabla principal (solo PDF) -->
+          <div class="card solo-pdf">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div id="tablaTitulo" style="font-size:12px;font-weight:600;color:#111827;">
+                Detalle de proyectos
+              </div>
+              <div style="font-size:10px;color:#9CA3AF;">
+                Ordenado por relevancia (encaje y estado).
+              </div>
+            </div>
+            <div id="tablaDatosWrapper"></div>
+            <div id="tablaEmpty" class="empty-state" style="display:none;">
+              No hay datos para los filtros seleccionados.
+            </div>
+          </div>
+
+          <!-- Resumen de indicadores (visible también en pantalla) -->
+          <div class="card">
+            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+              Resumen ejecutivo
+            </div>
+            <div id="resumenEjecutivo" style="font-size:11px;color:#4B5563;display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -209,7 +219,7 @@
     let chartEstado = null;
     let chartEncaje = null;
     let chartSegmento = null;
-    let chartTopClientes = null;
+    let chartClientesTipo = null;
 
     const fVista = document.getElementById("fVista");
     const fZona = document.getElementById("fZona");
@@ -400,8 +410,8 @@
         counts[e] = (counts[e] || 0) + 1;
       });
 
-      const labels = Object.keys(counts);
-      const data = labels.map(l => counts[l]);
+      const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
+      const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
       const total = data.reduce((a, b) => a + b, 0);
 
       Chart.register(window.ChartDataLabels);
@@ -435,7 +445,7 @@
               labels: { font: { size: 10 } }
             },
             datalabels: {
-              formatter: (v, ctx) => {
+              formatter: (v) => {
                 if (!total || !v) return "";
                 const pct = Math.round((v * 100) / total);
                 return pct ? pct + "%" : "";
@@ -558,21 +568,22 @@
       });
     }
 
-    function renderChartTopClientes(clis) {
-      if (chartTopClientes) chartTopClientes.destroy();
-      const ctx = document.getElementById("chartTopClientes").getContext("2d");
+    function renderChartClientesTipo(clis) {
+      if (chartClientesTipo) chartClientesTipo.destroy();
+      const ctx = document.getElementById("chartClientesTipo").getContext("2d");
 
-      const top = clis
-        .slice()
-        .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
-        .filter(c => (c.num_obras || 0) > 0)
-        .slice(0, 6);
+      const activos = clis.filter(c => c.trabaja_con_2n);
+      const counts = {};
+      activos.forEach(c => {
+        const tipo = c.tipo || "Sin tipo";
+        counts[tipo] = (counts[tipo] || 0) + 1;
+      });
 
-      const labels = top.length ? top.map(c => c.nombre_display || "") : ["Sin datos"];
-      const data = top.length ? top.map(c => c.num_obras || 0) : [1];
+      const labels = Object.keys(counts).length ? Object.keys(counts) : ["Sin datos"];
+      const data = Object.keys(counts).length ? labels.map(l => counts[l]) : [1];
       const total = data.reduce((a, b) => a + b, 0);
 
-      chartTopClientes = new Chart(ctx, {
+      chartClientesTipo = new Chart(ctx, {
         type: "doughnut",
         data: {
           labels,
@@ -807,7 +818,7 @@
       renderChartEstado(proy);
       renderChartEncaje(proy);
       renderChartSegmento(clis);
-      renderChartTopClientes(clis);
+      renderChartClientesTipo(clis);
       renderTabla(proy, clis);
       renderResumenEjecutivo(proy, clis);
     }
@@ -826,54 +837,52 @@
       btnExportPDF.disabled = true;
       btnExportPDF.textContent = "Generando PDF...";
 
-      // mostrar las tablas solo-pdf durante la captura
       const soloPdfBlocks = Array.from(document.querySelectorAll(".solo-pdf"));
       const prevDisplay = soloPdfBlocks.map(el => el.style.display);
       soloPdfBlocks.forEach(el => {
         el.style.display = "block";
       });
 
+      const sectionIds = ["section-overview", "section-clientes-2n", "section-tablas"];
+
       try {
-        const canvas = await html2canvas(reportContent, {
-          scale: 2,
-          useCORS: true,
-          windowWidth: document.documentElement.scrollWidth
-        });
-        const imgData = canvas.toDataURL("image/png");
+        let pdf = null;
+        const pageWidth = 210;   // A4 width mm
+        const pageHeight = 297;  // A4 height mm
 
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
+        for (let i = 0; i < sectionIds.length; i++) {
+          const section = document.getElementById(sectionIds[i]);
+          if (!section) continue;
 
-        const imgWidth = pageWidth - 20;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const canvas = await html2canvas(section, {
+            scale: 2,
+            useCORS: true,
+            windowWidth: document.documentElement.scrollWidth
+          });
+          const imgData = canvas.toDataURL("image/png");
 
-        let position = 10;
-        let heightLeft = imgHeight;
+          if (!pdf) {
+            pdf = new jsPDF("p", "mm", "a4");
+          } else {
+            pdf.addPage();
+          }
 
-        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= (pageHeight - 20);
+          const imgWidth = pageWidth - 20;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const posY = 10;
 
-        while (heightLeft > 0) {
-          pdf.addPage();
-          position = 10;
-          pdf.addImage(
-            imgData,
-            "PNG",
-            10,
-            position - (imgHeight - heightLeft),
-            imgWidth,
-            imgHeight
-          );
-          heightLeft -= (pageHeight - 20);
+          pdf.addImage(imgData, "PNG", 10, posY, imgWidth, imgHeight);
         }
 
-        pdf.save("reporte_crm_2n.pdf");
+        if (pdf) {
+          pdf.save("reporte_crm_2n.pdf");
+        } else {
+          alert("No hay secciones para exportar.");
+        }
       } catch (err) {
         console.error("Error generando PDF:", err);
         alert("Ha ocurrido un error al generar el PDF.");
       } finally {
-        // restaurar estado visual
         soloPdfBlocks.forEach((el, i) => {
           el.style.display = prevDisplay[i];
         });
