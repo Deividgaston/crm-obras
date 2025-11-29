@@ -1,1 +1,571 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Tareas (Móvil)</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body { background:#020617; }
+
+    .mobile-shell {
+      max-width:480px;
+      margin:0 auto;
+      padding:10px 10px 40px 10px;
+    }
+
+    .mobile-title {
+      font-size:18px;
+      font-weight:600;
+      color:#0f172a;
+    }
+    .mobile-subtitle {
+      font-size:12px;
+      color:#6b7280;
+    }
+
+    .search-input-mobile {
+      width:100%;
+      border-radius:999px;
+      border:1px solid #d1d5db;
+      padding:5px 9px;
+      font-size:11px;
+      margin-top:6px;
+      margin-bottom:6px;
+      background:#f9fafb;
+    }
+    .search-input-mobile:focus {
+      outline:none;
+      border-color:#2563eb;
+      box-shadow:0 0 0 1px rgba(37,99,235,0.15);
+      background:#ffffff;
+    }
+
+    .mobile-select {
+      border-radius:999px;
+      border:1px solid #d1d5db;
+      padding:4px 8px;
+      font-size:11px;
+      background:#f9fafb;
+      min-width:120px;
+    }
+
+    .mobile-filters-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-bottom:8px;
+    }
+
+    .mobile-kpis {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom:10px;
+    }
+    .mobile-kpi {
+      flex:1 1 45%;
+      background:radial-gradient(circle at top left,#eef2ff 0,#ffffff 45%,#f9fafb 100%);
+      border-radius:14px;
+      padding:8px 10px;
+      border:1px solid #e5e7eb;
+    }
+    .mobile-kpi-label {
+      font-size:10px;
+      color:#6b7280;
+      margin-bottom:2px;
+    }
+    .mobile-kpi-value {
+      font-size:18px;
+      font-weight:700;
+      color:#111827;
+      line-height:1.1;
+    }
+    .mobile-kpi-footnote {
+      font-size:9px;
+      color:#9ca3af;
+      margin-top:2px;
+    }
+
+    .mobile-section {
+      margin-top:4px;
+    }
+    .mobile-section-title {
+      font-size:13px;
+      font-weight:600;
+      color:#111827;
+      margin-bottom:4px;
+    }
+    .mobile-section-sub {
+      font-size:10.5px;
+      color:#6b7280;
+      margin-bottom:6px;
+    }
+
+    .mobile-list {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:10px;
+    }
+
+    .mobile-card {
+      background:#ffffff;
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      padding:8px 10px;
+    }
+    .mobile-card-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:2px;
+    }
+    .mobile-card-title {
+      font-size:12px;
+      font-weight:600;
+      color:#111827;
+    }
+
+    .mobile-chip {
+      font-size:9px;
+      border-radius:999px;
+      padding:2px 6px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      color:#374151;
+      white-space:nowrap;
+    }
+    .chip-prio-alta {
+      border-color:#ef4444;
+      background:#fee2e2;
+      color:#991b1b;
+    }
+    .chip-prio-media {
+      border-color:#f59e0b;
+      background:#fef3c7;
+      color:#92400e;
+    }
+    .chip-prio-baja {
+      border-color:#22c55e;
+      background:#dcfce7;
+      color:#166534;
+    }
+    .chip-tipo {
+      border-color:#60a5fa;
+      background:#dbeafe;
+      color:#1d4ed8;
+      margin-right:4px;
+    }
+
+    .mobile-card-body {
+      font-size:10.5px;
+      color:#4b5563;
+    }
+    .mobile-card-body div {
+      margin-bottom:2px;
+    }
+
+    .mobile-pill-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      margin-top:2px;
+    }
+    .mobile-pill {
+      font-size:9px;
+      border-radius:999px;
+      padding:2px 6px;
+      background:#f3f4f6;
+      color:#4b5563;
+    }
+
+    .mobile-meta {
+      font-size:9px;
+      color:#9ca3af;
+      margin-top:2px;
+    }
+
+    .mobile-bottombar {
+      position:fixed;
+      left:0; right:0; bottom:0;
+      background:rgba(15,23,42,0.96);
+      border-top:1px solid #111827;
+      display:flex;
+      justify-content:space-around;
+      align-items:center;
+      padding:6px 4px 10px 4px;
+      z-index:20;
+    }
+    .mobile-nav-item {
+      flex:1;
+      text-align:center;
+      font-size:10px;
+      color:#9ca3af;
+      cursor:pointer;
+    }
+    .mobile-nav-item span {
+      display:block;
+      font-size:16px;
+      margin-bottom:1px;
+    }
+    .mobile-nav-item.active {
+      color:#f9fafb;
+      font-weight:600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topnav">
+    <div class="logo">CRM 2N · Tareas (Móvil)</div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span id="mobileUserEmail" style="font-size:11px;color:#E5E7EB;"></span>
+      <button
+        id="btnLogout"
+        type="button"
+        style="font-size:11px;padding:4px 8px;border-radius:999px;
+               border:1px solid #E5E7EB;background:#FFFFFF;color:#111827;cursor:pointer;">
+        Salir
+      </button>
+    </div>
+  </div>
+
+  <main class="content">
+    <div class="mobile-shell">
+      <div class="mobile-title">Tareas y seguimientos</div>
+      <div class="mobile-subtitle">
+        Vista ligera de seguimientos, tareas recurrentes y notas rápidas. Solo lectura.
+      </div>
+
+      <input
+        id="searchMobileTareas"
+        class="search-input-mobile"
+        placeholder="Buscar por título, proyecto, cliente..."
+      />
+
+      <div class="mobile-filters-row">
+        <select id="fTipo" class="mobile-select">
+          <option value="Todos">Tipo: todos</option>
+        </select>
+        <select id="fPrioridad" class="mobile-select">
+          <option value="Todas">Prioridad: todas</option>
+          <option value="alta">Alta</option>
+          <option value="media">Media</option>
+          <option value="baja">Baja</option>
+        </select>
+        <select id="fEstado" class="mobile-select">
+          <option value="Todos">Estado: todos</option>
+          <option value="abiertas">Solo abiertas</option>
+          <option value="cerradas">Solo cerradas</option>
+        </select>
+      </div>
+
+      <div class="mobile-kpis">
+        <div class="mobile-kpi">
+          <div class="mobile-kpi-label">Tareas abiertas</div>
+          <div id="kpiAbiertas" class="mobile-kpi-value">–</div>
+          <div class="mobile-kpi-footnote">Incluye seguimientos y tareas.</div>
+        </div>
+        <div class="mobile-kpi">
+          <div class="mobile-kpi-label">Próximos 7 días</div>
+          <div id="kpiProximas" class="mobile-kpi-value">–</div>
+          <div class="mobile-kpi-footnote">Vencimiento en la próxima semana.</div>
+        </div>
+        <div class="mobile-kpi">
+          <div class="mobile-kpi-label">Notas rápidas</div>
+          <div id="kpiNotas" class="mobile-kpi-value">–</div>
+          <div class="mobile-kpi-footnote">Tipo “nota” o similar.</div>
+        </div>
+        <div class="mobile-kpi">
+          <div class="mobile-kpi-label">Total tareas</div>
+          <div id="kpiTotal" class="mobile-kpi-value">–</div>
+        </div>
+      </div>
+
+      <section class="mobile-section">
+        <div class="mobile-section-title">Hoy y próximos seguimientos</div>
+        <div class="mobile-section-sub">Ordenadas por fecha de vencimiento.</div>
+        <div id="listaProximas" class="mobile-list"></div>
+      </section>
+
+      <section class="mobile-section">
+        <div class="mobile-section-title">Tareas vencidas</div>
+        <div class="mobile-section-sub">Seguimientos que se han pasado de fecha y siguen abiertos.</div>
+        <div id="listaVencidas" class="mobile-list"></div>
+      </section>
+
+      <section class="mobile-section">
+        <div class="mobile-section-title">Notas rápidas (recientes)</div>
+        <div class="mobile-section-sub">Notas de tipo rápido / recordatorio sin vencimiento claro.</div>
+        <div id="listaNotas" class="mobile-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="mobile-bottombar">
+    <div class="mobile-nav-item" onclick="location.href='mobile-index.html'">
+      <span>🏠</span>Inicio
+    </div>
+    <div class="mobile-nav-item" onclick="location.href='mobile-proyectos.html'">
+      <span>🏗️</span>Proyectos
+    </div>
+    <div class="mobile-nav-item active" onclick="location.href='mobile-tareas.html'">
+      <span>✅</span>Tareas
+    </div>
+    <div class="mobile-nav-item" onclick="location.href='mobile-clientes.html'">
+      <span>👥</span>Clientes
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import {
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const userEmailSpan = document.getElementById("mobileUserEmail");
+
+    const searchInput = document.getElementById("searchMobileTareas");
+    const selectTipo = document.getElementById("fTipo");
+    const selectPrioridad = document.getElementById("fPrioridad");
+    const selectEstado = document.getElementById("fEstado");
+
+    const kpiAbiertas = document.getElementById("kpiAbiertas");
+    const kpiProximas = document.getElementById("kpiProximas");
+    const kpiNotas = document.getElementById("kpiNotas");
+    const kpiTotal = document.getElementById("kpiTotal");
+
+    const listaProximas = document.getElementById("listaProximas");
+    const listaVencidas = document.getElementById("listaVencidas");
+    const listaNotas = document.getElementById("listaNotas");
+
+    let tareas = [];
+    let filtroTexto = "";
+
+    function norm(t) {
+      return (t || "").toString()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase().trim();
+    }
+
+    function getMillis(v) {
+      if (!v) return 0;
+      try {
+        if (v.toMillis) return v.toMillis();
+        return new Date(v).getTime() || 0;
+      } catch {
+        return 0;
+      }
+    }
+
+    function isCerrada(t) {
+      const e = (t.estado || "").toString().toLowerCase().trim();
+      return e === "completada" || e === "cerrada" || e === "hecha";
+    }
+
+    async function cargarTareas() {
+      const snap = await getDocs(collection(db, "tareas"));
+      tareas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      inicializarFiltros();
+      aplicarFiltrosYRender();
+    }
+
+    function inicializarFiltros() {
+      const tipos = new Set();
+      tareas.forEach(t => { if (t.tipo) tipos.add(t.tipo); });
+
+      selectTipo.innerHTML =
+        '<option value="Todos">Tipo: todos</option>' +
+        [...tipos].sort((a,b)=>a.localeCompare(b,"es")).map(t => `<option value="${t}">${t}</option>`).join("");
+    }
+
+    function aplicarFiltrosBase() {
+      let lista = [...tareas];
+
+      const tipoSel = selectTipo.value;
+      const prioSel = selectPrioridad.value;
+      const estadoSel = selectEstado.value;
+
+      if (tipoSel !== "Todos") {
+        lista = lista.filter(t => (t.tipo || "") === tipoSel);
+      }
+
+      if (prioSel !== "Todas") {
+        lista = lista.filter(t => (t.prioridad || "").toString().toLowerCase() === prioSel);
+      }
+
+      if (estadoSel === "abiertas") {
+        lista = lista.filter(t => !isCerrada(t));
+      } else if (estadoSel === "cerradas") {
+        lista = lista.filter(t => isCerrada(t));
+      }
+
+      if (filtroTexto) {
+        lista = lista.filter(t => {
+          const blob = [
+            t.titulo,
+            t.descripcion,
+            t.nota,
+            t.proyectoNombre,
+            t.clienteNombre,
+            t.proyecto,
+            t.cliente
+          ].join(" ");
+          return norm(blob).includes(filtroTexto);
+        });
+      }
+
+      return lista;
+    }
+
+    function aplicarFiltrosYRender() {
+      const base = aplicarFiltrosBase();
+      renderKPIs(base);
+      renderSecciones(base);
+    }
+
+    function renderKPIs(lista) {
+      const total = lista.length;
+      const abiertas = lista.filter(t => !isCerrada(t)).length;
+      const notas = lista.filter(t => {
+        const tipo = (t.tipo || "").toString().toLowerCase();
+        return tipo.includes("nota");
+      }).length;
+
+      const ahora = Date.now();
+      const unaSemana = 7 * 24 * 60 * 60 * 1000;
+      const proximas = lista.filter(t => {
+        if (isCerrada(t)) return false;
+        const fv = t.fecha_vencimiento || t.fecha;
+        const ms = getMillis(fv);
+        if (!ms) return false;
+        return ms >= ahora && ms <= ahora + unaSemana;
+      }).length;
+
+      kpiTotal.textContent = total || 0;
+      kpiAbiertas.textContent = abiertas || 0;
+      kpiNotas.textContent = notas || 0;
+      kpiProximas.textContent = proximas || 0;
+    }
+
+    function crearCard(t) {
+      const titulo = t.titulo || "Tarea sin título";
+      const tipo = t.tipo || "Tarea";
+      const prioridad = (t.prioridad || "").toString().toLowerCase();
+      const proyecto = t.proyectoNombre || t.proyecto || "";
+      const cliente = t.clienteNombre || t.cliente || "";
+      const descripcion = t.descripcion || t.nota || "";
+
+      const fv = t.fecha_vencimiento || t.fecha;
+      const fechaTxt = fv ? new Date(getMillis(fv)).toLocaleDateString("es-ES") : "-";
+
+      let chipPrioClase = "mobile-chip";
+      if (prioridad === "alta") chipPrioClase += " chip-prio-alta";
+      else if (prioridad === "media") chipPrioClase += " chip-prio-media";
+      else if (prioridad === "baja") chipPrioClase += " chip-prio-baja";
+
+      const card = document.createElement("div");
+      card.className = "mobile-card";
+      card.innerHTML = `
+        <div class="mobile-card-header">
+          <div class="mobile-card-title">${titulo}</div>
+          <div>
+            <span class="mobile-chip chip-tipo">${tipo}</span>
+            <span class="${chipPrioClase}">
+              ${prioridad ? "Prioridad: " + prioridad : "Sin prioridad"}
+            </span>
+          </div>
+        </div>
+        <div class="mobile-card-body">
+          <div><strong>Fecha:</strong> ${fechaTxt}</div>
+          ${proyecto ? `<div><strong>Proyecto:</strong> ${proyecto}</div>` : ""}
+          ${cliente ? `<div><strong>Cliente:</strong> ${cliente}</div>` : ""}
+          ${descripcion ? `<div>${descripcion}</div>` : ""}
+        </div>
+        <div class="mobile-meta">
+          Estado: ${(t.estado || "Sin estado")}
+        </div>
+      `;
+      return card;
+    }
+
+    function renderSecciones(lista) {
+      listaProximas.innerHTML = "";
+      listaVencidas.innerHTML = "";
+      listaNotas.innerHTML = "";
+
+      const ahora = Date.now();
+      const hoyInicio = new Date();
+      hoyInicio.setHours(0,0,0,0);
+      const hoyFin = new Date();
+      hoyFin.setHours(23,59,59,999);
+
+      const unaSemana = 7 * 24 * 60 * 60 * 1000;
+
+      const abiertas = lista.filter(t => !isCerrada(t));
+
+      const proximas = abiertas.filter(t => {
+        const ms = getMillis(t.fecha_vencimiento || t.fecha);
+        if (!ms) return false;
+        return ms >= hoyInicio.getTime() && ms <= (Date.now() + unaSemana);
+      }).sort((a,b)=>getMillis(a.fecha_vencimiento||a.fecha)-getMillis(b.fecha_vencimiento||b.fecha));
+
+      const vencidas = abiertas.filter(t => {
+        const ms = getMillis(t.fecha_vencimiento || t.fecha);
+        return ms && ms < hoyInicio.getTime();
+      }).sort((a,b)=>getMillis(a.fecha_vencimiento||a.fecha)-getMillis(b.fecha_vencimiento||b.fecha));
+
+      const notas = lista.filter(t => {
+        const tipo = (t.tipo || "").toString().toLowerCase();
+        return tipo.includes("nota");
+      }).sort((a,b)=>getMillis(b.fecha||0)-getMillis(a.fecha||0)).slice(0,8);
+
+      if (!proximas.length) {
+        listaProximas.innerHTML =
+          '<div style="font-size:10px;color:#6b7280;">No hay seguimientos próximos según filtros.</div>';
+      } else {
+        proximas.forEach(t => listaProximas.appendChild(crearCard(t)));
+      }
+
+      if (!vencidas.length) {
+        listaVencidas.innerHTML =
+          '<div style="font-size:10px;color:#6b7280;">No hay tareas vencidas abiertas.</div>';
+      } else {
+        vencidas.forEach(t => listaVencidas.appendChild(crearCard(t)));
+      }
+
+      if (!notas.length) {
+        listaNotas.innerHTML =
+          '<div style="font-size:10px;color:#6b7280;">No hay notas rápidas recientes.</div>';
+      } else {
+        notas.forEach(t => listaNotas.appendChild(crearCard(t)));
+      }
+    }
+
+    searchInput.addEventListener("input", () => {
+      filtroTexto = norm(searchInput.value || "");
+      aplicarFiltrosYRender();
+    });
+
+    selectTipo.addEventListener("change", aplicarFiltrosYRender);
+    selectPrioridad.addEventListener("change", aplicarFiltrosYRender);
+    selectEstado.addEventListener("change", aplicarFiltrosYRender);
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.replace("login.html");
+        return;
+      }
+      userEmailSpan.textContent = user.email || "";
+      cargarTareas();
+    });
+  </script>
+
+  <script type="module" src="auth.js"></script>
+</body>
+</html>
