@@ -5,247 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM 2N – Proyectos (Móvil)</title>
   <link rel="stylesheet" href="style.css" />
-
-  <style>
-    body {
-      background: #ffffff;
-    }
-    .mobile-shell {
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 10px 10px 40px 10px;
-    }
-    .mobile-header {
-      margin-bottom: 10px;
-    }
-    .mobile-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #0f172a;
-    }
-    .mobile-subtitle {
-      font-size: 12px;
-      color: #6b7280;
-    }
-    .search-input-mobile {
-      width: 100%;
-      border-radius: 999px;
-      border: 1px solid #d1d5db;
-      padding: 5px 9px;
-      font-size: 11px;
-      margin-top: 6px;
-      margin-bottom: 6px;
-      background: #f9fafb;
-    }
-    .search-input-mobile:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
-      background: #ffffff;
-    }
-
-    .mobile-filters-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-    .mobile-select {
-      border-radius: 999px;
-      border: 1px solid #d1d5db;
-      padding: 4px 8px;
-      font-size: 11px;
-      background: #f9fafb;
-      min-width: 120px;
-    }
-    .mobile-select:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
-      background: #ffffff;
-    }
-
-    .mobile-kpis {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-    .mobile-kpi {
-      flex: 1 1 45%;
-      background: radial-gradient(circle at top left, #eef2ff 0, #ffffff 45%, #f9fafb 100%);
-      border-radius: 14px;
-      padding: 8px 10px;
-      border: 1px solid #e5e7eb;
-    }
-    .mobile-kpi-label {
-      font-size: 10px;
-      color: #6b7280;
-      margin-bottom: 2px;
-    }
-    .mobile-kpi-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: #111827;
-      line-height: 1.1;
-    }
-    .mobile-kpi-footnote {
-      font-size: 9px;
-      color: #9ca3af;
-      margin-top: 2px;
-    }
-
-    .mobile-section {
-      margin-top: 4px;
-    }
-    .mobile-section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #111827;
-      margin-bottom: 4px;
-    }
-    .mobile-section-sub {
-      font-size: 10.5px;
-      color: #6b7280;
-      margin-bottom: 6px;
-    }
-
-    .mobile-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .mobile-card {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
-      padding: 8px 10px;
-    }
-    .mobile-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2px;
-    }
-    .mobile-card-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #111827;
-    }
-    .mobile-chip {
-      font-size: 9px;
-      border-radius: 999px;
-      padding: 2px 6px;
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
-      color: #374151;
-      white-space: nowrap;
-    }
-    .mobile-chip-estado {
-      border-color: #60a5fa;
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-    .mobile-chip-encaje-alto {
-      border-color: #16a34a;
-      background: #dcfce7;
-      color: #166534;
-    }
-    .mobile-chip-encaje-medio {
-      border-color: #f59e0b;
-      background: #fef3c7;
-      color: #92400e;
-    }
-    .mobile-chip-encaje-bajo {
-      border-color: #ef4444;
-      background: #fee2e2;
-      color: #991b1b;
-    }
-    .mobile-card-body {
-      font-size: 10.5px;
-      color: #4b5563;
-    }
-    .mobile-card-body div {
-      margin-bottom: 2px;
-    }
-    .mobile-pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 2px;
-    }
-    .mobile-pill {
-      font-size: 9px;
-      border-radius: 999px;
-      padding: 2px 6px;
-      background: #f3f4f6;
-      color: #4b5563;
-    }
-    .mobile-meta {
-      font-size: 9px;
-      color: #9ca3af;
-      margin-top: 2px;
-    }
-
-    .mobile-bottombar {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(15, 23, 42, 0.96);
-      border-top: 1px solid #111827;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      padding: 6px 4px 10px 4px;
-      z-index: 20;
-    }
-    .mobile-nav-item {
-      flex: 1;
-      text-align: center;
-      font-size: 10px;
-      color: #9ca3af;
-      cursor: pointer;
-    }
-    .mobile-nav-item span {
-      display: block;
-      font-size: 16px;
-      margin-bottom: 1px;
-    }
-    .mobile-nav-item.active {
-      color: #f9fafb;
-      font-weight: 600;
-    }
-
-    @media (min-width: 768px) {
-      .topnav {
-        justify-content: space-between;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="mobile.css" />
 </head>
 
 <body>
-  <!-- Topbar -->
   <div class="topnav">
     <div class="logo">CRM 2N · Proyectos (Móvil)</div>
     <div style="display:flex;align-items:center;gap:6px;">
-      <span id="mobileUserEmail" style="font-size:11px;color:#E5E7EB;"></span>
-      <button
-        id="btnLogout"
-        type="button"
-        style="
-          font-size:11px;
-          padding:4px 8px;
-          border-radius:999px;
-          border:1px solid #E5E7EB;
-          background:#FFFFFF;
-          color:#111827;
-          cursor:pointer;
-          white-space:nowrap;
-        "
-      >
+      <span id="mobileUserEmail" style="font-size:11px;color:#475569;"></span>
+      <button id="btnLogout"
+        style="font-size:11px;padding:4px 8px;border-radius:999px;
+               border:1px solid #E5E7EB;background:#FFFFFF;color:#111827;">
         Salir
       </button>
     </div>
@@ -253,34 +23,32 @@
 
   <main class="content">
     <div class="mobile-shell">
-      <div class="mobile-header">
-        <div class="mobile-title">Proyectos</div>
-        <div class="mobile-subtitle">
-          Vista de solo lectura para consultar obras, estados y encaje 2N.
-        </div>
+      <div class="mobile-title">Proyectos</div>
+      <div class="mobile-subtitle">
+        Vista de solo lectura para consultar obras, estados y encaje 2N.
+      </div>
 
-        <input
-          id="searchMobileProyectos"
-          type="text"
-          class="search-input-mobile"
-          placeholder="Buscar por obra, cliente, ciudad..."
-        />
+      <input
+        id="searchMobileProyectos"
+        type="text"
+        class="search-input-mobile"
+        placeholder="Buscar por obra, cliente, ciudad..."
+      />
 
-        <div class="mobile-filters-row">
-          <select id="fEstadoMobile" class="mobile-select">
-            <option value="Todos">Estado: todos</option>
-          </select>
-          <select id="fProvinciaMobile" class="mobile-select">
-            <option value="Todas">Provincia: todas</option>
-          </select>
-          <select id="fEncajeMobile" class="mobile-select">
-            <option value="Todos">Encaje 2N: todos</option>
-            <option value="ALTO">ALTO</option>
-            <option value="MEDIO">MEDIO</option>
-            <option value="BAJO">BAJO</option>
-            <option value="SIN">Sin dato</option>
-          </select>
-        </div>
+      <div class="mobile-filters-row">
+        <select id="fEstadoMobile" class="mobile-select">
+          <option value="Todos">Estado: todos</option>
+        </select>
+        <select id="fProvinciaMobile" class="mobile-select">
+          <option value="Todas">Provincia: todas</option>
+        </select>
+        <select id="fEncajeMobile" class="mobile-select">
+          <option value="Todos">Encaje 2N: todos</option>
+          <option value="ALTO">ALTO</option>
+          <option value="MEDIO">MEDIO</option>
+          <option value="BAJO">BAJO</option>
+          <option value="SIN">Sin dato</option>
+        </select>
       </div>
 
       <div class="mobile-kpis">
@@ -306,7 +74,6 @@
     </div>
   </main>
 
-  <!-- Bottom nav -->
   <div class="mobile-bottombar">
     <div class="mobile-nav-item" onclick="location.href='mobile-index.html'">
       <span>🏠</span>Inicio
@@ -314,230 +81,190 @@
     <div class="mobile-nav-item active" onclick="location.href='mobile-proyectos.html'">
       <span>🏗️</span>Proyectos
     </div>
-    <div class="mobile-nav-item" onclick="location.href='tareas.html'">
+    <div class="mobile-nav-item" onclick="location.href='mobile-tareas.html'">
       <span>✅</span>Tareas
     </div>
-    <div class="mobile-nav-item" onclick="location.href='clientes.html'">
+    <div class="mobile-nav-item" onclick="location.href='mobile-clientes.html'">
       <span>👥</span>Clientes
     </div>
   </div>
 
   <script type="module">
     import { auth, db } from "./firebase.js";
-    import {
-      collection,
-      getDocs
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { collection, getDocs }
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    const userEmailSpan = document.getElementById("mobileUserEmail");
-
-    const searchInput = document.getElementById("searchMobileProyectos");
-    const selectEstado = document.getElementById("fEstadoMobile");
+    const userEmailSpan   = document.getElementById("mobileUserEmail");
+    const searchInput     = document.getElementById("searchMobileProyectos");
+    const selectEstado    = document.getElementById("fEstadoMobile");
     const selectProvincia = document.getElementById("fProvinciaMobile");
-    const selectEncaje = document.getElementById("fEncajeMobile");
+    const selectEncaje    = document.getElementById("fEncajeMobile");
 
     const kpiProyFiltrados = document.getElementById("kpiProyFiltrados");
-    const kpiProyEncaje = document.getElementById("kpiProyEncaje");
-    const listaProyectosMobile = document.getElementById("listaProyectosMobile");
-    const textoResumen = document.getElementById("textoResumenProyectos");
+    const kpiProyEncaje    = document.getElementById("kpiProyEncaje");
+    const listaProyectos   = document.getElementById("listaProyectosMobile");
+    const textoResumen     = document.getElementById("textoResumenProyectos");
 
     let proyectos = [];
     let filtroTexto = "";
 
-    function norm(text) {
-      return (text || "")
-        .toString()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .trim();
+    function norm(t){
+      return (t||"").toString().normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+    }
+    function ms(v){
+      if(!v) return 0;
+      try{ return v.toMillis ? v.toMillis() : new Date(v).getTime(); }
+      catch{ return 0; }
     }
 
-    function getMillis(v) {
-      if (!v) return 0;
-      try {
-        if (v.toMillis) return v.toMillis();
-        return new Date(v).getTime() || 0;
-      } catch {
-        return 0;
-      }
-    }
-
-    async function cargarProyectos() {
-      try {
-        const snap = await getDocs(collection(db, "proyectos"));
-        proyectos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
+    async function cargarProyectos(){
+      try{
+        const snap = await getDocs(collection(db,"proyectos"));
+        proyectos = snap.docs.map(d=>({id:d.id,...d.data()}));
         inicializarFiltros();
         aplicarFiltrosYRender();
-      } catch (err) {
-        console.error("Error cargando proyectos móvil:", err);
-        textoResumen.textContent = "Error cargando proyectos (revisa conexión y permisos).";
+      }catch(e){
+        console.error(e);
+        textoResumen.textContent = "Error cargando proyectos.";
       }
     }
 
-    function inicializarFiltros() {
-      const estadosSet = new Set();
-      const provinciasSet = new Set();
-
-      proyectos.forEach(p => {
-        if (p.estado) estadosSet.add(p.estado);
-        if (p.provincia) provinciasSet.add(p.provincia);
+    function inicializarFiltros(){
+      const estados   = new Set();
+      const provincias= new Set();
+      proyectos.forEach(p=>{
+        if(p.estado) estados.add(p.estado);
+        if(p.provincia) provincias.add(p.provincia);
       });
-
-      const estados = Array.from(estadosSet).sort((a, b) => a.localeCompare(b, "es"));
-      const provincias = Array.from(provinciasSet).sort((a, b) => a.localeCompare(b, "es"));
 
       selectEstado.innerHTML =
         '<option value="Todos">Estado: todos</option>' +
-        estados.map(e => `<option value="${e}">${e}</option>`).join("");
+        [...estados].sort((a,b)=>a.localeCompare(b,"es"))
+          .map(e=>`<option value="${e}">${e}</option>`).join("");
 
       selectProvincia.innerHTML =
         '<option value="Todas">Provincia: todas</option>' +
-        provincias.map(p => `<option value="${p}">${p}</option>`).join("");
+        [...provincias].sort((a,b)=>a.localeCompare(b,"es"))
+          .map(p=>`<option value="${p}">${p}</option>`).join("");
     }
 
-    function aplicarFiltros() {
+    function aplicarFiltros(){
       let lista = [...proyectos];
-
-      const estadoSel = selectEstado.value;
+      const estadoSel    = selectEstado.value;
       const provinciaSel = selectProvincia.value;
-      const encajeSel = selectEncaje.value;
+      const encajeSel    = selectEncaje.value;
 
-      if (estadoSel !== "Todos") {
-        lista = lista.filter(p => (p.estado || "") === estadoSel);
+      if(estadoSel!=="Todos"){
+        lista = lista.filter(p=>(p.estado||"")===estadoSel);
       }
-
-      if (provinciaSel !== "Todas") {
-        lista = lista.filter(p => (p.provincia || "") === provinciaSel);
+      if(provinciaSel!=="Todas"){
+        lista = lista.filter(p=>(p.provincia||"")===provinciaSel);
       }
-
-      if (encajeSel !== "Todos") {
-        lista = lista.filter(p => {
-          const e = (p.encaje_2n || "").toString().toUpperCase().trim();
-          if (encajeSel === "SIN") {
-            return !["ALTO", "MEDIO", "BAJO"].includes(e);
-          }
-          return e === encajeSel;
+      if(encajeSel!=="Todos"){
+        lista = lista.filter(p=>{
+          const e=(p.encaje_2n||"").toString().toUpperCase().trim();
+          if(encajeSel==="SIN") return !["ALTO","MEDIO","BAJO"].includes(e);
+          return e===encajeSel;
         });
       }
-
-      if (filtroTexto) {
-        const txt = filtroTexto;
-        lista = lista.filter(p => {
-          const blob = [
-            p.nombre_obra,
-            p.nombre,
-            p.cliente_principal,
-            p.promotora,
-            p.constructora,
-            p.ciudad,
-            p.provincia
+      if(filtroTexto){
+        const txt=filtroTexto;
+        lista=lista.filter(p=>{
+          const blob=[
+            p.nombre_obra,p.nombre,p.cliente_principal,
+            p.promotora,p.constructora,p.ciudad,p.provincia
           ].join(" ");
           return norm(blob).includes(txt);
         });
       }
-
       return lista;
     }
 
-    function aplicarFiltrosYRender() {
+    function aplicarFiltrosYRender(){
       const lista = aplicarFiltros();
       renderKPIs(lista);
       renderLista(lista);
     }
 
-    function renderKPIs(lista) {
+    function renderKPIs(lista){
       const totalFilt = lista.length;
-      const encajeAltoMedio = lista.filter(p => {
-        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
-        return e === "ALTO" || e === "MEDIO";
+      const encajeAM = lista.filter(p=>{
+        const e=(p.encaje_2n||"").toString().toUpperCase().trim();
+        return e==="ALTO"||e==="MEDIO";
       }).length;
 
-      kpiProyFiltrados.textContent = totalFilt || 0;
-      kpiProyEncaje.textContent = encajeAltoMedio || 0;
+      kpiProyFiltrados.textContent = totalFilt||0;
+      kpiProyEncaje.textContent    = encajeAM||0;
 
-      if (!proyectos.length) {
-        textoResumen.textContent = "No hay proyectos cargados todavía.";
+      if(!proyectos.length){
+        textoResumen.textContent="No hay proyectos.";
         return;
       }
-
-      const partes = [];
-      partes.push(`Total: ${proyectos.length} proyectos`);
-      partes.push(`Filtrados: ${totalFilt}`);
-
-      textoResumen.textContent = partes.join(" · ");
+      textoResumen.textContent =
+        `Total: ${proyectos.length} · Filtrados: ${totalFilt}`;
     }
 
-    function renderLista(lista) {
-      listaProyectosMobile.innerHTML = "";
-
-      if (!lista.length) {
-        listaProyectosMobile.innerHTML =
-          '<div class="mobile-card-body" style="font-size:10px;color:#6b7280;">No hay proyectos que cumplan los filtros actuales.</div>';
+    function renderLista(lista){
+      listaProyectos.innerHTML="";
+      if(!lista.length){
+        listaProyectos.innerHTML =
+          '<div style="font-size:10px;color:#6b7280;">No hay proyectos con estos filtros.</div>';
         return;
       }
+      lista.sort((a,b)=>ms(b.fecha_actualizacion||b.fecha)-ms(a.fecha_actualizacion||a.fecha));
+      lista.forEach(p=>{
+        const nombre   = p.nombre_obra||p.nombre||"Proyecto sin nombre";
+        const provincia= p.provincia||p.ciudad||"";
+        const estado   = p.estado||"Sin estado";
+        const encaje   = (p.encaje_2n||"").toString().toUpperCase().trim()||"SIN";
+        const seg      = p.segmento||p.tipo||"";
+        const cliente  = p.cliente_principal||p.promotora||"";
+        const fRef     = p.fecha_actualizacion||p.fecha||null;
+        const fTxt     = fRef ? new Date(ms(fRef)).toLocaleDateString("es-ES"):"-";
 
-      // Orden por fecha de actualización / alta (descendente)
-      lista.sort((a, b) => getMillis(b.fecha_actualizacion || b.fecha || 0) - getMillis(a.fecha_actualizacion || a.fecha || 0));
+        let claseEncaje="mobile-chip";
+        if(encaje==="ALTO") claseEncaje+=" chip-prio-baja";    // verde
+        else if(encaje==="MEDIO") claseEncaje+=" chip-prio-media";
+        else if(encaje==="BAJO") claseEncaje+=" chip-prio-alta";
 
-      lista.forEach(p => {
-        const nombre = p.nombre_obra || p.nombre || "Proyecto sin nombre";
-        const provincia = p.provincia || p.ciudad || "";
-        const estado = p.estado || "Sin estado";
-        const encaje = (p.encaje_2n || "").toString().toUpperCase().trim() || "SIN";
-        const segmento = p.segmento || p.tipo || "";
-        const cliente = p.cliente_principal || p.promotora || "";
-
-        let claseEncaje = "mobile-chip";
-        if (encaje === "ALTO") claseEncaje += " mobile-chip-encaje-alto";
-        else if (encaje === "MEDIO") claseEncaje += " mobile-chip-encaje-medio";
-        else if (encaje === "BAJO") claseEncaje += " mobile-chip-encaje-bajo";
-
-        const fechaRef = p.fecha_actualizacion || p.fecha || null;
-        const fechaTxt = fechaRef ? new Date(getMillis(fechaRef)).toLocaleDateString("es-ES") : "-";
-
-        const card = document.createElement("div");
-        card.className = "mobile-card";
-        card.innerHTML = `
+        const card=document.createElement("div");
+        card.className="mobile-card";
+        card.innerHTML=`
           <div class="mobile-card-header">
             <div class="mobile-card-title">${nombre}</div>
-            <div class="mobile-chip mobile-chip-estado">${estado}</div>
+            <div class="mobile-chip">${estado}</div>
           </div>
           <div class="mobile-card-body">
-            ${provincia ? `<div><strong>Zona:</strong> ${provincia}</div>` : ""}
+            ${provincia?`<div><strong>Zona:</strong> ${provincia}</div>`:""}
             <div class="mobile-pill-row">
               <span class="${claseEncaje}">Encaje: ${encaje}</span>
-              ${segmento ? `<span class="mobile-pill">${segmento}</span>` : ""}
-              ${cliente ? `<span class="mobile-pill">Cliente: ${cliente}</span>` : ""}
+              ${seg?`<span class="mobile-pill">${seg}</span>`:""}
+              ${cliente?`<span class="mobile-pill">Cliente: ${cliente}</span>`:""}
             </div>
-            <div class="mobile-meta">Última actividad: ${fechaTxt}</div>
-          </div>
-        `;
-        listaProyectosMobile.appendChild(card);
+            <div class="mobile-meta">Última actividad: ${fTxt}</div>
+          </div>`;
+        listaProyectos.appendChild(card);
       });
     }
 
-    searchInput.addEventListener("input", () => {
-      filtroTexto = norm(searchInput.value || "");
+    searchInput.addEventListener("input",()=>{
+      filtroTexto = norm(searchInput.value||"");
       aplicarFiltrosYRender();
     });
+    selectEstado.addEventListener("change",aplicarFiltrosYRender);
+    selectProvincia.addEventListener("change",aplicarFiltrosYRender);
+    selectEncaje.addEventListener("change",aplicarFiltrosYRender);
 
-    selectEstado.addEventListener("change", aplicarFiltrosYRender);
-    selectProvincia.addEventListener("change", aplicarFiltrosYRender);
-    selectEncaje.addEventListener("change", aplicarFiltrosYRender);
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.replace("login.html");
-        return;
-      }
-      userEmailSpan.textContent = user.email || "";
+    onAuthStateChanged(auth,(u)=>{
+      if(!u) return location.replace("login.html");
+      userEmailSpan.textContent = u.email;
       cargarProyectos();
     });
   </script>
 
-  <!-- Guardia de autenticación + logout -->
   <script type="module" src="auth.js"></script>
 </body>
 </html>
