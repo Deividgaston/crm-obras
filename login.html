@@ -118,6 +118,13 @@
       align-items: center;
       gap: 6px;
       transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+      white-space: nowrap;
+    }
+    .login-button.secondary {
+      background: transparent;
+      border: 1px solid #4b5563;
+      color: #e5e7eb;
+      box-shadow: none;
     }
     .login-button:disabled {
       opacity: 0.7;
@@ -152,6 +159,19 @@
     .login-status.success {
       color: #bbf7d0;
     }
+    .login-separator {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin:8px 0 6px 0;
+      font-size:10px;
+      color:#6b7280;
+    }
+    .login-separator span.line {
+      flex:1;
+      height:1px;
+      background:rgba(55,65,81,0.7);
+    }
   </style>
 </head>
 <body>
@@ -169,6 +189,7 @@
         </div>
       </div>
 
+      <!-- LOGIN FORM -->
       <form id="loginForm" class="login-form">
         <div>
           <label for="email" class="login-label">Correo electrónico</label>
@@ -178,7 +199,6 @@
             class="login-input"
             placeholder="tu.correo@2n-crm.com"
             autocomplete="email"
-            required
           />
         </div>
         <div>
@@ -189,7 +209,6 @@
             class="login-input"
             placeholder="••••••••"
             autocomplete="current-password"
-            required
           />
         </div>
 
@@ -200,15 +219,29 @@
           </label>
           <button type="submit" id="btnLogin" class="login-button">
             <span class="icon">→</span>
-            <span>Entrar al CRM</span>
+            <span>Entrar</span>
           </button>
         </div>
       </form>
 
+      <div class="login-separator">
+        <span class="line"></span>
+        <span>o</span>
+        <span class="line"></span>
+      </div>
+
+      <!-- BOTÓN GOOGLE -->
+      <div style="display:flex;justify-content:flex-end;margin-bottom:2px;">
+        <button type="button" id="btnGoogle" class="login-button secondary">
+          <span class="icon">🟢</span>
+          <span>Entrar con Google</span>
+        </button>
+      </div>
+
       <div class="login-footer">
         <div class="login-status" id="loginStatus"></div>
         <div>
-          <span>Acceso privado · Usuarios creados en Firebase Console</span>
+          <span>Acceso privado · Usuarios vía email o Google</span>
         </div>
       </div>
     </div>
@@ -217,7 +250,9 @@
   <script type="module">
     import { auth } from "./firebase.js";
     import {
-      signInWithEmailAndPassword
+      signInWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const form = document.getElementById("loginForm");
@@ -225,21 +260,29 @@
     const passInput = document.getElementById("password");
     const rememberInput = document.getElementById("remember");
     const btnLogin = document.getElementById("btnLogin");
+    const btnGoogle = document.getElementById("btnGoogle");
     const statusEl = document.getElementById("loginStatus");
+
+    const provider = new GoogleAuthProvider();
 
     function setStatus(message, type = "") {
       statusEl.textContent = message || "";
       statusEl.className = "login-status" + (type ? " " + type : "");
     }
 
+    // LOGIN EMAIL / CONTRASEÑA
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
       const password = passInput.value;
 
-      if (!email || !password) return;
+      if (!email || !password) {
+        setStatus("Introduce correo y contraseña.", "error");
+        return;
+      }
 
       btnLogin.disabled = true;
+      btnGoogle.disabled = true;
       setStatus("Verificando credenciales...", "");
 
       try {
@@ -257,6 +300,32 @@
         setStatus(msg, "error");
       } finally {
         btnLogin.disabled = false;
+        btnGoogle.disabled = false;
+      }
+    });
+
+    // LOGIN CON GOOGLE
+    btnGoogle.addEventListener("click", async () => {
+      btnLogin.disabled = true;
+      btnGoogle.disabled = true;
+      setStatus("Abriendo ventana de Google...", "");
+
+      try {
+        await signInWithPopup(auth, provider);
+        setStatus("Acceso correcto con Google. Entrando al CRM...", "success");
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 400);
+      } catch (err) {
+        console.error("Error login Google:", err);
+        let msg = "No se ha podido iniciar sesión con Google.";
+        if (err.code === "auth/popup-closed-by-user") {
+          msg = "Se ha cerrado la ventana de Google.";
+        }
+        setStatus(msg, "error");
+      } finally {
+        btnLogin.disabled = false;
+        btnGoogle.disabled = false;
       }
     });
   </script>
