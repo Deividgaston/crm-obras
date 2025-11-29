@@ -1,31 +1,812 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>CRM 2N – Reportes</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM 2N – Reportes</title>
+  <link rel="stylesheet" href="style.css" />
 
-<div class="topnav">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+  <!-- PDF (html2canvas + jsPDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- NAV SUPERIOR -->
+  <div class="topnav">
     <div class="logo">CRM 2N</div>
 
     <div class="nav-tabs">
-        <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
-        <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
-        <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
-        <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
-        <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
-        <div class="nav-item active" onclick="location.href='reportes.html'">Reportes</div>
+      <div class="nav-item" onclick="location.href='index.html'">Dashboard</div>
+      <div class="nav-item" onclick="location.href='proyectos.html'">Proyectos</div>
+      <div class="nav-item" onclick="location.href='buscar.html'">Buscar</div>
+      <div class="nav-item" onclick="location.href='pipeline.html'">Pipeline</div>
+      <div class="nav-item" onclick="location.href='clientes.html'">Clientes</div>
+      <div class="nav-item" onclick="location.href='tareas.html'">Tareas</div>
+      <div class="nav-item active" onclick="location.href='reportes.html'">Reportes</div>
     </div>
 
-    <input type="text" class="search-box" placeholder="Buscar..." />
-</div>
+    <input type="text" class="search-box" id="buscadorGlobal" placeholder="Filtrar proyectos / clientes..." />
+  </div>
 
-<main class="content">
-    <h2>Reportes</h2>
-    <p>En construcción.</p>
-</main>
+  <main class="content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div>
+        <h2 style="margin-top:0;margin-bottom:4px;color:#16325C;">Reportes · Vista analista de mercado</h2>
+        <div style="font-size:12px;color:#5A6872;">
+          Control total de obras y clientes, segmentado por zona, estado y encaje 2N. Exporta el informe a PDF.
+        </div>
+      </div>
+      <button id="btnExportPDF" class="btn-primary" type="button" style="font-size:11px;padding:6px 12px;">
+        📄 Descargar PDF del reporte
+      </button>
+    </div>
 
+    <!-- FILTROS -->
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <select id="fVista" class="select-input" style="max-width:180px;">
+          <option value="mixto">Vista: Mixta</option>
+          <option value="proyectos">Solo proyectos</option>
+          <option value="clientes">Solo clientes</option>
+        </select>
+
+        <select id="fZona" class="select-input" style="max-width:200px;">
+          <option value="Todas">Zonas: todas</option>
+        </select>
+
+        <select id="fEstado" class="select-input" style="max-width:180px;">
+          <option value="Todos">Estado proyecto: todos</option>
+          <option value="En curso">En curso</option>
+          <option value="Ganado">Ganado</option>
+          <option value="Perdido">Perdido</option>
+        </select>
+
+        <select id="fEncaje" class="select-input" style="max-width:180px;">
+          <option value="Todos">Encaje 2N: todos</option>
+          <option value="ALTO">ALTO</option>
+          <option value="MEDIO">MEDIO</option>
+          <option value="BAJO">BAJO</option>
+          <option value="SIN">Sin clasificar</option>
+        </select>
+
+        <div style="flex:1;"></div>
+
+        <span style="font-size:10.5px;color:#9CA3AF;">
+          El PDF se genera con los filtros actuales.
+        </span>
+      </div>
+    </div>
+
+    <!-- CONTENIDO DEL REPORTE (SE CAPTURA PARA PDF) -->
+    <div id="reportContent">
+      <!-- KPIs -->
+      <div class="kpi-row" style="margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-label">Proyectos filtrados</div>
+          <div id="kpiProyectos" class="kpi-value">–</div>
+          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Total de obras dentro de los filtros.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Clientes filtrados</div>
+          <div id="kpiClientes" class="kpi-value">–</div>
+          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Clientes con actividad en las zonas seleccionadas.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Obras con encaje ALTO / MEDIO</div>
+          <div id="kpiEncajeAltoMedio" class="kpi-value">–</div>
+          <div class="kpi-sub" style="font-size:10.5px;color:#6B7280;">Pipeline donde 2N encaja muy bien.</div>
+        </div>
+      </div>
+
+      <!-- CHARTS FILA 1 -->
+      <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
+        <!-- Proyectos por estado -->
+        <div class="card">
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+            Distribución de proyectos por estado
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+            Vista rápida de la madurez del pipeline.
+          </div>
+          <div style="position:relative;height:220px;">
+            <canvas id="chartEstado"></canvas>
+          </div>
+        </div>
+
+        <!-- Encaje 2N -->
+        <div class="card">
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+            Encaje 2N en proyectos filtrados
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+            Clasificación ALTO / MEDIO / BAJO vs sin clasificar.
+          </div>
+          <div style="position:relative;height:220px;">
+            <canvas id="chartEncaje"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS FILA 2 -->
+      <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:14px;align-items:flex-start;margin-bottom:14px;">
+        <!-- Encaje por tipo de activo (si existe) o segmento -->
+        <div class="card">
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+            Proyectos por tipo de activo / segmento
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+            Mix entre residencial, terciario y otros (si está informado en los proyectos).
+          </div>
+          <div style="position:relative;height:220px;">
+            <canvas id="chartSegmento"></canvas>
+          </div>
+        </div>
+
+        <!-- Top clientes por nº de obras -->
+        <div class="card">
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+            Top clientes por nº de obras
+          </div>
+          <div style="font-size:10.5px;color:#6B7280;margin-bottom:4px;">
+            Ranking de clientes según volumen de proyectos asignados.
+          </div>
+          <div style="position:relative;height:220px;">
+            <canvas id="chartTopClientes"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- LISTAS DETALLADAS -->
+      <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
+        <!-- Tabla principal -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div id="tablaTitulo" style="font-size:12px;font-weight:600;color:#111827;">
+              Detalle de proyectos
+            </div>
+            <div style="font-size:10px;color:#9CA3AF;">
+              Ordenado por relevancia (encaje y estado).
+            </div>
+          </div>
+          <div id="tablaDatosWrapper"></div>
+          <div id="tablaEmpty" class="empty-state" style="display:none;">
+            No hay datos para los filtros seleccionados.
+          </div>
+        </div>
+
+        <!-- Resumen de indicadores -->
+        <div class="card">
+          <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">
+            Resumen ejecutivo
+          </div>
+          <div id="resumenEjecutivo" style="font-size:11px;color:#4B5563;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import {
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    let proyectos = [];
+    let clientes = [];
+    let clientesView = [];
+
+    let chartEstado = null;
+    let chartEncaje = null;
+    let chartSegmento = null;
+    let chartTopClientes = null;
+
+    const fVista = document.getElementById("fVista");
+    const fZona = document.getElementById("fZona");
+    const fEstado = document.getElementById("fEstado");
+    const fEncaje = document.getElementById("fEncaje");
+    const buscadorGlobal = document.getElementById("buscadorGlobal");
+
+    const kpiProyectos = document.getElementById("kpiProyectos");
+    const kpiClientes = document.getElementById("kpiClientes");
+    const kpiEncajeAltoMedio = document.getElementById("kpiEncajeAltoMedio");
+
+    const tablaTitulo = document.getElementById("tablaTitulo");
+    const tablaDatosWrapper = document.getElementById("tablaDatosWrapper");
+    const tablaEmpty = document.getElementById("tablaEmpty");
+    const resumenEjecutivo = document.getElementById("resumenEjecutivo");
+
+    const btnExportPDF = document.getElementById("btnExportPDF");
+    const reportContent = document.getElementById("reportContent");
+
+    function norm(text) {
+      return (text || "")
+        .toString()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
+    function contarObrasPorClienteNombre(nombreCliente) {
+      const target = (nombreCliente || "").toString().toLowerCase().trim();
+      if (!target) return 0;
+      let contador = 0;
+      proyectos.forEach(p => {
+        const campos = [
+          p.cliente_principal,
+          p.promotora,
+          p.constructora,
+          p.arquitectura,
+          p.ingenieria
+        ];
+        if (campos.some(v => (v || "").toString().toLowerCase().trim() === target)) {
+          contador++;
+        }
+      });
+      return contador;
+    }
+
+    function buildClientesView() {
+      clientesView = clientes.map(c => {
+        const nombre = c.nombre || c.nombre_cliente || "";
+        return {
+          ...c,
+          nombre_display: nombre,
+          num_obras: contarObrasPorClienteNombre(nombre)
+        };
+      });
+    }
+
+    function inicializarFiltroZonas() {
+      const zonasSet = new Set();
+
+      proyectos.forEach(p => {
+        if (p.ciudad) zonasSet.add(p.ciudad);
+        if (p.provincia) zonasSet.add(p.provincia);
+      });
+      clientes.forEach(c => {
+        if (c.ciudad) zonasSet.add(c.ciudad);
+        if (c.provincia) zonasSet.add(c.provincia);
+      });
+
+      const zonas = [...zonasSet].filter(z => z).sort((a, b) => a.localeCompare(b, "es"));
+      fZona.innerHTML =
+        '<option value="Todas">Zonas: todas</option>' +
+        zonas.map(z => `<option value="${z}">${z}</option>`).join("");
+    }
+
+    async function cargarDatos() {
+      const [snapProy, snapCli] = await Promise.all([
+        getDocs(collection(db, "proyectos")),
+        getDocs(collection(db, "clientes"))
+      ]);
+
+      proyectos = snapProy.docs.map(d => ({ id: d.id, ...d.data() }));
+      clientes = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      buildClientesView();
+      inicializarFiltroZonas();
+      aplicarFiltrosYRender();
+    }
+
+    function filtrarDatos() {
+      const vista = fVista.value;
+      const zona = fZona.value;
+      const estado = fEstado.value;
+      const encaje = fEncaje.value;
+      const txt = norm(buscadorGlobal.value);
+
+      let proy = proyectos.slice();
+      let clis = clientesView.slice();
+
+      if (zona !== "Todas") {
+        proy = proy.filter(
+          p => p.ciudad === zona || p.provincia === zona
+        );
+        clis = clis.filter(
+          c => c.ciudad === zona || c.provincia === zona
+        );
+      }
+
+      if (estado !== "Todos") {
+        proy = proy.filter(p => (p.estado || "") === estado);
+      }
+
+      if (encaje !== "Todos") {
+        proy = proy.filter(p => {
+          const e = (p.encaje_2n || "").toString().toUpperCase().trim();
+          if (encaje === "SIN") {
+            return !["ALTO", "MEDIO", "BAJO"].includes(e);
+          }
+          return e === encaje;
+        });
+      }
+
+      if (txt) {
+        proy = proy.filter(p => {
+          const blob = [
+            p.nombre_obra,
+            p.nombre,
+            p.ciudad,
+            p.provincia,
+            p.estado,
+            p.encaje_2n,
+            p.cliente_principal,
+            p.promotora
+          ]
+            .join(" ")
+            .toLowerCase();
+          return blob.includes(txt);
+        });
+
+        clis = clis.filter(c => {
+          const blob = [
+            c.nombre_display,
+            c.tipo,
+            c.segmento,
+            c.ciudad,
+            c.provincia
+          ]
+            .join(" ")
+            .toLowerCase();
+          return blob.includes(txt);
+        });
+      }
+
+      if (vista === "proyectos") {
+        return { proy, clis: [] };
+      }
+      if (vista === "clientes") {
+        return { proy: [], clis };
+      }
+      return { proy, clis };
+    }
+
+    function renderKPIs(proy, clis) {
+      kpiProyectos.textContent = proy.length;
+      kpiClientes.textContent = clis.length;
+
+      const encAltoMedio = proy.filter(p => {
+        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
+        return e === "ALTO" || e === "MEDIO";
+      }).length;
+      kpiEncajeAltoMedio.textContent = encAltoMedio;
+    }
+
+    function renderChartEstado(proy) {
+      const counts = { "En curso": 0, Ganado: 0, Perdido: 0, Otros: 0 };
+      proy.forEach(p => {
+        const e = p.estado || "";
+        if (e === "En curso") counts["En curso"]++;
+        else if (e === "Ganado") counts.Ganado++;
+        else if (e === "Perdido") counts.Perdido++;
+        else counts.Otros++;
+      });
+
+      const data = [counts["En curso"], counts.Ganado, counts.Perdido, counts.Otros];
+      const labels = ["En curso", "Ganado", "Perdido", "Otros"];
+
+      if (chartEstado) chartEstado.destroy();
+      const ctx = document.getElementById("chartEstado").getContext("2d");
+      chartEstado = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: ["#60A5FA", "#22C55E", "#F97373", "#E5E7EB"]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: "end",
+              align: "top",
+              formatter: (v) => (v ? v : ""),
+              font: { size: 10, weight: "600" },
+              color: "#111827"
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+    }
+
+    function renderChartEncaje(proy) {
+      const counts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
+
+      proy.forEach(p => {
+        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
+        if (e === "ALTO") counts.ALTO++;
+        else if (e === "MEDIO") counts.MEDIO++;
+        else if (e === "BAJO") counts.BAJO++;
+        else counts.SIN++;
+      });
+
+      const data = [counts.ALTO, counts.MEDIO, counts.BAJO, counts.SIN];
+      const total = data.reduce((a, b) => a + b, 0);
+
+      if (chartEncaje) chartEncaje.destroy();
+      const ctx = document.getElementById("chartEncaje").getContext("2d");
+      Chart.register(window.ChartDataLabels);
+
+      chartEncaje = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["ALTO", "MEDIO", "BAJO", "SIN"],
+          datasets: [
+            {
+              data,
+              backgroundColor: ["#16A34A", "#FACC15", "#FB923C", "#E5E7EB"],
+              borderColor: "#FFFFFF",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          cutout: "55%",
+          plugins: {
+            legend: { position: "bottom", labels: { font: { size: 11 } } },
+            datalabels: {
+              formatter: (v, ctx) => {
+                if (!total || !v) return "";
+                const pct = Math.round((v * 100) / total);
+                return pct ? pct + "%" : "";
+              },
+              color: "#111827",
+              font: { size: 10, weight: "600" }
+            }
+          }
+        }
+      });
+    }
+
+    function renderChartSegmento(proy) {
+      const counts = {};
+      proy.forEach(p => {
+        const seg = p.segmento || p.tipo_activo || "Sin segmento";
+        counts[seg] = (counts[seg] || 0) + 1;
+      });
+
+      const labels = Object.keys(counts);
+      const data = labels.map(l => counts[l]);
+
+      if (chartSegmento) chartSegmento.destroy();
+      const ctx = document.getElementById("chartSegmento").getContext("2d");
+      chartSegmento = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: "#4F46E5"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: "end",
+              align: "top",
+              formatter: (v) => (v ? v : ""),
+              font: { size: 9, weight: "600" },
+              color: "#111827"
+            }
+          },
+          scales: {
+            x: { ticks: { font: { size: 9 } } },
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+    }
+
+    function renderChartTopClientes(clis) {
+      const top = clis
+        .slice()
+        .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
+        .filter(c => (c.num_obras || 0) > 0)
+        .slice(0, 8);
+
+      const labels = top.map(c => c.nombre_display || "");
+      const data = top.map(c => c.num_obras || 0);
+
+      if (chartTopClientes) chartTopClientes.destroy();
+      const ctx = document.getElementById("chartTopClientes").getContext("2d");
+      chartTopClientes = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: "#22C55E"
+            }
+          ]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: "end",
+              align: "right",
+              formatter: (v) => (v ? v : ""),
+              font: { size: 9, weight: "600" },
+              color: "#111827"
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            },
+            y: { ticks: { font: { size: 9 } } }
+          }
+        }
+      });
+    }
+
+    function renderTabla(proy, clis) {
+      const vista = fVista.value;
+      let html = "";
+
+      if (vista === "clientes") {
+        if (!clis.length) {
+          tablaDatosWrapper.innerHTML = "";
+          tablaEmpty.style.display = "block";
+          tablaTitulo.textContent = "Detalle de clientes";
+          return;
+        }
+        tablaEmpty.style.display = "none";
+        tablaTitulo.textContent = "Detalle de clientes";
+
+        html += `
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Tipo</th>
+                <th>Segmento</th>
+                <th>Ciudad</th>
+                <th>Provincia</th>
+                <th>Obras</th>
+                <th>2N</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        clis
+          .slice()
+          .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
+          .forEach(c => {
+            const trabaja2N = !!c.trabaja_con_2n;
+            const badge2N = trabaja2N
+              ? '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#DCFCE7;color:#166534;">2N</span>'
+              : '<span style="font-size:10px;color:#9CA3AF;">—</span>';
+            html += `
+              <tr>
+                <td>${c.nombre_display || ""}</td>
+                <td>${c.tipo || ""}</td>
+                <td>${c.segmento || ""}</td>
+                <td>${c.ciudad || ""}</td>
+                <td>${c.provincia || ""}</td>
+                <td>${c.num_obras || 0}</td>
+                <td>${badge2N}</td>
+              </tr>
+            `;
+          });
+        html += "</tbody></table>";
+        tablaDatosWrapper.innerHTML = html;
+        return;
+      }
+
+      if (!proy.length) {
+        tablaDatosWrapper.innerHTML = "";
+        tablaEmpty.style.display = "block";
+        tablaTitulo.textContent = "Detalle de proyectos";
+        return;
+      }
+      tablaEmpty.style.display = "none";
+      tablaTitulo.textContent = "Detalle de proyectos";
+
+      html += `
+        <table>
+          <thead>
+            <tr>
+              <th>Proyecto</th>
+              <th>Ciudad</th>
+              <th>Estado</th>
+              <th>Encaje 2N</th>
+              <th>Cliente principal</th>
+              <th>Segmento</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      const pesoEncaje = (e) => {
+        const v = (e || "").toString().toUpperCase().trim();
+        if (v === "ALTO") return 3;
+        if (v === "MEDIO") return 2;
+        if (v === "BAJO") return 1;
+        return 0;
+      };
+      const pesoEstado = (e) => {
+        if (e === "Ganado") return 3;
+        if (e === "En curso") return 2;
+        if (e === "Perdido") return 1;
+        return 0;
+      };
+
+      proy
+        .slice()
+        .sort((a, b) => {
+          const pa = pesoEncaje(a.encaje_2n) + pesoEstado(a.estado);
+          const pb = pesoEncaje(b.encaje_2n) + pesoEstado(b.estado);
+          return pb - pa;
+        })
+        .forEach(p => {
+          const enc = (p.encaje_2n || "").toString().toUpperCase().trim();
+          let badge;
+          if (enc === "ALTO") {
+            badge = '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#DCFCE7;color:#166534;">ALTO</span>';
+          } else if (enc === "MEDIO") {
+            badge = '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#FEF9C3;color:#92400E;">MEDIO</span>';
+          } else if (enc === "BAJO") {
+            badge = '<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#FFE4E6;color:#9F1239;">BAJO</span>';
+          } else {
+            badge = '<span style="font-size:10px;color:#9CA3AF;">—</span>';
+          }
+
+          html += `
+            <tr>
+              <td>${p.nombre_obra || p.nombre || ""}</td>
+              <td>${p.ciudad || p.provincia || ""}</td>
+              <td>${p.estado || ""}</td>
+              <td>${badge}</td>
+              <td>${p.cliente_principal || p.promotora || ""}</td>
+              <td>${p.segmento || p.tipo_activo || ""}</td>
+            </tr>
+          `;
+        });
+
+      html += "</tbody></table>";
+      tablaDatosWrapper.innerHTML = html;
+    }
+
+    function renderResumenEjecutivo(proy, clis) {
+      const totalProy = proy.length;
+      const totalCli = clis.length;
+
+      const encCounts = { ALTO: 0, MEDIO: 0, BAJO: 0, SIN: 0 };
+      proy.forEach(p => {
+        const e = (p.encaje_2n || "").toString().toUpperCase().trim();
+        if (e === "ALTO") encCounts.ALTO++;
+        else if (e === "MEDIO") encCounts.MEDIO++;
+        else if (e === "BAJO") encCounts.BAJO++;
+        else encCounts.SIN++;
+      });
+
+      const clientesConObra = clis.filter(c => (c.num_obras || 0) > 0).length;
+      const clientesClave = clis
+        .slice()
+        .sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0))
+        .slice(0, 5)
+        .map(c => `${c.nombre_display || ""} (${c.num_obras || 0})`)
+        .join(", ");
+
+      resumenEjecutivo.innerHTML = `
+        <div>
+          <strong style="color:#111827;">Cobertura actual de pipeline:</strong><br/>
+          Hay <strong>${totalProy}</strong> proyectos dentro de los filtros activos, con un total de
+          <strong>${encCounts.ALTO + encCounts.MEDIO}</strong> obras en las que el encaje de 2N se considera
+          <strong>ALTO / MEDIO</strong>.
+        </div>
+        <div>
+          <strong style="color:#111827;">Calidad de segmentación:</strong><br/>
+          Encaje ALTO: <strong>${encCounts.ALTO}</strong> · MEDIO: <strong>${encCounts.MEDIO}</strong> ·
+          BAJO: <strong>${encCounts.BAJO}</strong> · Sin clasificar: <strong>${encCounts.SIN}</strong>.
+        </div>
+        <div>
+          <strong style="color:#111827;">Base de clientes activa:</strong><br/>
+          Hay <strong>${totalCli}</strong> clientes dentro de los filtros, de los cuales
+          <strong>${clientesConObra}</strong> tienen al menos una obra vinculada.
+        </div>
+        <div>
+          <strong style="color:#111827;">Clientes clave por nº de obras:</strong><br/>
+          ${clientesClave || "Sin clientes destacados en esta vista."}
+        </div>
+      `;
+    }
+
+    function aplicarFiltrosYRender() {
+      const { proy, clis } = filtrarDatos();
+
+      renderKPIs(proy, clis);
+      renderChartEstado(proy);
+      renderChartEncaje(proy);
+      renderChartSegmento(proy);
+      renderChartTopClientes(clis);
+      renderTabla(proy, clis);
+      renderResumenEjecutivo(proy, clis);
+    }
+
+    fVista.addEventListener("change", aplicarFiltrosYRender);
+    fZona.addEventListener("change", aplicarFiltrosYRender);
+    fEstado.addEventListener("change", aplicarFiltrosYRender);
+    fEncaje.addEventListener("change", aplicarFiltrosYRender);
+    buscadorGlobal.addEventListener("input", () => {
+      clearTimeout(buscadorGlobal._t);
+      buscadorGlobal._t = setTimeout(aplicarFiltrosYRender, 200);
+    });
+
+    btnExportPDF.addEventListener("click", async () => {
+      const { jsPDF } = window.jspdf;
+      btnExportPDF.disabled = true;
+      btnExportPDF.textContent = "Generando PDF...";
+
+      try {
+        const canvas = await html2canvas(reportContent, {
+          scale: 2,
+          useCORS: true,
+          windowWidth: document.documentElement.scrollWidth
+        });
+        const imgData = canvas.toDataURL("image/png");
+
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const imgWidth = pageWidth - 20;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let position = 10;
+        let heightLeft = imgHeight;
+
+        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - 20);
+
+        while (heightLeft > 0) {
+          pdf.addPage();
+          position = 10;
+          pdf.addImage(imgData, "PNG", 10, position - (imgHeight - heightLeft), imgWidth, imgHeight);
+          heightLeft -= (pageHeight - 20);
+        }
+
+        pdf.save("reporte_crm_2n.pdf");
+      } catch (err) {
+        console.error("Error generando PDF:", err);
+        alert("Ha ocurrido un error al generar el PDF.");
+      } finally {
+        btnExportPDF.disabled = false;
+        btnExportPDF.textContent = "📄 Descargar PDF del reporte";
+      }
+    });
+
+    cargarDatos();
+  </script>
 </body>
 </html>
