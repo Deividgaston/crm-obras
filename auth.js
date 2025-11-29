@@ -1,63 +1,84 @@
-// auth.js – Guardia global de autenticación para CRM 2N
-// -------------------------------------------------------
-
+// auth.js
 import { auth } from "./firebase.js";
 import {
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Páginas sin autenticación requerida
-const PUBLIC_PAGES = ["login.html", "login", ""];
+// =============================
+// REDIRECCIÓN A VERSIONES MÓVILES
+// =============================
 
-// Obtener el nombre del archivo actual
-function getCurrentPageName() {
+(function handleMobileRedirect() {
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) return;
+
   const path = window.location.pathname;
-  return (path.split("/").pop() || "").toLowerCase();
+  const page = path.split("/").pop() || "index.html";
+
+  // No redirigir desde login, admin ni si ya estás en una página móvil
+  if (
+    page === "login.html" ||
+    page === "admin.html" ||
+    page.startsWith("mobile-")
+  ) {
+    return;
+  }
+
+  const mobileMap = {
+    "index.html": "mobile-index.html",
+    "proyectos.html": "mobile-proyectos.html",
+    "clientes.html": "mobile-clientes.html",
+    "tareas.html": "mobile-tareas.html"
+    // si en el futuro haces más: "reportes.html": "mobile-reportes.html", etc.
+  };
+
+  const target = mobileMap[page];
+  if (target) {
+    window.location.replace(target);
+  }
+})();
+
+// =============================
+// GUARDIA DE AUTENTICACIÓN
+// =============================
+
+const PUBLIC_PAGES = ["login.html"];
+
+function getCurrentPage() {
+  const path = window.location.pathname;
+  return path.split("/").pop() || "index.html";
 }
 
-// ¿Es página pública?
-function isPublicPage() {
-  return PUBLIC_PAGES.includes(getCurrentPageName());
-}
-
-// Aplicar la guardia de autenticación
 onAuthStateChanged(auth, (user) => {
+  const page = getCurrentPage();
 
-  // 🚫 NO autenticado → cualquier página privada redirige a login
-  if (!user && !isPublicPage()) {
+  // Si no está logueado y no es página pública → al login
+  if (!user && !PUBLIC_PAGES.includes(page)) {
     window.location.replace("login.html");
     return;
   }
 
-  // 🔁 SI autenticado → evitar permanecer en login
-  if (user && getCurrentPageName() === "login.html") {
+  // Si está logueado y está en login → al index (desktop; móvil ya redirige solo)
+  if (user && PUBLIC_PAGES.includes(page)) {
     window.location.replace("index.html");
     return;
   }
 });
 
-// Logout global si existe el botón
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("btnLogout");
+// =============================
+// LOGOUT (botón con id="btnLogout")
+// =============================
 
-  if (btn) {
-    btn.addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-
-        // Evitar volver atrás al login
-        window.location.replace("login.html");
-
-        // Limpieza extra (por si algún navegador cachea)
-        setTimeout(() => {
-          window.location.href = "login.html";
-        }, 50);
-
-      } catch (err) {
-        console.error("❌ Error al cerrar sesión:", err);
-        alert("No se pudo cerrar sesión, inténtalo de nuevo.");
-      }
-    });
-  }
-});
+const btnLogout = document.getElementById("btnLogout");
+if (btnLogout) {
+  btnLogout.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      window.location.replace("login.html");
+    } catch (err) {
+      console.error("Error al cerrar sesión:", err);
+      alert("No se ha podido cerrar sesión. Inténtalo de nuevo.");
+    }
+  });
+}
