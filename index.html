@@ -90,7 +90,7 @@
           <canvas id="chartEncaje"></canvas>
         </div>
 
-        <!-- Tareas próximas 7 días debajo del gráfico -->
+        <!-- Tareas próximas 7 días debajo del gráfico (por proyecto) -->
         <div style="border-top:1px solid #E5E7EB;padding-top:8px;margin-top:4px;">
           <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:2px;">
             Tareas pendientes próximos 7 días
@@ -100,6 +100,46 @@
           </div>
           <div id="tareasList" style="display:flex;flex-direction:column;gap:6px;"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- SEGUNDA FILA: TAREAS CRM + NOTAS RÁPIDAS -->
+    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:flex-start;margin-top:16px;">
+      <!-- TAREAS CRM (colección tareas) -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#111827;">
+              Tareas CRM (próximos 7 días)
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;">
+              Tareas creadas en la sección Tareas, con o sin proyecto asignado.
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn-secondary"
+            style="padding:4px 8px;font-size:11px;"
+            onclick="location.href='tareas.html'">
+            Ver todas
+          </button>
+        </div>
+        <div id="tareasListCRM" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+
+      <!-- NOTAS RÁPIDAS -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#111827;">
+              Notas rápidas
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;">
+              Notas tipo “nota rápida” creadas en la sección Tareas.
+            </div>
+          </div>
+        </div>
+        <div id="notasListCRM" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
     </div>
   </main>
@@ -153,6 +193,7 @@
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     let proyectos = [];
+    let tareas = [];
     let chartEncaje = null;
 
     const kpiTotal = document.getElementById("kpiTotal");
@@ -162,6 +203,9 @@
 
     const seguimientosList = document.getElementById("seguimientosList");
     const tareasList = document.getElementById("tareasList");
+
+    const tareasListCRM = document.getElementById("tareasListCRM");
+    const notasListCRM = document.getElementById("notasListCRM");
 
     const segDialog = document.getElementById("seguimientoDialog");
     const segForm = document.getElementById("seguimientoForm");
@@ -174,14 +218,23 @@
     const tareaComentario = document.getElementById("tareaComentario");
 
     async function cargarDashboard() {
-      const snap = await getDocs(collection(db, "proyectos"));
+      const [snapProyectos, snapTareas] = await Promise.all([
+        getDocs(collection(db, "proyectos")),
+        getDocs(collection(db, "tareas"))
+      ]);
+
       proyectos = [];
-      snap.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+      snapProyectos.forEach(d => proyectos.push({ id: d.id, ...d.data() }));
+
+      tareas = [];
+      snapTareas.forEach(d => tareas.push({ id: d.id, ...d.data() }));
 
       renderKpis();
       renderEncajeChart();
       renderSeguimientos();
       renderTareas();
+      renderTareasCRM();
+      renderNotasCRM();
     }
 
     function renderKpis() {
@@ -385,7 +438,7 @@
           </div>
         `;
 
-        tareasList.appendChild(item);
+      tareasList.appendChild(item);
       });
 
       tareasList.querySelectorAll("button.link-like-tarea").forEach(btn => {
@@ -393,6 +446,139 @@
           const id = btn.getAttribute("data-id");
           openSegDialog(id);
         });
+      });
+    }
+
+    /* TAREAS CRM (colección tareas) */
+    function renderTareasCRM() {
+      tareasListCRM.innerHTML = "";
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const limite = new Date(hoy);
+      limite.setDate(limite.getDate() + 7);
+      limite.setHours(23, 59, 59, 999);
+
+      const proximas = tareas
+        .filter(t => t.fecha) // solo tareas con fecha
+        .map(t => {
+          const d = new Date(t.fecha);
+          if (isNaN(d.getTime())) return null;
+          d.setHours(0, 0, 0, 0);
+          return { ...t, _date: d };
+        })
+        .filter(t => t && t._date >= hoy && t._date <= limite)
+        .sort((a, b) => a._date - b._date)
+        .slice(0, 10);
+
+      if (!proximas.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No hay tareas CRM en los próximos 7 días.";
+        tareasListCRM.appendChild(empty);
+        return;
+      }
+
+      proximas.forEach(t => {
+        const fechaStr = t._date.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "2-digit"
+        });
+
+        const proyectoNombre =
+          proyectos.find(p => p.id === t.proyecto_id)?.nombre_obra ||
+          "Sin proyecto";
+
+        const badgeColor =
+          t.prioridad === "alta"
+            ? "background:#FEE2E2;color:#B91C1C;"
+            : t.prioridad === "baja"
+            ? "background:#E0F2FE;color:#0369A1;"
+            : "background:#E5E7EB;color:#374151;";
+
+        const item = document.createElement("div");
+        item.style.border = "1px solid #E5E7EB";
+        item.style.borderRadius = "8px";
+        item.style.padding = "6px 8px";
+        item.style.background = "#F9FAFB";
+
+        item.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:11px;color:#6B7280;">${fechaStr}</span>
+              <span style="font-size:12px;font-weight:600;color:#111827;">
+                ${t.titulo || "Sin título"}
+              </span>
+              <span style="font-size:11px;color:#6B7280;">
+                ${proyectoNombre}
+              </span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+              <span style="font-size:10px;padding:2px 6px;border-radius:999px;${badgeColor}">
+                ${(t.prioridad || "").toUpperCase()}
+              </span>
+              <span style="font-size:10px;color:#6B7280;">
+                ${t.tipo || ""}
+              </span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#4B5563;margin-top:4px;">
+            ${(t.descripcion || "").slice(0, 140)}
+          </div>
+        `;
+
+        tareasListCRM.appendChild(item);
+      });
+    }
+
+    /* NOTAS RÁPIDAS (tareas.tipo === 'nota') */
+    function renderNotasCRM() {
+      notasListCRM.innerHTML = "";
+
+      const notas = tareas
+        .filter(t => t.tipo === "nota")
+        .sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""))
+        .slice(0, 15);
+
+      if (!notas.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "Sin notas rápidas.";
+        notasListCRM.appendChild(empty);
+        return;
+      }
+
+      notas.forEach(n => {
+        const proyectoNombre =
+          proyectos.find(p => p.id === n.proyecto_id)?.nombre_obra ||
+          "Sin proyecto";
+
+        const item = document.createElement("div");
+        item.style.border = "1px solid #E5E7EB";
+        item.style.borderRadius = "8px";
+        item.style.padding = "6px 8px";
+        item.style.background = "#F9FAFB";
+
+        item.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:11px;color:#6B7280;">
+                ${n.fecha || ""}
+              </span>
+              <span style="font-size:12px;font-weight:600;color:#111827;">
+                ${n.titulo || "Nota rápida"}
+              </span>
+              <span style="font-size:11px;color:#6B7280;">
+                ${proyectoNombre}
+              </span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#4B5563;margin-top:4px;">
+            ${(n.descripcion || "").slice(0, 160)}
+          </div>
+        `;
+
+        notasListCRM.appendChild(item);
       });
     }
 
