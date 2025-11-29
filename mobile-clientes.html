@@ -5,93 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM 2N – Clientes (Móvil)</title>
   <link rel="stylesheet" href="style.css" />
-
-  <style>
-    body { background: #ffffff; }
-    .mobile-shell {
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 10px 10px 40px 10px;
-    }
-
-    .mobile-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #0f172a;
-    }
-    .mobile-subtitle {
-      font-size: 12px;
-      color: #6b7280;
-    }
-
-    .search-input-mobile {
-      width: 100%; border-radius: 999px; border: 1px solid #d1d5db;
-      padding: 5px 9px; font-size: 11px; margin-top: 6px; margin-bottom: 6px;
-      background: #f9fafb;
-    }
-    .search-input-mobile:focus {
-      outline: none; border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
-      background: #ffffff;
-    }
-
-    .mobile-select {
-      border-radius: 999px; border: 1px solid #d1d5db;
-      padding: 4px 8px; font-size: 11px; background: #f9fafb; min-width: 120px;
-    }
-
-    .mobile-kpis { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-    .mobile-kpi {
-      flex: 1 1 45%;
-      background: radial-gradient(circle at top left, #eef2ff 0, #ffffff 45%, #f9fafb 100%);
-      border-radius: 14px; padding: 8px 10px; border: 1px solid #e5e7eb;
-    }
-    .mobile-kpi-label { font-size: 10px; color: #6b7280; margin-bottom: 2px; }
-    .mobile-kpi-value { font-size: 18px; font-weight:700; color:#111827; }
-
-    .mobile-list { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
-
-    .mobile-card {
-      background:#ffffff; border-radius:12px; border:1px solid #e5e7eb;
-      padding:8px 10px;
-    }
-    .mobile-card-header { display:flex; justify-content:space-between; margin-bottom:3px; }
-    .mobile-card-title { font-size:12px; font-weight:600; color:#111827; }
-
-    .mobile-chip {
-      font-size:9px; border-radius:999px; padding:2px 6px;
-      border:1px solid #e5e7eb; background:#f9fafb; color:#374151;
-      white-space:nowrap;
-    }
-    .mobile-chip-activo {
-      border-color:#16a34a; background:#dcfce7; color:#166534;
-    }
-
-    .mobile-pill { 
-      font-size:9px; border-radius:999px; padding:2px 6px;
-      background:#f3f4f6; color:#4b5563;
-    }
-
-    .mobile-bottombar {
-      position:fixed; left:0; right:0; bottom:0;
-      background:rgba(15,23,42,0.96);
-      border-top:1px solid #111827;
-      display:flex; justify-content:space-around; padding:6px 4px 10px 4px;
-    }
-
-    .mobile-nav-item { 
-      flex:1; text-align:center; font-size:10px; color:#9ca3af; cursor:pointer;
-    }
-    .mobile-nav-item span { display:block; font-size:16px; margin-bottom:1px; }
-    .mobile-nav-item.active { color:#f9fafb; font-weight:600; }
-  </style>
+  <link rel="stylesheet" href="mobile.css" />
 </head>
 
 <body>
   <div class="topnav">
     <div class="logo">CRM 2N · Clientes (Móvil)</div>
     <div style="display:flex;align-items:center;gap:6px;">
-      <span id="mobileUserEmail" style="font-size:11px;color:#E5E7EB;"></span>
+      <span id="mobileUserEmail" style="font-size:11px;color:#475569;"></span>
       <button id="btnLogout"
         style="font-size:11px;padding:4px 8px;border-radius:999px;
                border:1px solid #E5E7EB;background:#FFFFFF;color:#111827;">
@@ -104,20 +25,20 @@
     <div class="mobile-shell">
 
       <div class="mobile-title">Clientes</div>
-      <div class="mobile-subtitle">Consulta rápida de segmentos, actividad y si ya trabajan con 2N.</div>
+      <div class="mobile-subtitle">
+        Consulta rápida de segmentos, actividad y si ya trabajan con 2N.
+      </div>
 
       <input id="searchMobileClientes" class="search-input-mobile"
              placeholder="Buscar nombre, tipo, segmento..." />
 
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+      <div class="mobile-filters-row">
         <select id="fTipo" class="mobile-select">
           <option value="Todos">Tipo: todos</option>
         </select>
-
         <select id="fSegmento" class="mobile-select">
           <option value="Todos">Segmento: todos</option>
         </select>
-
         <select id="fProvincia" class="mobile-select">
           <option value="Todas">Provincia: todas</option>
         </select>
@@ -128,7 +49,6 @@
           <div class="mobile-kpi-label">Clientes filtrados</div>
           <div id="kpiClientesFiltrados" class="mobile-kpi-value">–</div>
         </div>
-
         <div class="mobile-kpi">
           <div class="mobile-kpi-label">Clientes con 2N activo</div>
           <div id="kpiClientesActivos" class="mobile-kpi-value">–</div>
@@ -159,149 +79,136 @@
 
   <script type="module">
     import { auth, db } from "./firebase.js";
-    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { collection, getDocs }
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const userEmailSpan = document.getElementById("mobileUserEmail");
-    const searchInput = document.getElementById("searchMobileClientes");
+    const searchInput   = document.getElementById("searchMobileClientes");
+    const selectTipo    = document.getElementById("fTipo");
+    const selectSegmento= document.getElementById("fSegmento");
+    const selectProv    = document.getElementById("fProvincia");
 
-    const selectTipo = document.getElementById("fTipo");
-    const selectSegmento = document.getElementById("fSegmento");
-    const selectProvincia = document.getElementById("fProvincia");
-
-    const kpiClientesFiltrados = document.getElementById("kpiClientesFiltrados");
-    const kpiClientesActivos = document.getElementById("kpiClientesActivos");
-
-    const listaClientesMobile = document.getElementById("listaClientesMobile");
+    const kpiFiltrados  = document.getElementById("kpiClientesFiltrados");
+    const kpiActivos    = document.getElementById("kpiClientesActivos");
+    const listaClientes = document.getElementById("listaClientesMobile");
 
     let clientes = [];
     let filtroTexto = "";
 
-    function norm(t) {
-      return (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    function norm(t){
+      return (t||"").normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
     }
 
-    async function cargarClientes() {
-      const snap = await getDocs(collection(db, "clientes"));
-      clientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
+    async function cargarClientes(){
+      const snap = await getDocs(collection(db,"clientes"));
+      clientes = snap.docs.map(d=>({id:d.id,...d.data()}));
       inicializarFiltros();
       aplicarFiltrosYRender();
     }
 
-    function inicializarFiltros() {
-      const tipos = new Set();
+    function inicializarFiltros(){
+      const tipos     = new Set();
       const segmentos = new Set();
-      const provincias = new Set();
+      const provincias= new Set();
 
-      clientes.forEach(c => {
-        if (c.tipo) tipos.add(c.tipo);
-        if (c.segmento) segmentos.add(c.segmento);
-        if (c.provincia) provincias.add(c.provincia);
+      clientes.forEach(c=>{
+        if(c.tipo) tipos.add(c.tipo);
+        if(c.segmento) segmentos.add(c.segmento);
+        if(c.provincia) provincias.add(c.provincia);
       });
 
       selectTipo.innerHTML =
         '<option value="Todos">Tipo: todos</option>' +
-        [...tipos].sort().map(t => `<option value="${t}">${t}</option>`).join("");
+        [...tipos].sort().map(t=>`<option value="${t}">${t}</option>`).join("");
 
       selectSegmento.innerHTML =
         '<option value="Todos">Segmento: todos</option>' +
-        [...segmentos].sort().map(s => `<option value="${s}">${s}</option>`).join("");
+        [...segmentos].sort().map(s=>`<option value="${s}">${s}</option>`).join("");
 
-      selectProvincia.innerHTML =
+      selectProv.innerHTML =
         '<option value="Todas">Provincia: todas</option>' +
-        [...provincias].sort().map(p => `<option value="${p}">${p}</option>`).join("");
+        [...provincias].sort().map(p=>`<option value="${p}">${p}</option>`).join("");
     }
 
-    function aplicarFiltros() {
-      let lista = [...clientes];
+    function aplicarFiltros(){
+      let lista=[...clientes];
+      const tSel  = selectTipo.value;
+      const sSel  = selectSegmento.value;
+      const pSel  = selectProv.value;
 
-      const tipoSel = selectTipo.value;
-      const segmentoSel = selectSegmento.value;
-      const provinciaSel = selectProvincia.value;
+      if(tSel!=="Todos")   lista=lista.filter(c=>(c.tipo||"")===tSel);
+      if(sSel!=="Todos")   lista=lista.filter(c=>(c.segmento||"")===sSel);
+      if(pSel!=="Todas")   lista=lista.filter(c=>(c.provincia||"")===pSel);
 
-      if (tipoSel !== "Todos") lista = lista.filter(c => (c.tipo || "") === tipoSel);
-      if (segmentoSel !== "Todos") lista = lista.filter(c => (c.segmento || "") === segmentoSel);
-      if (provinciaSel !== "Todas") lista = lista.filter(c => (c.provincia || "") === provinciaSel);
-
-      if (filtroTexto) {
-        lista = lista.filter(c => {
-          const blob = [
-            c.nombre, c.nombre_cliente, c.tipo, c.segmento, c.provincia
-          ].join(" ");
+      if(filtroTexto){
+        lista=lista.filter(c=>{
+          const blob=[c.nombre,c.nombre_cliente,c.tipo,c.segmento,c.provincia].join(" ");
           return norm(blob).includes(filtroTexto);
         });
       }
-
       return lista;
     }
 
-    function aplicarFiltrosYRender() {
-      const lista = aplicarFiltros();
+    function aplicarFiltrosYRender(){
+      const lista=aplicarFiltros();
       renderKPIs(lista);
       renderLista(lista);
     }
 
-    function renderKPIs(lista) {
-      kpiClientesFiltrados.textContent = lista.length || 0;
-      const activos = lista.filter(c => c.trabaja_con_2n === true).length;
-      kpiClientesActivos.textContent = activos;
+    function renderKPIs(lista){
+      kpiFiltrados.textContent = lista.length||0;
+      kpiActivos.textContent   = lista.filter(c=>c.trabaja_con_2n===true).length;
     }
 
-    function renderLista(lista) {
-      listaClientesMobile.innerHTML = "";
-
-      if (!lista.length) {
-        listaClientesMobile.innerHTML =
-          '<div class="mobile-card-body" style="font-size:10px;color:#6b7280;">No hay clientes según los filtros.</div>';
+    function renderLista(lista){
+      listaClientes.innerHTML="";
+      if(!lista.length){
+        listaClientes.innerHTML =
+          '<div style="font-size:10px;color:#6b7280;">No hay clientes con estos filtros.</div>';
         return;
       }
-
-      lista.sort((a, b) =>
-        (a.nombre || a.nombre_cliente || "").localeCompare(
-          b.nombre || b.nombre_cliente || "", "es"
+      lista.sort((a,b)=>
+        (a.nombre||a.nombre_cliente||"").localeCompare(
+          b.nombre||b.nombre_cliente||"","es"
         )
       );
+      lista.forEach(c=>{
+        const nombre   = c.nombre||c.nombre_cliente||"Cliente sin nombre";
+        const tipo     = c.tipo||"Sin tipo";
+        const segmento = c.segmento||"";
+        const provincia= c.provincia||"";
+        const activo   = c.trabaja_con_2n===true;
 
-      lista.forEach(c => {
-        const nombre = c.nombre || c.nombre_cliente || "Cliente sin nombre";
-        const tipo = c.tipo || "Sin tipo";
-        const segmento = c.segmento || "";
-        const provincia = c.provincia || "";
-
-        const activo = c.trabaja_con_2n === true;
-
-        const card = document.createElement("div");
-        card.className = "mobile-card";
-
-        card.innerHTML = `
+        const card=document.createElement("div");
+        card.className="mobile-card";
+        card.innerHTML=`
           <div class="mobile-card-header">
             <div class="mobile-card-title">${nombre}</div>
-            ${activo ? `<div class="mobile-chip mobile-chip-activo">2N activo</div>` : ""}
+            ${activo?'<div class="mobile-chip mobile-chip-activo">2N activo</div>':""}
           </div>
           <div class="mobile-card-body">
             <div><strong>Tipo:</strong> ${tipo}</div>
-            ${segmento ? `<div><strong>Segmento:</strong> ${segmento}</div>` : ""}
-            ${provincia ? `<div><strong>Zona:</strong> ${provincia}</div>` : ""}
-          </div>
-        `;
-
-        listaClientesMobile.appendChild(card);
+            ${segmento?`<div><strong>Segmento:</strong> ${segmento}</div>`:""}
+            ${provincia?`<div><strong>Zona:</strong> ${provincia}</div>`:""}
+          </div>`;
+        listaClientes.appendChild(card);
       });
     }
 
-    searchInput.addEventListener("input", () => {
-      filtroTexto = norm(searchInput.value || "");
+    searchInput.addEventListener("input",()=>{
+      filtroTexto = norm(searchInput.value||"");
       aplicarFiltrosYRender();
     });
+    selectTipo.addEventListener("change",aplicarFiltrosYRender);
+    selectSegmento.addEventListener("change",aplicarFiltrosYRender);
+    selectProv.addEventListener("change",aplicarFiltrosYRender);
 
-    selectTipo.addEventListener("change", aplicarFiltrosYRender);
-    selectSegmento.addEventListener("change", aplicarFiltrosYRender);
-    selectProvincia.addEventListener("change", aplicarFiltrosYRender);
-
-    onAuthStateChanged(auth, user => {
-      if (!user) return location.replace("login.html");
-      userEmailSpan.textContent = user.email || "";
+    onAuthStateChanged(auth,u=>{
+      if(!u) return location.replace("login.html");
+      userEmailSpan.textContent=u.email;
       cargarClientes();
     });
   </script>
@@ -309,4 +216,3 @@
   <script type="module" src="auth.js"></script>
 </body>
 </html>
-
