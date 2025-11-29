@@ -5,122 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM 2N – Admin usuarios</title>
   <link rel="stylesheet" href="style.css" />
+
   <style>
-    .admin-header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:10px;
-    }
-    .admin-title {
-      font-size:16px;
-      font-weight:600;
-      color:#111827;
-    }
-    .admin-subtitle {
-      font-size:12px;
-      color:#6B7280;
-      margin-top:2px;
-    }
-    .admin-form-row {
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:flex-end;
-      margin-bottom:10px;
-    }
-    .admin-form-group {
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-      min-width:180px;
-    }
-    .admin-label {
-      font-size:11px;
-      color:#4B5563;
-    }
-    .admin-input {
-      border-radius:999px;
-      border:1px solid #D1D5DB;
-      padding:4px 8px;
-      font-size:11px;
-    }
-    .admin-input:focus {
-      outline:none;
-      border-color:#2563EB;
-      box-shadow:0 0 0 1px rgba(37,99,235,0.15);
-      background:#FFFFFF;
-    }
-    .admin-select {
-      border-radius:999px;
-      border:1px solid #D1D5DB;
-      padding:4px 8px;
-      font-size:11px;
-      background:#F9FAFB;
-    }
-    .admin-select:focus {
-      outline:none;
-      border-color:#2563EB;
-      box-shadow:0 0 0 1px rgba(37,99,235,0.15);
-      background:#FFFFFF;
-    }
-    .admin-table {
-      width:100%;
-      border-collapse:collapse;
-      font-size:11px;
-    }
-    .admin-table th,
-    .admin-table td {
-      border:1px solid #E5E7EB;
-      padding:4px 6px;
-      text-align:left;
-    }
-    .admin-table th {
-      background:#F3F4F6;
-      font-weight:600;
-      color:#111827;
-    }
-    .badge-role {
-      font-size:10px;
-      border-radius:999px;
-      padding:2px 6px;
-      border:1px solid #D1D5DB;
-      background:#F9FAFB;
-      color:#374151;
-      display:inline-block;
-    }
-    .badge-role-admin {
-      border-color:#4F46E5;
-      background:#EEF2FF;
-      color:#312E81;
-    }
-    .badge-role-user {
-      border-color:#22C55E;
-      background:#ECFDF3;
-      color:#166534;
-    }
-    .text-muted {
-      font-size:10px;
-      color:#9CA3AF;
-    }
-    .danger-link {
-      font-size:10px;
-      color:#DC2626;
-      cursor:pointer;
-      text-decoration:underline;
-    }
-    .pill-me {
-      font-size:10px;
-      border-radius:999px;
-      background:#111827;
-      color:#F9FAFB;
-      padding:2px 6px;
-      margin-left:4px;
-    }
+    .admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+    .admin-title{font-size:16px;font-weight:600;color:#111827;}
+    .admin-subtitle{font-size:12px;color:#6B7280;margin-top:2px;}
+    .admin-form-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:10px;}
+    .admin-form-group{display:flex;flex-direction:column;gap:3px;min-width:180px;}
+    .admin-label{font-size:11px;color:#4B5563;}
+    .admin-input{border-radius:999px;border:1px solid #D1D5DB;padding:4px 8px;font-size:11px;}
+    .admin-input:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 1px rgba(37,99,235,0.15);background:#FFFFFF;}
+    .admin-select{border-radius:999px;border:1px solid #D1D5DB;padding:4px 8px;font-size:11px;background:#F9FAFB;}
+    .admin-select:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 1px rgba(37,99,235,0.15);background:#FFFFFF;}
+    .admin-table{width:100%;border-collapse:collapse;font-size:11px;}
+    .admin-table th,.admin-table td{border:1px solid #E5E7EB;padding:4px 6px;text-align:left;}
+    .admin-table th{background:#F3F4F6;font-weight:600;color:#111827;}
+    .badge-role{font-size:10px;border-radius:999px;padding:2px 6px;border:1px solid #D1D5DB;background:#F9FAFB;color:#374151;display:inline-block;}
+    .badge-role-admin{border-color:#4F46E5;background:#EEF2FF;color:#312E81;}
+    .badge-role-user{border-color:#22C55E;background:#ECFDF3;color:#166534;}
+    .badge-role-read{border-color:#F59E0B;background:#FEF3C7;color:#B45309;}
+    .text-muted{font-size:10px;color:#9CA3AF;}
+    .danger-link{font-size:10px;color:#DC2626;cursor:pointer;text-decoration:underline;}
+    .pill-me{font-size:10px;border-radius:999px;background:#111827;color:#F9FAFB;padding:2px 6px;margin-left:4px;}
   </style>
 </head>
+
 <body>
-  <!-- NAV SUPERIOR -->
   <div class="topnav">
     <div class="logo">CRM 2N</div>
 
@@ -140,16 +50,7 @@
       <button
         id="btnLogout"
         type="button"
-        style="
-          font-size:11px;
-          padding:6px 10px;
-          border-radius:999px;
-          border:1px solid #E5E7EB;
-          background:#FFFFFF;
-          color:#111827;
-          cursor:pointer;
-          white-space:nowrap;
-        "
+        style="font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid #E5E7EB;background:#FFFFFF;color:#111827;cursor:pointer;white-space:nowrap;"
       >
         Cerrar sesión
       </button>
@@ -161,58 +62,40 @@
       <div>
         <div class="admin-title">Administración de usuarios</div>
         <div class="admin-subtitle">
-          Gestiona qué correos pueden usar el CRM 2N. Esta lista se usa en Firestore como lista blanca.
+          Gestiona los correos autorizados y roles del CRM 2N.
         </div>
       </div>
-      <div class="text-muted" id="adminInfo">
-        Solo el superadmin puede ver esta página.
-      </div>
+      <div class="text-muted" id="adminInfo"></div>
     </div>
 
     <section class="card" style="margin-bottom:12px;">
       <div class="admin-form-row">
         <div class="admin-form-group">
-          <label class="admin-label" for="emailNuevo">Correo del usuario</label>
-          <input
-            id="emailNuevo"
-            type="email"
-            class="admin-input"
-            placeholder="nuevo.usuario@empresa.com"
-          />
+          <label class="admin-label">Correo del usuario</label>
+          <input id="emailNuevo" type="email" class="admin-input" placeholder="usuario@empresa.com" />
         </div>
 
         <div class="admin-form-group">
-          <label class="admin-label" for="rolNuevo">Rol</label>
+          <label class="admin-label">Rol</label>
           <select id="rolNuevo" class="admin-select">
-            <option value="user">Usuario (normal)</option>
-            <option value="admin">Admin</option>
+            <option value="user">Usuario normal</option>
+            <option value="read">Solo lectura</option>
+            <option value="admin">Administrador</option>
           </select>
         </div>
 
-        <button
-          id="btnAddUser"
-          class="btn-primary"
-          type="button"
-          style="font-size:11px;padding:6px 12px;height:30px;"
-        >
-          + Añadir a la lista blanca
+        <button id="btnAddUser" class="btn-primary" style="font-size:11px;padding:6px 12px;height:30px;">
+          + Añadir
         </button>
       </div>
 
-      <div class="text-muted">
-        Nota: esto controla el acceso a Firestore (según las reglas).  
-        El usuario debe iniciar sesión con este mismo correo (Google o email/contraseña) para entrar al CRM.
-      </div>
+      <div class="text-muted">El usuario debe iniciar sesión con este mismo correo.</div>
     </section>
 
     <section class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <div style="font-size:12px;font-weight:600;color:#111827;">
-          Usuarios permitidos
-        </div>
-        <div class="text-muted" id="estadoCarga">
-          Cargando usuarios...
-        </div>
+        <div style="font-size:12px;font-weight:600;color:#111827;">Usuarios permitidos</div>
+        <div class="text-muted" id="estadoCarga">Cargando...</div>
       </div>
 
       <div style="max-height:320px;overflow:auto;">
@@ -221,13 +104,11 @@
             <tr>
               <th>Email</th>
               <th>Rol</th>
-              <th>Creado</th>
+              <th>Añadido</th>
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Rellenado por JS -->
-          </tbody>
+          <tbody></tbody>
         </table>
       </div>
     </section>
@@ -236,16 +117,11 @@
   <script type="module">
     import { auth, db } from "./firebase.js";
     import {
-      collection,
-      getDocs,
-      setDoc,
-      deleteDoc,
-      doc,
-      serverTimestamp
+      collection, getDocs, setDoc, deleteDoc, doc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import {
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const SUPER_ADMIN = "gastonortigosa@gmail.com";
 
     const emailNuevo = document.getElementById("emailNuevo");
     const rolNuevo = document.getElementById("rolNuevo");
@@ -255,145 +131,102 @@
     const adminUserEmail = document.getElementById("adminUserEmail");
     const adminInfo = document.getElementById("adminInfo");
 
-    const SUPER_ADMIN_EMAIL = "gastonortigosa@gmail.com";
+    function sanitize(email){return (email||"").trim().toLowerCase();}
+    function format(ts){if(!ts)return"-";try{return ts.toDate().toLocaleString("es-ES");}catch{return"-";}}
 
-    function sanitizeEmail(email) {
-      return (email || "").trim().toLowerCase();
-    }
+    async function loadUsers(){
+      estadoCarga.textContent="Cargando...";
+      tablaUsuariosBody.innerHTML="";
 
-    function formatearFecha(ts) {
-      if (!ts) return "-";
-      try {
-        const d = ts.toDate();
-        return d.toLocaleString("es-ES");
-      } catch (e) {
-        return "-";
-      }
-    }
+      try{
+        const snap=await getDocs(collection(db,"usuarios_admin"));
+        const arr=[];
+        snap.forEach(d=>arr.push({id:d.id,...d.data()}));
 
-    async function cargarUsuariosPermitidos() {
-      estadoCarga.textContent = "Cargando usuarios...";
-      tablaUsuariosBody.innerHTML = "";
-
-      try {
-        const snap = await getDocs(collection(db, "usuarios_admin"));
-        const items = [];
-        snap.forEach(d => {
-          items.push({ id: d.id, ...d.data() });
-        });
-
-        if (!items.length) {
-          tablaUsuariosBody.innerHTML = `
-            <tr>
-              <td colspan="4" class="text-muted">No hay usuarios en la lista blanca todavía.</td>
-            </tr>
-          `;
-          estadoCarga.textContent = "0 usuarios.";
+        if(!arr.length){
+          tablaUsuariosBody.innerHTML="<tr><td colspan='4' class='text-muted'>No hay usuarios.</td></tr>";
+          estadoCarga.textContent="0 usuarios";
           return;
         }
 
-        items.sort((a, b) => (a.email || "").localeCompare(b.email || "", "es"));
+        arr.sort((a,b)=>a.email.localeCompare(b.email));
+        tablaUsuariosBody.innerHTML="";
 
-        items.forEach(u => {
-          const tr = document.createElement("tr");
+        arr.forEach(u=>{
+          const rol=u.rol||"user";
+          const badgeClass=
+            rol==="admin" ? "badge-role-admin" :
+            rol==="read" ? "badge-role-read" :
+            "badge-role-user";
 
-          const rol = (u.rol || "user").toString();
-          const esAdmin = rol === "admin";
-
-          tr.innerHTML = `
-            <td>${u.email || u.id}</td>
-            <td>
-              <span class="badge-role ${esAdmin ? "badge-role-admin" : "badge-role-user"}">
-                ${esAdmin ? "Admin" : "Usuario"}
-                ${u.email === SUPER_ADMIN_EMAIL ? '<span class="pill-me">Tú</span>' : ""}
-              </span>
-            </td>
-            <td>${formatearFecha(u.createdAt)}</td>
-            <td>
-              <span class="danger-link" data-email="${u.id}">Eliminar</span>
-            </td>
+          const tr=document.createElement("tr");
+          tr.innerHTML=`
+            <td>${u.email}</td>
+            <td><span class="badge-role ${badgeClass}">${rol}</span>${u.email===SUPER_ADMIN?'<span class="pill-me">Tú</span>':''}</td>
+            <td>${format(u.createdAt)}</td>
+            <td><span data-email="${u.id}" class="danger-link">Eliminar</span></td>
           `;
 
-          const linkEliminar = tr.querySelector(".danger-link");
-          linkEliminar.addEventListener("click", async () => {
-            const email = linkEliminar.getAttribute("data-email");
-            if (!email) return;
-            const sure = confirm(`¿Eliminar ${email} de la lista blanca?`);
-            if (!sure) return;
-            try {
-              await deleteDoc(doc(db, "usuarios_admin", email));
-              await cargarUsuariosPermitidos();
-            } catch (err) {
-              console.error("Error eliminando usuario:", err);
-              alert("No se ha podido eliminar el usuario. Revisa las reglas de Firestore.");
-            }
-          });
+          tr.querySelector(".danger-link").onclick=async()=>{
+            if(!confirm("¿Eliminar usuario?"))return;
+            await deleteDoc(doc(db,"usuarios_admin",u.id));
+            loadUsers();
+          };
 
           tablaUsuariosBody.appendChild(tr);
         });
 
-        estadoCarga.textContent = `${items.length} usuario(s) permitidos.`;
-      } catch (err) {
-        console.error("Error cargando usuarios_admin:", err);
-        estadoCarga.textContent = "Error al cargar usuarios (revisa permisos).";
-        tablaUsuariosBody.innerHTML = `
-          <tr>
-            <td colspan="4" class="text-muted">Error al cargar. Puede que tu usuario no tenga permisos.</td>
-          </tr>
-        `;
+        estadoCarga.textContent=arr.length+" usuarios";
+
+      }catch(e){
+        estadoCarga.textContent="Error cargando";
+        tablaUsuariosBody.innerHTML="<tr><td colspan='4' class='text-muted'>Error (permisos)</td></tr>";
       }
     }
 
-    async function agregarUsuario() {
-      const email = sanitizeEmail(emailNuevo.value);
-      const rol = (rolNuevo.value || "user").toString();
+    async function addUser(){
+      const email=sanitize(emailNuevo.value);
+      const rol=rolNuevo.value;
 
-      if (!email) {
-        alert("Introduce un correo válido.");
-        return;
-      }
+      if(!email){alert("Pon un email válido.");return;}
 
-      btnAddUser.disabled = true;
-      btnAddUser.textContent = "Añadiendo...";
+      btnAddUser.disabled=true;
+      btnAddUser.textContent="Añadiendo...";
 
-      try {
-        await setDoc(doc(db, "usuarios_admin", email), {
+      try{
+        await setDoc(doc(db,"usuarios_admin",email),{
           email,
           rol,
-          createdAt: serverTimestamp()
+          createdAt:serverTimestamp()
         });
-        emailNuevo.value = "";
-        rolNuevo.value = "user";
-        await cargarUsuariosPermitidos();
-      } catch (err) {
-        console.error("Error añadiendo usuario_admin:", err);
-        alert("No se ha podido añadir el usuario. Revisa las reglas de Firestore.");
-      } finally {
-        btnAddUser.disabled = false;
-        btnAddUser.textContent = "+ Añadir a la lista blanca";
+        emailNuevo.value="";
+        rolNuevo.value="user";
+        loadUsers();
+      }catch(e){
+        alert("Error añadiendo usuario (reglas Firestore).");
+      }finally{
+        btnAddUser.disabled=false;
+        btnAddUser.textContent="+ Añadir";
       }
     }
 
-    btnAddUser.addEventListener("click", agregarUsuario);
+    btnAddUser.onclick=addUser;
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.replace("login.html");
-        return;
+    onAuthStateChanged(auth,user=>{
+      if(!user){location.href="login.html";return;}
+
+      adminUserEmail.textContent=user.email;
+
+      if(user.email!==SUPER_ADMIN){
+        adminInfo.textContent="No eres superadmin. Puede que no puedas gestionar la lista blanca.";
+      }else{
+        adminInfo.textContent="Superadmin activo.";
       }
 
-      adminUserEmail.textContent = user.email || "";
-      if (user.email !== SUPER_ADMIN_EMAIL) {
-        adminInfo.textContent = "Tu usuario no es superadmin. Puede que Firestore bloquee esta vista.";
-      } else {
-        adminInfo.textContent = "Superadmin: puedes gestionar la lista blanca de correos.";
-      }
-
-      cargarUsuariosPermitidos();
+      loadUsers();
     });
   </script>
 
-  <!-- Guardia de autenticación global -->
   <script type="module" src="auth.js"></script>
 </body>
 </html>
