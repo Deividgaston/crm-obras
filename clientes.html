@@ -89,6 +89,14 @@
 
       <input id="fTextoCliente" class="search-input" style="max-width:240px;" placeholder="Buscar por nombre / ciudad..." />
 
+      <!-- NUEVO: contador de clientes -->
+      <span
+        id="clientesTotalLabel"
+        style="font-size:11px;color:#6B7280;white-space:nowrap;"
+      >
+        Clientes: 0 / 0
+      </span>
+
       <div style="flex:1;"></div>
 
       <!-- scouting -->
@@ -101,6 +109,11 @@
         📥 Importar clientes
       </button>
       <input type="file" id="inputImportClientes" accept=".csv,.xlsx" style="display:none;" />
+
+      <!-- NUEVO: fusionar clientes -->
+      <button id="btnFusionarClientes" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
+        Fusionar
+      </button>
 
       <!-- eliminar -->
       <button id="btnEliminarClientes" class="btn-secondary" type="button" style="font-size:11px;padding:4px 10px;">
@@ -304,6 +317,8 @@
     const clienteForm = document.getElementById("clienteForm");
     const btnNuevoCliente = document.getElementById("btnNuevoCliente");
     const btnEliminarClientes = document.getElementById("btnEliminarClientes");
+    const btnFusionarClientes = document.getElementById("btnFusionarClientes");
+    const clientesTotalLabel = document.getElementById("clientesTotalLabel");
 
     const scoutingDialog = document.getElementById("scoutingClientesDialog");
     const btnOpenScoutingClientes = document.getElementById("btnOpenScoutingClientes");
@@ -318,7 +333,6 @@
     const inputImportClientes = document.getElementById("inputImportClientes");
     const btnImportarClientes = document.getElementById("btnImportarClientes");
 
-    // ======= HELPERS =======
     function normalizar(txt) {
       return (txt || "").toString().trim().toLowerCase();
     }
@@ -413,6 +427,13 @@
         zonas.map(z => `<option value="${z}">${z}</option>`).join("");
     }
 
+    function actualizarContadorClientes(listaFiltrada) {
+      if (!clientesTotalLabel) return;
+      const total = clientesView.length || clientes.length || 0;
+      const filtrados = listaFiltrada.length;
+      clientesTotalLabel.textContent = `Clientes: ${filtrados} / ${total}`;
+    }
+
     function aplicarFiltrosClientes() {
       const zona = fZonaCliente.value;
       const tipo = fTipoCliente.value;
@@ -441,6 +462,8 @@
       });
 
       lista.sort((a, b) => (b.num_obras || 0) - (a.num_obras || 0));
+
+      actualizarContadorClientes(lista);
       renderTablaClientes(lista);
       renderGraficoClientes(lista);
     }
@@ -680,6 +703,79 @@
       }
     });
 
+    // NUEVO: fusionar dos clientes seleccionados
+    btnFusionarClientes.addEventListener("click", fusionarClientesSeleccionados);
+
+    async function fusionarClientesSeleccionados() {
+      const marcados = Array.from(document.querySelectorAll(".chk-cliente-row:checked"));
+      if (marcados.length !== 2) {
+        alert("Selecciona exactamente 2 clientes para fusionar.");
+        return;
+      }
+
+      const id1 = marcados[0].dataset.id;
+      const id2 = marcados[1].dataset.id;
+
+      const c1 = clientes.find(c => c.id === id1);
+      const c2 = clientes.find(c => c.id === id2);
+
+      if (!c1 || !c2) {
+        alert("No se han podido cargar los datos de los clientes.");
+        return;
+      }
+
+      const nombreFusion = (c1.nombre || c1.nombre_cliente || "").trim() ||
+                           (c2.nombre || c2.nombre_cliente || "").trim();
+
+      const ok = confirm(
+        `Vas a fusionar estos dos clientes:\n\n` +
+        `1) ${c1.nombre || c1.nombre_cliente || "(sin nombre)"}\n` +
+        `2) ${c2.nombre || c2.nombre_cliente || "(sin nombre)"}\n\n` +
+        `Se mantendrá un solo cliente con el nombre:\n"${nombreFusion}".\n\n` +
+        `Las obras no se modifican (se vinculan por nombre tal como ahora).\n\n` +
+        `¿Continuar?`
+      );
+      if (!ok) return;
+
+      const ownerId =
+        c1.ownerId || c2.ownerId || (auth.currentUser ? auth.currentUser.uid : "");
+
+      const merged = {
+        nombre: nombreFusion,
+        tipo: (c1.tipo || c2.tipo || ""),
+        segmento: (c1.segmento || c2.segmento || ""),
+        ciudad: (c1.ciudad || c2.ciudad || ""),
+        provincia: (c1.provincia || c2.provincia || ""),
+        telefono: (c1.telefono || c2.telefono || ""),
+        web: (c1.web || c2.web || ""),
+        trabaja_con_2n: !!(c1.trabaja_con_2n || c2.trabaja_con_2n),
+        ownerId: ownerId || ""
+      };
+
+      const keepId = id1;
+      const removeId = id2;
+
+      try {
+        await updateDoc(doc(db, "clientes", keepId), merged);
+        await deleteDoc(doc(db, "clientes", removeId));
+
+        clientes = clientes.filter(c => c.id !== removeId);
+        const idx = clientes.findIndex(c => c.id === keepId);
+        if (idx !== -1) {
+          clientes[idx] = { ...clientes[idx], ...merged };
+        }
+
+        recalcularVinculaciones();
+        inicializarFiltroZonasClientes();
+        aplicarFiltrosClientes();
+
+        alert("Clientes fusionados correctamente.");
+      } catch (err) {
+        console.error("Error fusionando clientes:", err);
+        alert("Error al fusionar clientes.");
+      }
+    }
+
     function getCheckedValues(nodeList) {
       return Array.from(nodeList).filter(el => el.checked).map(el => el.value);
     }
@@ -857,7 +953,6 @@
       }
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
-      // 🔧 FIX MINIMO: usar workbook.Sheets en vez de XLSX.Sheets
       const sheet = workbook.Sheets["Clientes"] || workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
